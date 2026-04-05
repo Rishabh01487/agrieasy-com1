@@ -15,3 +15,4 @@
 - [2025-12-09] Optimize build performance
 - [2025-12-10] Refactor components
 - [2025-12-10] Update styling for mobile view
+- [2025-12-11] Fix typo in README instructions
