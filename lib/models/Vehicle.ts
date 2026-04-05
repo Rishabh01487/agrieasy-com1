@@ -1,0 +1,29 @@
+import mongoose from 'mongoose'
+
+const VehicleSchema = new mongoose.Schema({
+  transporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  vehicleType: {
+    type: String,
+    enum: ['mini-truck', 'pickup-van', 'truck', 'tractor-trolley', 'tempo'],
+    required: true,
+  },
+  registrationNumber: { type: String, required: true, unique: true },
+  capacity: { type: Number, required: true }, // in kg
+  pricePerKm: { type: Number, required: true },
+  availability: { type: Boolean, default: true },
+
+  // Driver info
+  driverName: { type: String, required: true },
+  driverPhone: { type: String, required: true },
+  driverLicense: { type: String, required: true },
+  driverUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // optional link to driver account
+
+  currentLocation: {
+    latitude: Number,
+    longitude: Number,
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+}, { timestamps: true })
+
+export default mongoose.models.Vehicle || mongoose.model('Vehicle', VehicleSchema)
