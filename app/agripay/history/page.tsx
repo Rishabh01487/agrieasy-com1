@@ -23,15 +23,18 @@ const C = {
 
 const typeColor: Record<string, string> = {
     send: C.red, receive: C.green, topup: C.green, bill_pay: C.gold, refund: C.green,
+    paylater_borrow: '#059669', paylater_repay: '#065f46', neft: C.brinjal, rtgs: '#7c3aed', upi_pay: '#6366f1',
 }
 const catIcon: Record<string, string> = {
     fuel: '⛽', salary: '👤', transfer: '💸', recharge: '📱', food: '🍱', booking: '🚛', other: '📄',
+    paylater: '💰', neft: '🏦', rtgs: '🏛️', upi: '📱',
 }
 const typeLabel: Record<string, string> = {
     send: 'Sent', receive: 'Received', topup: 'Added', bill_pay: 'Bill Paid', refund: 'Refunded',
+    paylater_borrow: 'Borrowed', paylater_repay: 'Repaid', neft: 'NEFT', rtgs: 'RTGS', upi_pay: 'UPI',
 }
 
-const FILTERS = [['all', 'All'], ['topup', 'Added'], ['send', 'Sent'], ['receive', 'Received'], ['bill_pay', 'Bills']]
+const FILTERS = [['all', 'All'], ['topup', 'Added'], ['send', 'Sent'], ['receive', 'Received'], ['bill_pay', 'Bills'], ['paylater_borrow', 'PayLater']]
 
 export default function TransactionHistory() {
     const [txns, setTxns] = useState<Transaction[]>([])

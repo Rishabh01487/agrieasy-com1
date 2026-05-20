@@ -19,6 +19,9 @@ interface Wallet {
     isKYC: boolean
     bankVerified: boolean
     bankName?: string
+    paylaterEligible?: boolean
+    paylaterLimit?: number
+    paylaterUsed?: number
 }
 
 const C = {
@@ -29,12 +32,15 @@ const C = {
 
 const typeColor: Record<string, string> = {
     send: C.red, receive: C.green, topup: C.green, bill_pay: C.gold, refund: C.green,
+    paylater_borrow: '#059669', paylater_repay: '#065f46', neft: C.brinjal, rtgs: '#7c3aed', upi_pay: '#6366f1',
 }
 const catIcon: Record<string, string> = {
     fuel: '⛽', salary: '👤', transfer: '💸', recharge: '📱', food: '🍱', booking: '🚛', other: '📄',
+    paylater: '💰', neft: '🏦', rtgs: '🏛️', upi: '📱',
 }
 const typeLabel: Record<string, string> = {
     send: '↑ Sent', receive: '↓ Received', topup: '+ Added', bill_pay: '⚡ Paid', refund: '↩ Refund',
+    paylater_borrow: '💰 Borrowed', paylater_repay: '💳 Repaid', neft: '🏦 NEFT', rtgs: '🏛️ RTGS', upi_pay: '📱 UPI',
 }
 
 export default function AgriPayDashboard() {
@@ -115,15 +121,33 @@ export default function AgriPayDashboard() {
                     </div>
                 </div>
 
+                {/* PayLater Credit Card */}
+                {wallet?.paylaterEligible && (
+                    <Link href="/agripay/paylater" style={{ textDecoration: 'none', display: 'block', marginBottom: '20px' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #065f46 0%, #059669 100%)', borderRadius: '16px', padding: '16px 20px', boxShadow: '0 2px 12px rgba(5,150,105,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div>
+                                <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 4px' }}>PayLater Credit</p>
+                                <p style={{ color: '#fff', fontWeight: 900, fontSize: '1.3rem', margin: 0 }}>₹{((wallet?.paylaterLimit || 0) - (wallet?.paylaterUsed || 0)).toLocaleString('en-IN')}</p>
+                                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', margin: '2px 0 0' }}>Available • 0.099%/day interest</p>
+                            </div>
+                            <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: '10px', padding: '10px 14px', textAlign: 'center' }}>
+                                <span style={{ color: '#fff', fontSize: '1.4rem', fontWeight: 900 }}>💰</span>
+                                <p style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 700, margin: '2px 0 0' }}>Borrow</p>
+                            </div>
+                        </div>
+                    </Link>
+                )}
+
                 {/* Quick Actions */}
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', marginBottom: '20px', boxShadow: '0 1px 8px rgba(109,40,217,0.06)' }}>
                     <h3 style={{ color: C.brDark, fontWeight: 700, fontSize: '0.85rem', textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 16px' }}>Quick Actions</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: '8px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: '8px' }}>
                         {[
                             { href: '/agripay/add-money', icon: '+', label: 'Add\nMoney', color: C.green },
                             { href: '/agripay/send', icon: '↗', label: 'Send\nMoney', color: C.brinjal },
                             { href: '/agripay/scan', icon: '📷', label: 'Scan\n& Pay', color: '#6366f1' },
                             { href: '/agripay/pay-bill', icon: '⚡', label: 'Pay\nBill', color: C.gold },
+                            { href: '/agripay/paylater', icon: '💰', label: 'Pay\nLater', color: '#059669' },
                             { href: '/agripay/history', icon: '📋', label: 'History', color: '#0891b2' },
                         ].map(a => (
                             <Link key={a.label} href={a.href} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', textDecoration: 'none' }}>

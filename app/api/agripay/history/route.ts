@@ -7,13 +7,15 @@ export async function GET(request: NextRequest) {
     try {
         const userId = request.nextUrl.searchParams.get('userId')
         const limit = parseInt(request.nextUrl.searchParams.get('limit') || '20')
-        const type = request.nextUrl.searchParams.get('type') // optional filter
+        const type = request.nextUrl.searchParams.get('type')
+        const paymentMethod = request.nextUrl.searchParams.get('paymentMethod')
         if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
 
-        const query: { $or: Array<Record<string, unknown>>; type?: string } = {
+        const query: Record<string, unknown> = {
             $or: [{ fromUserId: userId }, { toUserId: userId }],
         }
         if (type) query.type = type
+        if (paymentMethod) query.paymentMethod = paymentMethod
 
         const transactions = await Transaction.find(query)
             .populate('fromUserId', 'phone farmerName firmName transporterCompanyName driverName role')

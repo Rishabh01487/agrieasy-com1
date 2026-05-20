@@ -1,23 +1,34 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
 const C = {
     bg: '#faf7ff', white: '#ffffff', brinjal: '#6d28d9', brLight: '#ede9fe',
     brMid: '#c4b5fd', brDark: '#4c1d95', text: '#1e1b4b', muted: '#6b7280',
-    border: '#ddd6fe', green: '#059669', red: '#dc2626',
+    border: '#ddd6fe', green: '#059669', red: '#dc2626', gold: '#d97706',
 }
 
-export default function SendMoney() {
+const PAYMENT_METHODS = [
+    { key: 'wallet', label: 'AgriPay Wallet', icon: '💳', desc: 'Instant • From wallet balance', color: C.brinjal },
+    { key: 'upi', label: 'UPI', icon: '📱', desc: 'Pay via UPI ID (e.g., user@upi)', color: '#6366f1' },
+    { key: 'neft', label: 'NEFT', icon: '🏦', desc: '1-2 hrs • Bank transfer', color: '#0891b2' },
+    { key: 'rtgs', label: 'RTGS', icon: '🏛️', desc: 'Instant • High value (₹2L+)', color: '#7c3aed' },
+]
+
+function SendMoneyContent() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const toParam = searchParams.get('to') || ''
+
     const [step, setStep] = useState<'recipient' | 'amount' | 'confirm' | 'success'>('recipient')
-    const [recipient, setRecipient] = useState('')
+    const [recipient, setRecipient] = useState(toParam)
     const [amount, setAmount] = useState('')
     const [note, setNote] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+    const [paymentMethod, setPaymentMethod] = useState('wallet')
 
     const handleSend = async () => {
         const amt = parseFloat(amount)
@@ -28,7 +39,7 @@ export default function SendMoney() {
         try {
             const res = await fetch('/api/agripay/transfer', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fromUserId: userId, toIdentifier: recipient, amount: amt, note }),
+                body: JSON.stringify({ fromUserId: userId, toIdentifier: recipient, amount: amt, note, paymentMethod }),
             })
             const json = await res.json()
             if (!res.ok) { setError(json.error || 'Transfer failed'); setLoading(false); return }
@@ -44,6 +55,7 @@ export default function SendMoney() {
 
     const steps = ['Recipient', 'Amount', 'Confirm']
     const stepIdx = step === 'recipient' ? 0 : step === 'amount' ? 1 : 2
+    const selectedMethod = PAYMENT_METHODS.find(m => m.key === paymentMethod)
 
     return (
         <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter","Segoe UI",sans-serif', color: C.text }}>
@@ -61,14 +73,13 @@ export default function SendMoney() {
                         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#dcfce7', border: `2px solid ${C.green}`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>✅</div>
                         <h2 style={{ color: C.green, fontWeight: 800, margin: '0 0 8px' }}>Money Sent!</h2>
                         <p style={{ color: C.brDark, fontWeight: 800, fontSize: '1.8rem', margin: '0 0 4px' }}>₹{amount}</p>
-                        <p style={{ color: C.muted, fontSize: '0.875rem' }}>sent to {recipient}</p>
+                        <p style={{ color: C.muted, fontSize: '0.875rem' }}>via {selectedMethod?.label} to {recipient}</p>
                     </div>
                 ) : (
                     <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px', boxShadow: '0 1px 8px rgba(109,40,217,0.06)' }}>
                         <h2 style={{ fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px', color: C.brDark }}>↗️ Send Money</h2>
-                        <p style={{ color: C.muted, marginBottom: '22px', fontSize: '0.9rem' }}>Send to any AgriEasy user instantly</p>
+                        <p style={{ color: C.muted, marginBottom: '22px', fontSize: '0.9rem' }}>Send to any AgriEasy user via your preferred method</p>
 
-                        {/* Step indicator */}
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
                             {steps.map((s, i) => (
                                 <div key={s} style={{ flex: 1 }}>
@@ -98,16 +109,42 @@ export default function SendMoney() {
                                     <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0"
                                         style={{ background: 'none', border: 'none', outline: 'none', color: C.brDark, fontSize: '2rem', fontWeight: 800, width: '100%' }} autoFocus />
                                 </div>
+
+                                {/* Payment Method Selection */}
+                                <label style={{ color: C.muted, fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Payment Method</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                                    {PAYMENT_METHODS.map(m => (
+                                        <button key={m.key} onClick={() => setPaymentMethod(m.key)}
+                                            style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: paymentMethod === m.key ? `${m.color}12` : C.bg, border: `1.5px solid ${paymentMethod === m.key ? m.color : C.border}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'left' }}>
+                                            <span style={{ fontSize: '1.4rem' }}>{m.icon}</span>
+                                            <div style={{ flex: 1 }}>
+                                                <p style={{ color: C.text, fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>{m.label}</p>
+                                                <p style={{ color: C.muted, fontSize: '0.75rem', margin: '2px 0 0' }}>{m.desc}</p>
+                                            </div>
+                                            {paymentMethod === m.key && <span style={{ color: m.color, fontWeight: 900 }}>✓</span>}
+                                        </button>
+                                    ))}
+                                </div>
+
                                 <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note (optional)" style={inp} />
                             </div>
                         )}
 
                         {step === 'confirm' && (
-                            <div style={{ background: C.brLight, borderRadius: '16px', padding: '24px', textAlign: 'center' }}>
-                                <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 8px' }}>Sending</p>
-                                <p style={{ color: C.brDark, fontWeight: 900, fontSize: '2.8rem', margin: '0 0 8px' }}>₹{amount}</p>
-                                <p style={{ color: C.muted, fontSize: '0.875rem', margin: '0 0 6px' }}>to <strong style={{ color: C.text }}>{recipient}</strong></p>
-                                {note && <p style={{ color: C.muted, fontSize: '0.8rem', margin: '8px 0 0', fontStyle: 'italic' }}>&quot;{note}&quot;</p>}
+                            <div>
+                                <div style={{ background: C.brLight, borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '16px' }}>
+                                    <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 8px' }}>Sending</p>
+                                    <p style={{ color: C.brDark, fontWeight: 900, fontSize: '2.8rem', margin: '0 0 8px' }}>₹{amount}</p>
+                                    <p style={{ color: C.muted, fontSize: '0.875rem', margin: '0 0 6px' }}>to <strong style={{ color: C.text }}>{recipient}</strong></p>
+                                    {note && <p style={{ color: C.muted, fontSize: '0.8rem', margin: '8px 0 0', fontStyle: 'italic' }}>&quot;{note}&quot;</p>}
+                                </div>
+                                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>{selectedMethod?.icon}</span>
+                                    <div>
+                                        <p style={{ color: C.text, fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>{selectedMethod?.label}</p>
+                                        <p style={{ color: C.muted, fontSize: '0.75rem', margin: 0 }}>{selectedMethod?.desc}</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -135,5 +172,13 @@ export default function SendMoney() {
             </div>
             <style>{`input:focus { border-color: ${C.brinjal} !important; }`}</style>
         </div>
+    )
+}
+
+export default function SendMoney() {
+    return (
+        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#faf7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6d28d9', fontWeight: 700 }}>Loading…</div>}>
+            <SendMoneyContent />
+        </Suspense>
     )
 }

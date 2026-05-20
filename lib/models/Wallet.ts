@@ -15,6 +15,14 @@ const WalletSchema = new mongoose.Schema({
     ifscCode: { type: String },
     bankVerified: { type: Boolean, default: false },
     bankVerifiedAt: { type: Date },
+    // PayLater fields
+    paylaterLimit: { type: Number, default: 0 },
+    paylaterUsed: { type: Number, default: 0 },
+    paylaterEligible: { type: Boolean, default: false },
+    paylaterCreditScore: { type: Number, default: 0 },
+    paylaterMaxLimit: { type: Number, default: 1000000 },
+    // UPI ID
+    upiId: { type: String },
 }, { timestamps: true })
 
 export default mongoose.models.Wallet || mongoose.model('Wallet', WalletSchema)

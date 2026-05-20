@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 
 const C = {
@@ -13,9 +13,17 @@ export default function ScanToPay() {
     const [agripayId, setAgripayId] = useState('')
     const [userName, setUserName] = useState('')
     const [loading, setLoading] = useState(true)
-    const [tab, setTab] = useState<'my-qr' | 'scan'>('my-qr')
+    const [tab, setTab] = useState<'my-qr' | 'camera'>('camera')
     const [scanInput, setScanInput] = useState('')
     const [copied, setCopied] = useState(false)
+    const [cameraActive, setCameraActive] = useState(false)
+    const [scannedId, setScannedId] = useState('')
+    const [cameraError, setCameraError] = useState('')
+
+    const videoRef = useRef<HTMLVideoElement>(null)
+    const canvasRef = useRef<HTMLCanvasElement>(null)
+    const streamRef = useRef<MediaStream | null>(null)
+    const scanTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
     useEffect(() => {
         const load = async () => {
@@ -26,13 +34,79 @@ export default function ScanToPay() {
                 const res = await fetch(`/api/agripay/wallet?userId=${userId}`)
                 const d = await res.json()
                 if (d.wallet?.agripayId) setAgripayId(d.wallet.agripayId)
-                // Try to get user name from role
                 const label = role === 'farmer' ? 'Farmer' : role === 'buyer' ? 'Buyer' : role === 'transporter' ? 'Transporter' : 'User'
                 setUserName(label)
             } catch (e) { console.error(e) } finally { setLoading(false) }
         }
         void load()
+        return () => stopCamera()
     }, [])
+
+    const startCamera = async () => {
+        setCameraError('')
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+            })
+            streamRef.current = stream
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream
+                await videoRef.current.play()
+            }
+            setCameraActive(true)
+            startScanLoop()
+        } catch (err: any) {
+            setCameraError('Camera access denied. Please allow camera permissions or enter ID manually.')
+            console.error('Camera error:', err)
+        }
+    }
+
+    const stopCamera = () => {
+        if (scanTimerRef.current) clearInterval(scanTimerRef.current)
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop())
+            streamRef.current = null
+        }
+        setCameraActive(false)
+    }
+
+    const startScanLoop = () => {
+        scanTimerRef.current = setInterval(async () => {
+            if (!videoRef.current || !canvasRef.current) return
+            const video = videoRef.current
+            const canvas = canvasRef.current
+            if (video.readyState !== video.HAVE_ENOUGH_DATA) return
+
+            canvas.width = video.videoWidth
+            canvas.height = video.videoHeight
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+            try {
+                const response = await fetch(
+                    `https://api.qrserver.com/v1/read-qr-code/?fileurl=${encodeURIComponent(canvas.toDataURL('image/jpeg', 0.5))}`
+                )
+                const data = await response.json()
+                if (data?.[0]?.symbol?.[0]?.data) {
+                    const qrData = data[0].symbol[0].data
+                    const match = qrData.match(/agripay:(.+)/) || qrData.match(/^(.+@agripay)$/)
+                    const id = match ? match[1] : qrData
+                    setScannedId(id)
+                    stopCamera()
+                }
+            } catch { }
+        }, 1500)
+    }
+
+    const handleTabChange = (newTab: 'my-qr' | 'camera') => {
+        setTab(newTab)
+        if (newTab === 'camera' && !cameraActive) {
+            startCamera()
+        } else if (newTab !== 'camera') {
+            stopCamera()
+        }
+    }
 
     const qrUrl = agripayId
         ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(`agripay:${agripayId}`)}&color=4c1d95&bgcolor=ede9fe&margin=10`
@@ -47,7 +121,6 @@ export default function ScanToPay() {
 
     return (
         <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter","Segoe UI",sans-serif', color: C.text }}>
-            {/* Nav */}
             <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: '12px 24px', boxShadow: '0 1px 6px rgba(109,40,217,0.08)' }}>
                 <div style={{ maxWidth: '540px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <Link href="/agripay" style={{ color: C.brinjal, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>← AgriPay</Link>
@@ -57,27 +130,21 @@ export default function ScanToPay() {
             </nav>
 
             <div style={{ maxWidth: '480px', margin: '32px auto', padding: '0 24px 48px' }}>
-
-                {/* Tab switcher */}
                 <div style={{ background: C.brLight, borderRadius: '12px', padding: '4px', display: 'flex', gap: '4px', marginBottom: '24px', border: `1px solid ${C.brMid}` }}>
-                    {[['my-qr', '📲 My QR Code'], ['scan', '📷 Enter ID to Pay']].map(([k, l]) => (
-                        <button key={k} onClick={() => setTab(k as 'my-qr' | 'scan')}
+                    {[['my-qr', '📲 My QR'], ['camera', '📷 Scan to Pay']].map(([k, l]) => (
+                        <button key={k} onClick={() => handleTabChange(k as 'my-qr' | 'camera')}
                             style={{ flex: 1, padding: '10px', borderRadius: '9px', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', background: tab === k ? C.white : 'transparent', color: tab === k ? C.brinjal : C.muted, boxShadow: tab === k ? '0 1px 4px rgba(109,40,217,0.12)' : 'none' }}>
                             {l}
                         </button>
                     ))}
                 </div>
 
-                {/* My QR Code tab */}
                 {tab === 'my-qr' && (
                     <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px', textAlign: 'center', boxShadow: '0 2px 16px rgba(109,40,217,0.08)' }}>
                         <h2 style={{ fontWeight: 800, fontSize: '1.2rem', color: C.brDark, margin: '0 0 6px' }}>Your AgriPay QR Code</h2>
-                        <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 24px' }}>Show this QR code to anyone who wants to pay you</p>
-
+                        <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 24px' }}>Show this to anyone who wants to pay you</p>
                         {loading ? (
-                            <div style={{ width: '220px', height: '220px', borderRadius: '16px', background: C.brLight, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}>
-                                Loading…
-                            </div>
+                            <div style={{ width: '220px', height: '220px', borderRadius: '16px', background: C.brLight, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.muted }}>Loading…</div>
                         ) : !agripayId ? (
                             <div style={{ width: '220px', height: '220px', borderRadius: '16px', background: C.brLight, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '8px' }}>
                                 <span style={{ fontSize: '2rem' }}>🔐</span>
@@ -85,76 +152,90 @@ export default function ScanToPay() {
                             </div>
                         ) : (
                             <>
-                                {/* QR Code frame */}
                                 <div style={{ position: 'relative', display: 'inline-block', marginBottom: '16px' }}>
                                     <div style={{ background: C.brLight, borderRadius: '20px', padding: '16px', border: `2px solid ${C.brMid}`, display: 'inline-block' }}>
-                                        {/* AgriPay logo on QR */}
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                            src={qrUrl}
-                                            alt="AgriPay QR Code"
-                                            width={220} height={220}
-                                            style={{ display: 'block', borderRadius: '10px' }}
-                                        />
+                                        <img src={qrUrl} alt="AgriPay QR Code" width={220} height={220} style={{ display: 'block', borderRadius: '10px' }} />
                                     </div>
-                                    {/* Center badge */}
-                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '36px', height: '36px', borderRadius: '8px', background: `linear-gradient(135deg, ${C.brDark}, ${C.brinjal})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1rem', border: '2px solid #fff', boxShadow: '0 2px 8px rgba(109,40,217,0.4)' }}>
-                                        ₹
-                                    </div>
+                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '36px', height: '36px', borderRadius: '8px', background: `linear-gradient(135deg, ${C.brDark}, ${C.brinjal})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1rem', border: '2px solid #fff', boxShadow: '0 2px 8px rgba(109,40,217,0.4)' }}>₹</div>
                                 </div>
-
-                                {/* Name + ID */}
                                 <div style={{ marginBottom: '20px' }}>
                                     <p style={{ color: C.brDark, fontWeight: 800, fontSize: '1rem', margin: '0 0 4px' }}>{userName}</p>
                                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: C.brLight, borderRadius: '100px', padding: '5px 14px', border: `1px solid ${C.brMid}` }}>
                                         <span style={{ color: C.brinjal, fontWeight: 700, fontSize: '0.875rem' }}>{agripayId}</span>
                                     </div>
                                 </div>
-
-                                {/* Copy button */}
-                                <button onClick={handleCopy}
-                                    style={{ width: '100%', padding: '12px', background: copied ? C.green : C.brinjal, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
-                                    {copied ? '✅ Copied to Clipboard!' : '📋 Copy AgriPay ID'}
+                                <button onClick={handleCopy} style={{ width: '100%', padding: '12px', background: copied ? C.green : C.brinjal, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
+                                    {copied ? '✅ Copied!' : '📋 Copy AgriPay ID'}
                                 </button>
                             </>
                         )}
-
-                        {/* Info */}
-                        <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 14px', marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '0.9rem' }}>ℹ️</span>
-                            <span style={{ color: C.muted, fontSize: '0.78rem' }}>Anyone can scan this QR with their camera or an AgriPay user can search your ID to send you money instantly.</span>
-                        </div>
                     </div>
                 )}
 
-                {/* Enter ID tab (for sending money by scanning) */}
-                {tab === 'scan' && (
-                    <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '28px', boxShadow: '0 2px 16px rgba(109,40,217,0.08)' }}>
-                        <h2 style={{ fontWeight: 800, fontSize: '1.2rem', color: C.brDark, margin: '0 0 6px' }}>Pay by AgriPay ID</h2>
-                        <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 24px' }}>Enter the AgriPay ID of the person you want to pay</p>
+                {tab === 'camera' && (
+                    <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '24px', boxShadow: '0 2px 16px rgba(109,40,217,0.08)' }}>
+                        <h2 style={{ fontWeight: 800, fontSize: '1.2rem', color: C.brDark, margin: '0 0 6px' }}>📷 Scan QR Code</h2>
+                        <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 20px' }}>Point your camera at an AgriPay QR code to pay</p>
 
-                        {/* Illustration */}
-                        <div style={{ background: C.brLight, borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px', border: `1px solid ${C.brMid}` }}>
-                            <div style={{ fontSize: '4rem', marginBottom: '8px' }}>📲</div>
-                            <p style={{ color: C.brDark, fontWeight: 700, fontSize: '0.9rem', margin: '0 0 4px' }}>Scan or Enter AgriPay ID</p>
-                            <p style={{ color: C.muted, fontSize: '0.8rem', margin: 0 }}>Ask them to show their QR code, or enter their ID directly</p>
+                        {/* Camera view */}
+                        <div style={{ position: 'relative', borderRadius: '16px', overflow: 'hidden', background: '#000', marginBottom: '16px', aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {!cameraActive && !scannedId && (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
+                                    <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📷</div>
+                                    <p style={{ margin: '0 0 16px', fontSize: '0.9rem', opacity: 0.8 }}>Camera preview will appear here</p>
+                                    <button onClick={startCamera} style={{ padding: '12px 28px', background: C.brinjal, border: 'none', borderRadius: '10px', color: '#fff', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>
+                                        📸 Open Camera
+                                    </button>
+                                </div>
+                            )}
+                            {cameraActive && (
+                                <>
+                                    <video ref={videoRef} autoPlay playsInline muted
+                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    {/* Scanner frame overlay */}
+                                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '200px', height: '200px', border: '3px solid rgba(109,40,217,0.8)', borderRadius: '16px', boxShadow: '0 0 0 9999px rgba(0,0,0,0.3)' }}>
+                                        <div style={{ position: 'absolute', top: '50%', left: 0, right: 0, height: '2px', background: 'rgba(109,40,217,0.6)', animation: 'scanline 2s ease-in-out infinite' }} />
+                                    </div>
+                                    <style>{`@keyframes scanline { 0%,100% { top: 20%; } 50% { top: 80%; } }`}</style>
+                                    <button onClick={stopCamera} style={{ position: 'absolute', bottom: '12px', left: '12px', padding: '8px 16px', background: 'rgba(220,38,38,0.9)', border: 'none', borderRadius: '8px', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
+                                        ⏹ Stop Camera
+                                    </button>
+                                </>
+                            )}
+                            {scannedId && (
+                                <div style={{ textAlign: 'center', padding: '40px', color: '#fff' }}>
+                                    <div style={{ fontSize: '3rem', marginBottom: '8px' }}>✅</div>
+                                    <p style={{ fontWeight: 700, margin: '0 0 4px' }}>QR Scanned!</p>
+                                    <p style={{ fontSize: '0.85rem', opacity: 0.8, margin: 0 }}>{scannedId}</p>
+                                </div>
+                            )}
+                            <canvas ref={canvasRef} style={{ display: 'none' }} />
                         </div>
 
-                        <label style={{ color: C.muted, fontSize: '0.75rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>AgriPay ID / Phone Number</label>
-                        <input type="text" value={scanInput} onChange={e => setScanInput(e.target.value)}
-                            placeholder="e.g., 9876543210@agripay or 9876543210"
-                            style={{ width: '100%', padding: '13px 14px', background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', marginBottom: '16px' }}
-                            autoFocus
-                        />
+                        {cameraError && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', marginBottom: '16px', color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>{cameraError}</div>}
 
-                        <Link href={scanInput.trim() ? `/agripay/send?to=${encodeURIComponent(scanInput.trim())}` : '#'}
-                            style={{ display: 'block', width: '100%', padding: '14px', background: scanInput.trim() ? C.brinjal : C.brMid, borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', textAlign: 'center', textDecoration: 'none', pointerEvents: scanInput.trim() ? 'auto' : 'none', boxSizing: 'border-box' }}>
-                            Pay Now →
-                        </Link>
-
-                        <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 14px', marginTop: '14px' }}>
-                            <p style={{ color: C.muted, fontSize: '0.78rem', margin: 0 }}>💡 <strong>Tip:</strong> AgriPay IDs look like <span style={{ color: C.brinjal, fontWeight: 600 }}>9876543210@agripay</span> — ask the recipient to share their ID from the QR Code page.</p>
-                        </div>
+                        {/* Manual entry fallback */}
+                        {!scannedId ? (
+                            <>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                                    <div style={{ flex: 1, height: '1px', background: C.border }} />
+                                    <span style={{ color: C.muted, fontSize: '0.78rem', fontWeight: 600 }}>OR ENTER MANUALLY</span>
+                                    <div style={{ flex: 1, height: '1px', background: C.border }} />
+                                </div>
+                                <input type="text" value={scanInput} onChange={e => setScanInput(e.target.value)}
+                                    placeholder="Enter AgriPay ID or phone number"
+                                    style={{ width: '100%', padding: '13px 14px', background: C.bg, border: `1.5px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box', marginBottom: '12px' }} />
+                                <Link href={scanInput.trim() ? `/agripay/send?to=${encodeURIComponent(scanInput.trim())}` : '#'}
+                                    style={{ display: 'block', width: '100%', padding: '14px', background: scanInput.trim() ? C.brinjal : C.brMid, borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', textAlign: 'center', textDecoration: 'none', pointerEvents: scanInput.trim() ? 'auto' : 'none', boxSizing: 'border-box' }}>
+                                    Pay Now →
+                                </Link>
+                            </>
+                        ) : (
+                            <Link href={`/agripay/send?to=${encodeURIComponent(scannedId)}`}
+                                style={{ display: 'block', width: '100%', padding: '14px', background: C.green, borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', textAlign: 'center', textDecoration: 'none', boxSizing: 'border-box' }}>
+                                Pay ₹{scannedId} → View Send Page
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>
