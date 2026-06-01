@@ -4,9 +4,8 @@ import User from '@/lib/models/User'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request: NextRequest) {
-  await dbConnect()
-
   try {
+    await dbConnect()
     const { email, phone, password, role, address, firmName, gstin, aadharNumber, farmerName } = await request.json()
 
     // Validate required fields

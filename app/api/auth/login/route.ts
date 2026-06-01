@@ -5,9 +5,8 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 
 export async function POST(request: NextRequest) {
-  await dbConnect()
-
   try {
+    await dbConnect()
     const { identifier, password } = await request.json()
 
     if (!identifier || !password) {
