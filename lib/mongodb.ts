@@ -1,12 +1,6 @@
 import mongoose from 'mongoose'
 import dns from 'dns'
 
-const MONGODB_URI = process.env.MONGODB_URI!
-
-if (!MONGODB_URI) {
-  throw new Error('Please define the MONGODB_URI environment variable inside .env.local')
-}
-
 interface CachedConnection {
   conn: typeof import('mongoose') | null
   promise: Promise<typeof import('mongoose')> | null
@@ -23,6 +17,12 @@ if (!cached) {
 }
 
 async function dbConnect() {
+  const MONGODB_URI = process.env.MONGODB_URI
+
+  if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable')
+  }
+
   if (!cached) throw new Error('Cache not initialized')
 
   // Re-apply Google DNS every call to ensure worker threads use it
