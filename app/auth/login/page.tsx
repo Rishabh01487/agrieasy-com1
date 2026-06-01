@@ -1,7 +1,7 @@
 'use client'
 
-import { Suspense, useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
 import { signIn } from 'next-auth/react'
@@ -24,14 +24,18 @@ const roleConfig: Record<string, { icon: string; label: string }> = {
   transporter: { icon: '🚛', label: 'Transporter' },
 }
 
-function LoginContent() {
+export default function Login() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const roleParam = searchParams.get('role') || 'farmer'
-  const [role] = useState(roleParam)
+  const [role, setRole] = useState('farmer')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    setRole(params.get('role') || 'farmer')
+  }, [])
+
   const rc = roleConfig[role] || roleConfig.farmer
 
   const onSubmit = async (data: FormData) => {
@@ -125,13 +129,5 @@ function LoginContent() {
       </div>
       <style>{`input:focus { border-color: #6d28d9 !important; box-shadow: 0 0 0 3px rgba(109,40,217,0.12) !important; }`}</style>
     </div>
-  )
-}
-
-export default function Login() {
-  return (
-    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#faf7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6d28d9', fontWeight: 700 }}>Loading…</div>}>
-      <LoginContent />
-    </Suspense>
   )
 }
