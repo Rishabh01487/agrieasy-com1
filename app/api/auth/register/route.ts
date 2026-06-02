@@ -4,7 +4,7 @@ import User from '@/lib/models/User'
 import * as bcryptModule from 'bcryptjs'
 
 // bcryptjs v3 switched to ESM-first — handle both default and namespace exports
-const bcrypt = (bcryptModule as { default?: typeof bcryptModule }).default || bcryptModule
+const bcrypt = (bcryptModule as any).default || bcryptModule
 
 export async function POST(request: NextRequest) {
   try {
