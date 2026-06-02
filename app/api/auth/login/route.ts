@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
-import bcrypt from 'bcryptjs'
+import * as bcryptModule from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+
+// bcryptjs v3 switched to ESM-first — handle both default and namespace exports
+const bcrypt = (bcryptModule as { default?: typeof bcryptModule }).default || bcryptModule
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,8 +43,10 @@ export async function POST(request: NextRequest) {
       token,
       user: { id: user._id, email: user.email, role: user.role },
     })
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error)
-    return NextResponse.json({ error: 'Login failed' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Login failed'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
+
