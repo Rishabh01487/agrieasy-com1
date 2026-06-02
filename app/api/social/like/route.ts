@@ -4,8 +4,8 @@ import Post from '@/lib/models/Post'
 
 // POST /api/social/like  { userId, postId }
 export async function POST(req: NextRequest) {
-    await dbConnect()
     try {
+        await dbConnect()
         const { userId, postId } = await req.json()
         if (!userId || !postId) return NextResponse.json({ error: 'userId and postId required' }, { status: 400 })
 

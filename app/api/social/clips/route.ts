@@ -4,14 +4,13 @@ import Post from '@/lib/models/Post'
 
 // GET /api/social/clips?page=&category=
 export async function GET(req: NextRequest) {
-    await dbConnect()
-    const { searchParams } = new URL(req.url)
-    const page = parseInt(searchParams.get('page') || '1')
-    const category = searchParams.get('category')
-    const limit = 10
-    const skip = (page - 1) * limit
-
     try {
+        await dbConnect()
+        const { searchParams } = new URL(req.url)
+        const page = parseInt(searchParams.get('page') || '1')
+        const category = searchParams.get('category')
+        const limit = 10
+        const skip = (page - 1) * limit
         const query: Record<string, unknown> = { isActive: true, type: 'krishiclip' }
         if (category && category !== 'all') query.category = category
 

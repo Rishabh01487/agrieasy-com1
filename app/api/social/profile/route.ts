@@ -6,14 +6,13 @@ import Follow from '@/lib/models/Follow'
 
 // GET /api/social/profile?userId=&viewerId=
 export async function GET(req: NextRequest) {
-    await dbConnect()
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId')
-    const viewerId = searchParams.get('viewerId')
-
-    if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-
     try {
+        await dbConnect()
+        const { searchParams } = new URL(req.url)
+        const userId = searchParams.get('userId')
+        const viewerId = searchParams.get('viewerId')
+
+        if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
         const user = await User.findById(userId).select('farmerName firmName role phone createdAt').lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 

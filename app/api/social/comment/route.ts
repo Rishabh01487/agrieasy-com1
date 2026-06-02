@@ -4,8 +4,8 @@ import Post from '@/lib/models/Post'
 
 // POST /api/social/comment  { userId, postId, text }
 export async function POST(req: NextRequest) {
-    await dbConnect()
     try {
+        await dbConnect()
         const { userId, postId, text } = await req.json()
         if (!userId || !postId || !text?.trim()) return NextResponse.json({ error: 'userId, postId, and text required' }, { status: 400 })
         if (text.length > 500) return NextResponse.json({ error: 'Comment too long (max 500 chars)' }, { status: 400 })

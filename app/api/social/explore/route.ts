@@ -4,15 +4,14 @@ import Post from '@/lib/models/Post'
 
 // GET /api/social/explore?category=&type=&page=
 export async function GET(req: NextRequest) {
-    await dbConnect()
-    const { searchParams } = new URL(req.url)
-    const category = searchParams.get('category')
-    const type = searchParams.get('type')      // 'post' | 'krishiclip' | null (all)
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = 18
-    const skip = (page - 1) * limit
-
     try {
+        await dbConnect()
+        const { searchParams } = new URL(req.url)
+        const category = searchParams.get('category')
+        const type = searchParams.get('type')
+        const page = parseInt(searchParams.get('page') || '1')
+        const limit = 18
+        const skip = (page - 1) * limit
         const query: Record<string, unknown> = { isActive: true }
         if (category && category !== 'all') query.category = category
         if (type && type !== 'all') query.type = type

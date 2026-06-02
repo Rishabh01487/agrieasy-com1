@@ -6,16 +6,15 @@ import Follow from '@/lib/models/Follow'
 
 // GET /api/social/posts?userId=&page=&category=&all=true
 export async function GET(req: NextRequest) {
-    await dbConnect()
-    const { searchParams } = new URL(req.url)
-    const userId = searchParams.get('userId')
-    const page = parseInt(searchParams.get('page') || '1')
-    const category = searchParams.get('category')
-    const all = searchParams.get('all') === 'true'
-    const limit = 15
-    const skip = (page - 1) * limit
-
     try {
+        await dbConnect()
+        const { searchParams } = new URL(req.url)
+        const userId = searchParams.get('userId')
+        const page = parseInt(searchParams.get('page') || '1')
+        const category = searchParams.get('category')
+        const all = searchParams.get('all') === 'true'
+        const limit = 15
+        const skip = (page - 1) * limit
         const query: Record<string, unknown> = { isActive: true, type: 'post' }
 
         // Add category filter if provided
@@ -50,8 +49,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/social/posts
 export async function POST(req: NextRequest) {
-    await dbConnect()
     try {
+        await dbConnect()
         const body = await req.json()
         const { userId, type, mediaUrl, mediaType, caption, hashtags, category, location } = body
 
