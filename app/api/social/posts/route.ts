@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import User from '@/lib/models/User'
-import Follow from '@/lib/models/Follow'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
@@ -13,26 +12,13 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const page = parseInt(searchParams.get('page') || '1')
         const category = searchParams.get('category')
-        const all = searchParams.get('all') === 'true'
         const limit = 15
         const skip = (page - 1) * limit
         const query: Record<string, unknown> = { isActive: true, type: 'post' }
 
         if (category && category !== 'all') query.category = category
 
-        // Try JWT auth first, fall back to query param userId (for backward compat)
-        const auth = authenticateRequest(req)
-        const userId = auth ? auth.userId : searchParams.get('userId')
-
-        if (userId && !all) {
-            const following = await Follow.find({ followerId: userId }).select('followingId')
-            const followingIds = following.map(f => f.followingId)
-
-            if (followingIds.length > 0) {
-                followingIds.push(userId)
-                query.userId = { $in: followingIds }
-            }
-        }
+        // Feed shows all active posts (global timeline)
 
         const posts = await Post.find(query)
             .sort({ createdAt: -1 })

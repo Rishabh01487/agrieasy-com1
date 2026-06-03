@@ -44,10 +44,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [imgErr, setImgErr] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-    if (!post.userId || typeof post.userId !== 'object') return null
-    const authorName = post.userId.farmerName || post.userId.firmName || 'User'
-    const authorRole = post.userId.role || ''
-    const authorId = post.userId._id
+    const isDeletedUser = !post.userId || typeof post.userId !== 'object'
+    const authorName = isDeletedUser ? 'Unknown User' : (post.userId.farmerName || post.userId.firmName || 'User')
+    const authorRole = isDeletedUser ? '' : (post.userId.role || '')
+    const authorId = isDeletedUser ? '' : post.userId._id
     const isOwner = viewerId && viewerId === authorId
 
     const handleLike = async () => {
