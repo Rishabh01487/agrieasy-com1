@@ -81,6 +81,7 @@ export default function TransporterDashboard() {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <Link href="/transporter/my-vehicles" style={{ color: C.brinjal, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: C.brLight }}>🚛 My Fleet</Link>
             <Link href="/transporter/add-vehicle" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: C.brinjal }}>+ Add Vehicle</Link>
+            <Link href="/agrisocial" style={{ color: C.brinjal, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: C.brLight }}>📱 AgriSocial</Link>
             <Link href="/" style={{ color: C.red, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: '#fee2e2', border: '1px solid #fca5a5' }}>Logout</Link>
           </div>
         </div>

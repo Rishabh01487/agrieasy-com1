@@ -65,6 +65,7 @@ export default function FarmerDashboard() {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <Link href="/farmer/search-buyers" style={{ color: C.brinjal, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: C.brLight }}>Search Buyers</Link>
             <Link href="/farmer/book-vehicle" style={{ color: C.brinjal, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: C.brLight }}>Book Vehicle</Link>
+            <Link href="/agrisocial" style={{ color: C.brinjal, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: C.brLight }}>📱 AgriSocial</Link>
             <Link href="/" style={{ color: C.red, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: '#fee2e2', border: '1px solid #fca5a5' }}>Logout</Link>
           </div>
         </div>
