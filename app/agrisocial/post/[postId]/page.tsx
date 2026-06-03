@@ -35,10 +35,10 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
 
     useEffect(() => {
         const load = async () => {
-            const res = await fetch(`/api/social/posts?page=1`)
-            const d = await res.json()
-            const found = (d.posts || []).find((p: Post) => p._id === postId)
-            if (found) {
+            const res = await fetch(`/api/social/posts/${postId}`)
+            if (res.ok) {
+                const d = await res.json()
+                const found = d.post
                 setPost(found)
                 setLiked(viewerId ? found.likes?.includes(viewerId) : false)
                 setLikesCount(found.likesCount || 0)
