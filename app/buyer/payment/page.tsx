@@ -1,174 +1,188 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-
-declare global {
-  interface Window { Razorpay: unknown }
-}
 
 const C = {
   bg: '#faf7ff', white: '#ffffff', brinjal: '#6d28d9', brLight: '#ede9fe',
-  brMid: '#c4b5fd', brDark: '#4c1d95', text: '#1e1b4b', muted: '#6b7280', border: '#ddd6fe',
+  brMid: '#c4b5fd', brDark: '#4c1d95', text: '#1e1b4b', muted: '#6b7280',
+  border: '#ddd6fe', green: '#059669', red: '#dc2626',
 }
+
+const PAYMENT_METHODS = [
+  { key: 'wallet', label: 'AgriPay Wallet', icon: '💳', desc: 'Instant • From wallet balance', color: C.brinjal },
+]
 
 function PaymentContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const [billingId, setBillingId] = useState<string | null>(null)
-  const [amount, setAmount] = useState<string>('')
-  const [amountInput, setAmountInput] = useState('')
+  const [step, setStep] = useState<'recipient' | 'amount' | 'confirm' | 'success'>('recipient')
+  const [recipient, setRecipient] = useState('')
+  const [amount, setAmount] = useState('')
+  const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<'ready' | 'processing' | 'success'>('ready')
   const [error, setError] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('wallet')
 
-  useEffect(() => {
-    const urlAmount = searchParams.get('amount')
-    const urlBillingId = searchParams.get('billingId')
-    if (urlAmount) setAmount(urlAmount)
-    if (urlBillingId) setBillingId(urlBillingId)
-  }, [searchParams])
-
-  const handlePayment = async () => {
-    const amt = amount || amountInput
-    if (!amt || parseFloat(amt) < 1) {
-      setError('Please enter a valid amount (minimum ₹1)')
-      return
-    }
-    setError('')
-    setLoading(true)
-    setStep('processing')
+  const handleSend = async () => {
+    const amt = parseFloat(amount)
+    if (!amt || amt < 1) { setError('Min ₹1'); return }
+    setLoading(true); setError('')
+    const userId = localStorage.getItem('userId')
+    if (!userId) { setError('Not logged in'); setLoading(false); return }
     try {
-      const userId = localStorage.getItem('userId')
-      const response = await fetch('/api/payment', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          billingId: billingId || `manual_${Date.now()}`,
-          farmerId: userId,
-          buyerId: userId,
-          amount: parseFloat(amt),
-        }),
+      const res = await fetch('/api/agripay/transfer', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toIdentifier: recipient, amount: amt, note, paymentMethod }),
       })
-      const data = await response.json()
-      if (!data.success) { alert('Payment initialization failed'); setLoading(false); setStep('ready'); return }
-
-      const script = document.createElement('script')
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-      script.async = true
-      script.onload = () => {
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: parseFloat(amt) * 100,
-          currency: 'INR',
-          name: 'AgriEasy.com',
-          description: 'Payment for commodity purchase',
-          order_id: data.orderId,
-          handler: async (response: Record<string, string>) => {
-            const verifyResponse = await fetch('/api/payment/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ razorpayPaymentId: response.razorpay_payment_id, razorpayOrderId: response.razorpay_order_id, razorpaySignature: response.razorpay_signature, transactionId: data.transactionId }),
-            })
-            if (verifyResponse.ok) { setStep('success'); setTimeout(() => router.push('/buyer/dashboard'), 2000) }
-            else alert('Payment verification failed')
-          },
-          prefill: { email: localStorage.getItem('userEmail') || '', contact: localStorage.getItem('userPhone') || '' },
-          theme: { color: C.brinjal },
-        }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const rzp = new (window as any).Razorpay(options)
-        rzp.open()
-      }
-      document.body.appendChild(script)
-    } catch (error) {
-      console.error('Error:', error)
-      alert('Payment failed')
-      setStep('ready')
-    } finally {
-      if ((window as { Razorpay?: unknown }).Razorpay) setLoading(false)
-    }
+      const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Transfer failed'); setLoading(false); return }
+      setStep('success')
+      setTimeout(() => router.push('/buyer/dashboard'), 3000)
+    } catch { setError('Network error') } finally { setLoading(false) }
   }
 
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '13px 14px', background: C.bg, border: `1.5px solid ${C.border}`,
+    borderRadius: '10px', color: C.text, fontSize: '0.95rem', outline: 'none', boxSizing: 'border-box',
+  }
+
+  const steps = ['Recipient', 'Amount', 'Confirm']
+  const stepIdx = step === 'recipient' ? 0 : step === 'amount' ? 1 : 2
+  const selectedMethod = PAYMENT_METHODS.find(m => m.key === paymentMethod)
+
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter","Segoe UI",sans-serif' }}>
+    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter","Segoe UI",sans-serif', color: C.text }}>
       <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: '12px 24px', boxShadow: '0 1px 6px rgba(109,40,217,0.08)' }}>
-        <div style={{ maxWidth: '480px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <img src="/icons/icon-192.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
-          <Link href="/buyer/dashboard" style={{ color: C.brinjal, fontWeight: 800, textDecoration: 'none' }}>AgriEasy</Link>
+        <div style={{ maxWidth: '540px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Link href="/buyer/dashboard" style={{ color: C.brinjal, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>← Dashboard</Link>
           <span style={{ color: C.muted }}>›</span>
-          <span style={{ color: C.text, fontWeight: 600, fontSize: '0.9rem' }}>Payment</span>
+          <span style={{ color: C.text, fontWeight: 600, fontSize: '0.875rem' }}>Send Payment</span>
         </div>
       </nav>
 
-      <div style={{ maxWidth: '480px', margin: '60px auto', padding: '0 24px' }}>
-        <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '40px', boxShadow: '0 4px 20px rgba(109,40,217,0.1)', textAlign: 'center' }}>
-          {step === 'success' ? (
-            <>
-              <div style={{ fontSize: '4rem', marginBottom: '16px' }}>✅</div>
-              <h2 style={{ color: '#166534', fontWeight: 800, fontSize: '1.5rem', margin: '0 0 8px' }}>Payment Successful!</h2>
-              <p style={{ color: C.muted }}>Redirecting to dashboard…</p>
-            </>
-          ) : amount ? (
-            <>
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💳</div>
-              <h2 style={{ color: C.brDark, fontWeight: 800, fontSize: '1.5rem', margin: '0 0 8px' }}>Complete Payment</h2>
-              <p style={{ color: C.muted, marginBottom: '28px', fontSize: '0.9rem' }}>Secure payment via Razorpay · UPI · Cards · Net Banking</p>
+      <div style={{ maxWidth: '540px', margin: '40px auto', padding: '0 24px' }}>
+        {step === 'success' ? (
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '48px', textAlign: 'center', boxShadow: '0 1px 8px rgba(109,40,217,0.06)' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#dcfce7', border: `2px solid ${C.green}`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>✅</div>
+            <h2 style={{ color: C.green, fontWeight: 800, margin: '0 0 8px' }}>Payment Sent!</h2>
+            <p style={{ color: C.brDark, fontWeight: 800, fontSize: '1.8rem', margin: '0 0 4px' }}>₹{amount}</p>
+            <p style={{ color: C.muted, fontSize: '0.875rem' }}>via {selectedMethod?.label} to {recipient}</p>
+          </div>
+        ) : (
+          <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '20px', padding: '32px', boxShadow: '0 1px 8px rgba(109,40,217,0.06)' }}>
+            <h2 style={{ fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px', color: C.brDark }}>Send Payment</h2>
+            <p style={{ color: C.muted, marginBottom: '22px', fontSize: '0.9rem' }}>Send money to any farmer or user on AgriEasy</p>
 
-              <div style={{ background: C.brLight, border: `1px solid ${C.brMid}`, borderRadius: '16px', padding: '20px', marginBottom: '28px' }}>
-                <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 6px' }}>Amount to Pay</p>
-                <p style={{ color: C.brDark, fontWeight: 800, fontSize: '2.4rem', margin: 0 }}>₹{amount}</p>
-              </div>
-
-              <button onClick={handlePayment} disabled={loading} style={{
-                width: '100%', padding: '14px', background: loading ? C.muted : C.brinjal,
-                color: '#fff', border: 'none', borderRadius: '12px', fontSize: '1rem',
-                fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '12px',
-              }}>
-                {loading ? 'Opening payment…' : 'Pay with UPI / Razorpay'}
-              </button>
-              <Link href="/buyer/dashboard" style={{ color: C.muted, fontSize: '0.875rem', textDecoration: 'none' }}>← Cancel and go back</Link>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💳</div>
-              <h2 style={{ color: C.brDark, fontWeight: 800, fontSize: '1.5rem', margin: '0 0 8px' }}>Make a Payment</h2>
-              <p style={{ color: C.muted, marginBottom: '24px', fontSize: '0.9rem' }}>Enter the amount you want to pay via Razorpay</p>
-
-              <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-                <label style={{ display: 'block', color: C.muted, fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px' }}>Amount (₹)</label>
-                <div style={{ position: 'relative' }}>
-                  <span style={{ position: 'absolute', left: '16px', top: '14px', color: C.muted, fontWeight: 700, fontSize: '1.2rem' }}>₹</span>
-                  <input
-                    type="number"
-                    min="1"
-                    placeholder="Enter amount"
-                    value={amountInput}
-                    onChange={e => { setAmountInput(e.target.value); setError('') }}
-                    style={{
-                      width: '100%', padding: '14px 14px 14px 36px', border: `2px solid ${error ? '#dc2626' : C.border}`,
-                      borderRadius: '12px', fontSize: '1.2rem', fontWeight: 600, color: C.text,
-                      outline: 'none', boxSizing: 'border-box',
-                    }}
-                  />
+            <div style={{ display: 'flex', gap: '6px', marginBottom: '24px' }}>
+              {steps.map((s, i) => (
+                <div key={s} style={{ flex: 1 }}>
+                  <div style={{ height: '4px', borderRadius: '2px', background: i <= stepIdx ? C.brinjal : C.border, marginBottom: '4px' }} />
+                  <span style={{ color: i <= stepIdx ? C.brinjal : C.muted, fontSize: '0.68rem', fontWeight: 700 }}>{s}</span>
                 </div>
-                {error && <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: '6px 0 0', fontWeight: 600 }}>{error}</p>}
-              </div>
+              ))}
+            </div>
 
-              <button onClick={handlePayment} disabled={loading || !amountInput} style={{
-                width: '100%', padding: '14px',
-                background: loading || !amountInput ? C.muted : C.brinjal,
-                color: '#fff', border: 'none', borderRadius: '12px', fontSize: '1rem',
-                fontWeight: 700, cursor: loading || !amountInput ? 'not-allowed' : 'pointer', marginBottom: '12px',
-              }}>
-                {loading ? 'Opening payment…' : `Pay ₹${parseFloat(amountInput || '0').toLocaleString('en-IN')}`}
+            {step === 'recipient' && (
+              <div>
+                <label style={{ color: C.muted, fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Recipient Phone or AgriPay ID</label>
+                <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)}
+                  placeholder="e.g., 9876543210 or 9876543210@agripay" style={inp} autoFocus />
+
+                <div style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+                  <Link href="/agripay/scan" style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '12px', background: C.brLight, border: `1px solid ${C.brMid}`,
+                    borderRadius: '12px', color: C.brinjal, fontWeight: 700, fontSize: '0.875rem',
+                    textDecoration: 'none',
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>📷</span> Scan QR
+                  </Link>
+                  <Link href="/agripay" style={{
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    padding: '12px', background: C.brLight, border: `1px solid ${C.brMid}`,
+                    borderRadius: '12px', color: C.brinjal, fontWeight: 700, fontSize: '0.875rem',
+                    textDecoration: 'none',
+                  }}>
+                    <span style={{ fontSize: '1.2rem' }}>💳</span> AgriPay
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {step === 'amount' && (
+              <div>
+                <div style={{ background: C.brLight, borderRadius: '10px', padding: '10px 14px', marginBottom: '16px' }}>
+                  <span style={{ color: C.muted, fontSize: '0.8rem' }}>Sending to: </span>
+                  <strong style={{ color: C.brDark }}>{recipient}</strong>
+                </div>
+                <label style={{ color: C.muted, fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Amount</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: C.bg, border: `2px solid ${C.brMid}`, borderRadius: '12px', padding: '12px 16px', marginBottom: '14px' }}>
+                  <span style={{ color: C.brinjal, fontWeight: 900, fontSize: '2rem' }}>₹</span>
+                  <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="0"
+                    style={{ background: 'none', border: 'none', outline: 'none', color: C.brDark, fontSize: '2rem', fontWeight: 800, width: '100%' }} autoFocus />
+                </div>
+
+                <label style={{ color: C.muted, fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Payment Method</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
+                  {PAYMENT_METHODS.map(m => (
+                    <button key={m.key} onClick={() => setPaymentMethod(m.key)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px', background: paymentMethod === m.key ? `${m.color}12` : C.bg, border: `1.5px solid ${paymentMethod === m.key ? m.color : C.border}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'left' }}>
+                      <span style={{ fontSize: '1.4rem' }}>{m.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <p style={{ color: C.text, fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>{m.label}</p>
+                        <p style={{ color: C.muted, fontSize: '0.75rem', margin: '2px 0 0' }}>{m.desc}</p>
+                      </div>
+                      {paymentMethod === m.key && <span style={{ color: m.color, fontWeight: 900 }}>✓</span>}
+                    </button>
+                  ))}
+                </div>
+
+                <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note (optional)" style={inp} />
+              </div>
+            )}
+
+            {step === 'confirm' && (
+              <div>
+                <div style={{ background: C.brLight, borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '16px' }}>
+                  <p style={{ color: C.muted, fontSize: '0.85rem', margin: '0 0 8px' }}>Sending</p>
+                  <p style={{ color: C.brDark, fontWeight: 900, fontSize: '2.8rem', margin: '0 0 8px' }}>₹{amount}</p>
+                  <p style={{ color: C.muted, fontSize: '0.875rem', margin: '0 0 6px' }}>to <strong style={{ color: C.text }}>{recipient}</strong></p>
+                  {note && <p style={{ color: C.muted, fontSize: '0.8rem', margin: '8px 0 0', fontStyle: 'italic' }}>&quot;{note}&quot;</p>}
+                </div>
+                <div style={{ background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>{selectedMethod?.icon}</span>
+                  <div>
+                    <p style={{ color: C.text, fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>{selectedMethod?.label}</p>
+                    <p style={{ color: C.muted, fontSize: '0.75rem', margin: 0 }}>{selectedMethod?.desc}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', margin: '14px 0 0', color: '#dc2626', fontSize: '0.85rem', fontWeight: 600 }}>⚠ {error}</div>}
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+              {step !== 'recipient' && (
+                <button onClick={() => { setStep(step === 'confirm' ? 'amount' : 'recipient'); setError('') }}
+                  style={{ flex: 1, padding: '13px', background: C.bg, border: `1px solid ${C.border}`, borderRadius: '12px', color: C.muted, fontWeight: 700, cursor: 'pointer' }}>
+                  ← Back
+                </button>
+              )}
+              <button onClick={() => {
+                setError('')
+                if (step === 'recipient') { if (!recipient.trim()) { setError('Enter phone or AgriPay ID'); return } setStep('amount') }
+                else if (step === 'amount') { if (!amount || parseFloat(amount) < 1) { setError('Enter valid amount (min ₹1)'); return } setStep('confirm') }
+                else handleSend()
+              }} disabled={loading}
+                style={{ flex: 2, padding: '13px', background: C.brinjal, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
+                {loading ? 'Sending…' : step === 'confirm' ? '✅ Confirm & Send' : step === 'amount' ? 'Review →' : 'Next →'}
               </button>
-              <Link href="/buyer/dashboard" style={{ color: C.muted, fontSize: '0.875rem', textDecoration: 'none' }}>← Cancel and go back</Link>
-            </>
-          )}
-        </div>
+            </div>
+          </div>
+        )}
       </div>
+      <style>{`input:focus { border-color: ${C.brinjal} !important; }`}</style>
     </div>
   )
 }
