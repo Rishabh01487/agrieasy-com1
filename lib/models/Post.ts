@@ -20,6 +20,8 @@ const PostSchema = new mongoose.Schema({
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     likesCount: { type: Number, default: 0 },
+    savedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    savedCount: { type: Number, default: 0 },
     comments: [CommentSchema],
     commentsCount: { type: Number, default: 0 },
     views: { type: Number, default: 0 },

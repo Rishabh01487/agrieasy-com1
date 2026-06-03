@@ -19,6 +19,7 @@ interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments: Comment[]; createdAt: string; location?: string; views?: number
+    savedBy?: string[]; savedCount?: number
 }
 
 export default function PostDetail({ params }: { params: Promise<{ postId: string }> }) {
@@ -29,9 +30,12 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [liked, setLiked] = useState(false)
     const [likesCount, setLikesCount] = useState(0)
+    const [saved, setSaved] = useState(false)
     const [commentText, setCommentText] = useState('')
     const [comments, setComments] = useState<Comment[]>([])
     const [posting, setPosting] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
         const load = async () => {
@@ -42,6 +46,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                 setPost(found)
                 setLiked(viewerId ? found.likes?.includes(viewerId) : false)
                 setLikesCount(found.likesCount || 0)
+                setSaved(viewerId ? found.savedBy?.includes(viewerId) : false)
                 setComments(found.comments || [])
             }
             setLoading(false)
@@ -55,6 +60,30 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
         setLiked(newLiked)
         setLikesCount(c => newLiked ? c + 1 : Math.max(0, c - 1))
         await fetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) })
+    }
+
+    const handleSave = async () => {
+        if (!viewerId || !post) return
+        const newSaved = !saved
+        setSaved(newSaved)
+        await fetch(`/api/social/save`, {
+            method: newSaved ? 'POST' : 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: newSaved ? JSON.stringify({ userId: viewerId, postId: post._id }) : undefined,
+        })
+    }
+
+    const handleDelete = async () => {
+        if (!viewerId || !post) return
+        setDeleting(true)
+        const res = await fetch(`/api/social/posts/${post._id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: viewerId }),
+        })
+        if (res.ok) router.push('/agrisocial')
+        else setShowDeleteConfirm(false)
+        setDeleting(false)
     }
 
     const handleComment = async () => {
@@ -119,6 +148,8 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                     ) : post.mediaUrl && post.mediaType === 'image' ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={post.mediaUrl} alt="post" style={{ width: '100%', maxHeight: '600px', objectFit: 'cover', display: 'block' }} />
+                    ) : post.mediaUrl && post.mediaType === 'video' ? (
+                        <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
                     ) : null}
 
                     {/* Caption */}
@@ -134,7 +165,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                     )}
 
                     {/* Action bar */}
-                    <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.orLight}`, display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.orLight}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
                         <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: liked ? C.red : C.muted, fontWeight: 700, fontSize: '0.9rem' }}>
                             <span style={{ fontSize: '1.4rem' }}>{liked ? '❤️' : '🤍'}</span>
                             <span>{likesCount} {likesCount === 1 ? 'like' : 'likes'}</span>
@@ -143,13 +174,36 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                             <span style={{ fontSize: '1.4rem' }}>💬</span>
                             <span>{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</span>
                         </div>
-                        {post.type === 'krishiclip' && (
+                        <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: saved ? C.orange : C.muted, fontWeight: 700, fontSize: '0.9rem' }}>
+                            <span style={{ fontSize: '1.4rem' }}>{saved ? '🔖' : '🏷️'}</span>
+                            <span>{saved ? 'Saved' : 'Save'}</span>
+                        </button>
+                        {viewerId && viewerId === (typeof post.userId === 'object' ? post.userId._id : post.userId) && (
+                            <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: C.muted, fontWeight: 700, fontSize: '0.9rem', marginLeft: 'auto' }}>
+                                <span style={{ fontSize: '1.2rem' }}>🗑️</span>
+                                <span>Delete</span>
+                            </button>
+                        )}
+                        {post.type === 'krishiclip' && !(viewerId && viewerId === (typeof post.userId === 'object' ? post.userId._id : post.userId)) && (
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: C.muted, fontWeight: 700, fontSize: '0.9rem', marginLeft: 'auto' }}>
                                 <span style={{ fontSize: '1.2rem' }}>👁️</span>
                                 <span>{post.views || 0} views</span>
                             </div>
                         )}
                     </div>
+
+                    {/* Delete confirm */}
+                    {showDeleteConfirm && (
+                        <div style={{ padding: '12px 16px', textAlign: 'center', borderBottom: `1px solid ${C.orLight}` }}>
+                            <p style={{ color: C.red, fontSize: '0.9rem', margin: '0 0 10px', fontWeight: 600 }}>Delete this {post.type === 'krishiclip' ? 'KrishiClip' : 'post'}?</p>
+                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                                <button onClick={handleDelete} disabled={deleting} style={{ background: C.red, border: 'none', borderRadius: '8px', padding: '7px 18px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', opacity: deleting ? 0.7 : 1 }}>
+                                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                                </button>
+                                <button onClick={() => setShowDeleteConfirm(false)} style={{ background: C.orLight, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '7px 18px', color: C.muted, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem' }}>Cancel</button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Comments list */}
                     <div style={{ maxHeight: '360px', overflowY: 'auto' }}>

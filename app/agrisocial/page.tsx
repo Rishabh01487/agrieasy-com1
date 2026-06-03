@@ -30,20 +30,24 @@ interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments?: Comment[]; createdAt: string; location?: string
+    savedBy?: string[]; savedCount?: number
 }
 
-function PostCard({ post, viewerId, onLike }: { post: Post; viewerId: string; onLike: (id: string, liked: boolean, count: number) => void }) {
+function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: string; onLike: (id: string, liked: boolean, count: number) => void; onDelete?: (id: string) => void }) {
     const [liked, setLiked] = useState(viewerId ? post.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(post.likesCount || 0)
+    const [saved, setSaved] = useState(viewerId ? post.savedBy?.includes(viewerId) : false)
     const [showComments, setShowComments] = useState(false)
     const [commentText, setCommentText] = useState('')
     const [comments, setComments] = useState<Comment[]>(post.comments || [])
     const [posting, setPosting] = useState(false)
     const [imgErr, setImgErr] = useState(false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
     const authorName = typeof post.userId === 'object' ? (post.userId.farmerName || post.userId.firmName || 'User') : 'User'
     const authorRole = typeof post.userId === 'object' ? post.userId.role : ''
     const authorId = typeof post.userId === 'object' ? post.userId._id : post.userId
+    const isOwner = viewerId && viewerId === authorId
 
     const handleLike = async () => {
         if (!viewerId) return
@@ -64,6 +68,28 @@ function PostCard({ post, viewerId, onLike }: { post: Post; viewerId: string; on
             setCommentText('')
         }
         setPosting(false)
+    }
+
+    const handleSave = async () => {
+        if (!viewerId) return
+        const newSaved = !saved
+        setSaved(newSaved)
+        await fetch(`/api/social/save`, {
+            method: newSaved ? 'POST' : 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: newSaved ? JSON.stringify({ userId: viewerId, postId: post._id }) : undefined,
+        })
+    }
+
+    const handleDelete = async () => {
+        if (!viewerId) return
+        const res = await fetch(`/api/social/posts/${post._id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: viewerId }),
+        })
+        if (res.ok) onDelete?.(post._id)
+        else setShowDeleteConfirm(false)
     }
 
     const ytId = post.mediaUrl ? (post.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
@@ -126,11 +152,32 @@ function PostCard({ post, viewerId, onLike }: { post: Post; viewerId: string; on
                     style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: C.muted, fontSize: '0.88rem', fontWeight: 700, padding: '5px 6px' }}>
                     💬 {comments.length}
                 </button>
+                <button onClick={handleSave}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: saved ? C.orange : C.muted, fontSize: '0.88rem', fontWeight: 700, padding: '5px 6px' }}>
+                    {saved ? '🔖' : '🏷️'}
+                </button>
+                {isOwner && (
+                    <button onClick={() => setShowDeleteConfirm(true)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: C.muted, fontSize: '0.88rem', fontWeight: 700, padding: '5px 6px' }}>
+                        🗑️
+                    </button>
+                )}
                 <Link href={`/agrisocial/post/${post._id}`}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: C.muted, fontSize: '0.88rem', fontWeight: 700, padding: '5px 6px', textDecoration: 'none', marginLeft: 'auto' }}>
                     🔗 View
                 </Link>
             </div>
+
+            {/* Delete confirm */}
+            {showDeleteConfirm && (
+                <div style={{ borderTop: `1px solid ${C.orLight}`, padding: '10px 16px', textAlign: 'center' }}>
+                    <p style={{ color: C.red, fontSize: '0.85rem', margin: '0 0 8px', fontWeight: 600 }}>Delete this post?</p>
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <button onClick={handleDelete} style={{ background: C.red, border: 'none', borderRadius: '8px', padding: '6px 16px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>Yes, delete</button>
+                        <button onClick={() => setShowDeleteConfirm(false)} style={{ background: C.orLight, border: `1px solid ${C.border}`, borderRadius: '8px', padding: '6px 16px', color: C.muted, fontWeight: 700, cursor: 'pointer', fontSize: '0.82rem' }}>Cancel</button>
+                    </div>
+                </div>
+            )}
 
             {/* Comments */}
             {showComments && (
@@ -290,7 +337,7 @@ export default function AgriSocialFeed() {
                         <p style={{ color: C.muted, fontSize: '0.75rem', fontWeight: 700, margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                             {category === 'all' ? `${posts.length} posts from the community` : `${posts.length} ${category} posts`}
                         </p>
-                        {posts.map(p => <PostCard key={p._id} post={p} viewerId={userId} onLike={handleLike} />)}
+                        {posts.map(p => <PostCard key={p._id} post={p} viewerId={userId} onLike={handleLike} onDelete={(id) => setPosts(ps => ps.filter(x => x._id !== id))} />)}
                     </>
                 )}
 

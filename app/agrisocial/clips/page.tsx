@@ -17,11 +17,13 @@ const CATEGORIES = [
 ]
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
-interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; views: number; createdAt: string }
+interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number }
 
-function ClipCard({ clip, viewerId, isActive }: { clip: Clip; viewerId: string; isActive: boolean }) {
+function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId: string; isActive: boolean; onDelete?: (id: string) => void }) {
     const [liked, setLiked] = useState(viewerId ? clip.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(clip.likesCount || 0)
+    const [saved, setSaved] = useState(viewerId ? clip.savedBy?.includes(viewerId) : false)
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const videoRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
@@ -33,6 +35,8 @@ function ClipCard({ clip, viewerId, isActive }: { clip: Clip; viewerId: string; 
 
     const authorName = typeof clip.userId === 'object' ? (clip.userId.farmerName || clip.userId.firmName || 'User') : 'User'
     const authorRole = typeof clip.userId === 'object' ? clip.userId.role : ''
+    const authorId = typeof clip.userId === 'object' ? clip.userId._id : clip.userId
+    const isOwner = viewerId && viewerId === authorId
 
     const handleLike = async () => {
         if (!viewerId) return
@@ -40,6 +44,28 @@ function ClipCard({ clip, viewerId, isActive }: { clip: Clip; viewerId: string; 
         setLiked(newLiked)
         setLikesCount(c => newLiked ? c + 1 : Math.max(0, c - 1))
         await fetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: clip._id }) })
+    }
+
+    const handleSave = async () => {
+        if (!viewerId) return
+        const newSaved = !saved
+        setSaved(newSaved)
+        await fetch(`/api/social/save`, {
+            method: newSaved ? 'POST' : 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: newSaved ? JSON.stringify({ userId: viewerId, postId: clip._id }) : undefined,
+        })
+    }
+
+    const handleDelete = async () => {
+        if (!viewerId) return
+        const res = await fetch(`/api/social/posts/${clip._id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: viewerId }),
+        })
+        if (res.ok) onDelete?.(clip._id)
+        else setShowDeleteConfirm(false)
     }
 
     const ytId = clip.mediaUrl ? (clip.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
@@ -74,15 +100,32 @@ function ClipCard({ clip, viewerId, isActive }: { clip: Clip; viewerId: string; 
                     <span style={{ fontSize: '1.8rem' }}>{liked ? '❤️' : '🤍'}</span>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>
                 </button>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: '#fff' }}>
-                    <span style={{ fontSize: '1.8rem' }}>💬</span>
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>Comment</span>
-                </div>
+                <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: '#fff' }}>
+                    <span style={{ fontSize: '1.8rem' }}>{saved ? '🔖' : '🏷️'}</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{saved ? 'Saved' : 'Save'}</span>
+                </button>
+                {isOwner && (
+                    <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: '#fff' }}>
+                        <span style={{ fontSize: '1.8rem' }}>🗑️</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>Delete</span>
+                    </button>
+                )}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: '#fff' }}>
                     <span style={{ fontSize: '1.8rem' }}>👁️</span>
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.views || 0}</span>
                 </div>
             </div>
+
+            {/* Delete confirm overlay */}
+            {showDeleteConfirm && (
+                <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                    <p style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, margin: 0 }}>Delete this KrishiClip?</p>
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                        <button onClick={handleDelete} style={{ background: C.red, border: 'none', borderRadius: '10px', padding: '10px 22px', color: '#fff', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem' }}>Yes, delete</button>
+                        <button onClick={() => setShowDeleteConfirm(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '10px', padding: '10px 22px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>Cancel</button>
+                    </div>
+                </div>
+            )}
 
             {/* Bottom info */}
             <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '72px' }}>
@@ -168,7 +211,7 @@ export default function KrishiClips() {
                     </div>
                 ) : clips.map((clip, idx) => (
                     <div key={clip._id} className="clip-item" data-idx={idx.toString()}>
-                        <ClipCard clip={clip} viewerId={userId} isActive={idx === activeIdx} />
+                        <ClipCard clip={clip} viewerId={userId} isActive={idx === activeIdx} onDelete={(id) => setClips(cs => cs.filter(x => x._id !== id))} />
                     </div>
                 ))}
             </div>
