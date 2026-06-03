@@ -8,9 +8,6 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
-    const auth = authenticateRequest(req)
-    if (!auth) return unauthorized()
-
     try {
         await dbConnect()
         const { searchParams } = new URL(req.url)
@@ -23,12 +20,16 @@ export async function GET(req: NextRequest) {
 
         if (category && category !== 'all') query.category = category
 
-        if (!all) {
-            const following = await Follow.find({ followerId: auth.userId }).select('followingId')
+        // Try JWT auth first, fall back to query param userId (for backward compat)
+        const auth = authenticateRequest(req)
+        const userId = auth ? auth.userId : searchParams.get('userId')
+
+        if (userId && !all) {
+            const following = await Follow.find({ followerId: userId }).select('followingId')
             const followingIds = following.map(f => f.followingId)
 
             if (followingIds.length > 0) {
-                followingIds.push(auth.userId as unknown as typeof followingIds[0])
+                followingIds.push(userId)
                 query.userId = { $in: followingIds }
             }
         }
