@@ -26,7 +26,14 @@ export async function POST(request: NextRequest) {
         if (!wallet.bankVerified) return NextResponse.json({ error: 'Verify your bank account first before withdrawing' }, { status: 400 })
         if (wallet.balance < amount) return NextResponse.json({ error: `Insufficient balance. Available: ₹${wallet.balance}` }, { status: 400 })
 
-        await Wallet.findByIdAndUpdate(wallet._id, { $inc: { balance: -amount } })
+        const debited = await Wallet.findOneAndUpdate(
+          { _id: wallet._id, balance: { $gte: amount } },
+          { $inc: { balance: -amount } },
+          { new: true }
+        )
+        if (!debited) {
+          return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+        }
 
         let status = 'pending'
         let payoutId: string | undefined

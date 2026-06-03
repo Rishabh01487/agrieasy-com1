@@ -20,7 +20,14 @@ export async function POST(request: NextRequest) {
         if (!wallet) return NextResponse.json({ error: 'Wallet not found. Open AgriPay first.' }, { status: 404 })
         if (wallet.balance < amount) return NextResponse.json({ error: `Insufficient balance. Available: ₹${wallet.balance}` }, { status: 400 })
 
-        await Wallet.findByIdAndUpdate(wallet._id, { $inc: { balance: -amount } })
+        const debited = await Wallet.findOneAndUpdate(
+          { _id: wallet._id, balance: { $gte: amount } },
+          { $inc: { balance: -amount } },
+          { new: true }
+        )
+        if (!debited) {
+          return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+        }
 
         const categoryMap: Record<string, string> = {
             fuel: 'fuel', salary: 'salary', food: 'food', recharge: 'recharge', other: 'other',

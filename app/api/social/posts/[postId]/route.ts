@@ -14,7 +14,7 @@ export async function GET(
   try {
     await dbConnect()
     const post = await Post.findById(postId)
-      .populate('userId', 'farmerName firmName role phone')
+      .populate('userId', 'farmerName firmName role')
       .populate('comments.userId', 'farmerName firmName')
       .lean()
 

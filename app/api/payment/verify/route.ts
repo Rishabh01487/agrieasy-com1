@@ -16,19 +16,24 @@ export async function POST(request: NextRequest) {
   await dbConnect()
 
   try {
-    const { razorpayPaymentId, razorpayOrderId, transactionId } = await request.json()
+    const { razorpayPaymentId, razorpayOrderId, transactionId, razorpaySignature } = await request.json()
 
     if (!razorpayPaymentId || !razorpayOrderId) {
       return NextResponse.json({ error: 'Missing payment details' }, { status: 400 })
     }
 
+    if (!razorpaySignature) {
+      return NextResponse.json({ error: 'Missing payment signature' }, { status: 400 })
+    }
+
     if (!process.env.RAZORPAY_KEY_SECRET) {
       return NextResponse.json({ error: 'Payment gateway not configured' }, { status: 500 })
     }
-    crypto
-      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
-      .digest('hex')
+
+    const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex')
+    if (expected !== razorpaySignature) {
+      return NextResponse.json({ error: 'Payment signature mismatch' }, { status: 400 })
+    }
 
     const transaction = await Transaction.findByIdAndUpdate(transactionId, {
       razorpayPaymentId,

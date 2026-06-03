@@ -8,10 +8,12 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function GET(req: NextRequest) {
+    const auth = authenticateRequest(req)
+    if (!auth) return unauthorized()
+
     try {
         await dbConnect()
         const { searchParams } = new URL(req.url)
-        const userId = searchParams.get('userId')
         const page = parseInt(searchParams.get('page') || '1')
         const category = searchParams.get('category')
         const all = searchParams.get('all') === 'true'
@@ -21,12 +23,12 @@ export async function GET(req: NextRequest) {
 
         if (category && category !== 'all') query.category = category
 
-        if (userId && !all) {
-            const following = await Follow.find({ followerId: userId }).select('followingId')
+        if (!all) {
+            const following = await Follow.find({ followerId: auth.userId }).select('followingId')
             const followingIds = following.map(f => f.followingId)
 
             if (followingIds.length > 0) {
-                followingIds.push(userId as unknown as typeof followingIds[0])
+                followingIds.push(auth.userId as unknown as typeof followingIds[0])
                 query.userId = { $in: followingIds }
             }
         }
@@ -35,7 +37,7 @@ export async function GET(req: NextRequest) {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate('userId', 'farmerName firmName role phone')
+            .populate('userId', 'farmerName firmName role')
             .lean()
 
         return NextResponse.json({ posts, total: posts.length })

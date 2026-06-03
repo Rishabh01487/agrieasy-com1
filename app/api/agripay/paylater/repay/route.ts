@@ -59,7 +59,14 @@ export async function POST(request: NextRequest) {
 
         const actualRepay = Math.min(amount, currentDue)
 
-        await Wallet.findByIdAndUpdate(wallet._id, { $inc: { balance: -actualRepay } })
+        const debited = await Wallet.findOneAndUpdate(
+          { _id: wallet._id, balance: { $gte: actualRepay } },
+          { $inc: { balance: -actualRepay } },
+          { new: true }
+        )
+        if (!debited) {
+          return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+        }
 
         const transaction = await Transaction.create({
             fromUserId: auth.userId,

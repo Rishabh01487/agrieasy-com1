@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 
 const PayLaterSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    loanAmount: { type: Number, required: true, min: 1 },
+    loanAmount: { type: Number, required: true, min: 1, max: 1000000 },
     amountDue: { type: Number, required: true },
     interestRate: { type: Number, default: 0.099 },
     interestRateDefault: { type: Number, default: 0.11 },

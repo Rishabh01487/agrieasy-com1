@@ -42,7 +42,14 @@ export async function POST(request: NextRequest) {
             toWallet = await Wallet.create({ userId: toUser._id, balance: 0, agripayId: `${toUser.phone}@agripay` })
         }
 
-        await Wallet.findByIdAndUpdate(fromWallet._id, { $inc: { balance: -amount } })
+        const debited = await Wallet.findOneAndUpdate(
+          { _id: fromWallet._id, balance: { $gte: amount } },
+          { $inc: { balance: -amount } },
+          { new: true }
+        )
+        if (!debited) {
+          return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+        }
         await Wallet.findByIdAndUpdate(toWallet._id, { $inc: { balance: amount } })
 
         const txType = 'send'

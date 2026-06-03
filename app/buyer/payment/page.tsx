@@ -17,27 +17,38 @@ function PaymentContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [billingId, setBillingId] = useState<string | null>(null)
-  const [amount, setAmount] = useState<string | null>(null)
+  const [amount, setAmount] = useState<string>('')
+  const [amountInput, setAmountInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'ready' | 'processing' | 'success'>('ready')
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    setBillingId(searchParams.get('billingId'))
-    setAmount(searchParams.get('amount'))
+    const urlAmount = searchParams.get('amount')
+    const urlBillingId = searchParams.get('billingId')
+    if (urlAmount) setAmount(urlAmount)
+    if (urlBillingId) setBillingId(urlBillingId)
   }, [searchParams])
 
   const handlePayment = async () => {
+    const amt = amount || amountInput
+    if (!amt || parseFloat(amt) < 1) {
+      setError('Please enter a valid amount (minimum ₹1)')
+      return
+    }
+    setError('')
     setLoading(true)
     setStep('processing')
     try {
+      const userId = localStorage.getItem('userId')
       const response = await fetch('/api/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          billingId,
-          farmerId: localStorage.getItem('userId'),
-          buyerId: localStorage.getItem('userId'),
-          amount: parseFloat(amount || '0'),
+          billingId: billingId || `manual_${Date.now()}`,
+          farmerId: userId,
+          buyerId: userId,
+          amount: parseFloat(amt),
         }),
       })
       const data = await response.json()
@@ -49,7 +60,7 @@ function PaymentContent() {
       script.onload = () => {
         const options = {
           key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: parseFloat(amount || '0') * 100,
+          amount: parseFloat(amt) * 100,
           currency: 'INR',
           name: 'AgriEasy.com',
           description: 'Payment for commodity purchase',
@@ -58,7 +69,7 @@ function PaymentContent() {
             const verifyResponse = await fetch('/api/payment/verify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ razorpayPaymentId: response.razorpay_payment_id, razorpayOrderId: response.razorpay_order_id, transactionId: data.transactionId }),
+              body: JSON.stringify({ razorpayPaymentId: response.razorpay_payment_id, razorpayOrderId: response.razorpay_order_id, razorpaySignature: response.razorpay_signature, transactionId: data.transactionId }),
             })
             if (verifyResponse.ok) { setStep('success'); setTimeout(() => router.push('/buyer/dashboard'), 2000) }
             else alert('Payment verification failed')
@@ -99,7 +110,7 @@ function PaymentContent() {
               <h2 style={{ color: '#166534', fontWeight: 800, fontSize: '1.5rem', margin: '0 0 8px' }}>Payment Successful!</h2>
               <p style={{ color: C.muted }}>Redirecting to dashboard…</p>
             </>
-          ) : (
+          ) : amount ? (
             <>
               <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💳</div>
               <h2 style={{ color: C.brDark, fontWeight: 800, fontSize: '1.5rem', margin: '0 0 8px' }}>Complete Payment</h2>
@@ -115,7 +126,43 @@ function PaymentContent() {
                 color: '#fff', border: 'none', borderRadius: '12px', fontSize: '1rem',
                 fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', marginBottom: '12px',
               }}>
-                {loading ? 'Opening payment…' : '💳 Pay with UPI / Razorpay'}
+                {loading ? 'Opening payment…' : 'Pay with UPI / Razorpay'}
+              </button>
+              <Link href="/buyer/dashboard" style={{ color: C.muted, fontSize: '0.875rem', textDecoration: 'none' }}>← Cancel and go back</Link>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>💳</div>
+              <h2 style={{ color: C.brDark, fontWeight: 800, fontSize: '1.5rem', margin: '0 0 8px' }}>Make a Payment</h2>
+              <p style={{ color: C.muted, marginBottom: '24px', fontSize: '0.9rem' }}>Enter the amount you want to pay via Razorpay</p>
+
+              <div style={{ marginBottom: '24px', textAlign: 'left' }}>
+                <label style={{ display: 'block', color: C.muted, fontSize: '0.85rem', fontWeight: 600, marginBottom: '8px' }}>Amount (₹)</label>
+                <div style={{ position: 'relative' }}>
+                  <span style={{ position: 'absolute', left: '16px', top: '14px', color: C.muted, fontWeight: 700, fontSize: '1.2rem' }}>₹</span>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Enter amount"
+                    value={amountInput}
+                    onChange={e => { setAmountInput(e.target.value); setError('') }}
+                    style={{
+                      width: '100%', padding: '14px 14px 14px 36px', border: `2px solid ${error ? '#dc2626' : C.border}`,
+                      borderRadius: '12px', fontSize: '1.2rem', fontWeight: 600, color: C.text,
+                      outline: 'none', boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+                {error && <p style={{ color: '#dc2626', fontSize: '0.8rem', margin: '6px 0 0', fontWeight: 600 }}>{error}</p>}
+              </div>
+
+              <button onClick={handlePayment} disabled={loading || !amountInput} style={{
+                width: '100%', padding: '14px',
+                background: loading || !amountInput ? C.muted : C.brinjal,
+                color: '#fff', border: 'none', borderRadius: '12px', fontSize: '1rem',
+                fontWeight: 700, cursor: loading || !amountInput ? 'not-allowed' : 'pointer', marginBottom: '12px',
+              }}>
+                {loading ? 'Opening payment…' : `Pay ₹${parseFloat(amountInput || '0').toLocaleString('en-IN')}`}
               </button>
               <Link href="/buyer/dashboard" style={{ color: C.muted, fontSize: '0.875rem', textDecoration: 'none' }}>← Cancel and go back</Link>
             </>

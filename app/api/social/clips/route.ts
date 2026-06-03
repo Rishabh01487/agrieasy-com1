@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit)
-            .populate('userId', 'farmerName firmName role phone')
+            .populate('userId', 'farmerName firmName role')
             .lean()
 
         // Increment views for returned clips

@@ -1,9 +1,12 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import Wallet from '@/lib/models/Wallet'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth || auth.role !== 'admin') return unauthorized()
   try {
     await dbConnect()
 
