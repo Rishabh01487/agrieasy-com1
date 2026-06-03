@@ -240,7 +240,7 @@ export default function AgriSocialFeed() {
     }, [])
 
     useEffect(() => {
-        void fetchPosts(userId, category)
+        fetchPosts(userId, category).catch(() => {})
     }, [fetchPosts, userId, category])
 
     const handleLike = (postId: string, liked: boolean, count: number) => {
