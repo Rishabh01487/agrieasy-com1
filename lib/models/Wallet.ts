@@ -1,4 +1,17 @@
 import mongoose from 'mongoose'
+import { encrypt, decrypt } from '@/lib/encryption'
+
+const encryptedString = {
+  type: String,
+  set(this: any, v: string) {
+    if (!v || v.includes(':')) return v
+    return encrypt(v)
+  },
+  get(this: any, v: string) {
+    if (!v || !v.includes(':')) return v
+    return decrypt(v)
+  },
+}
 
 const WalletSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
@@ -8,21 +21,18 @@ const WalletSchema = new mongoose.Schema({
     pin: { type: String },
     dailyLimit: { type: Number, default: 10000 },
     monthlyLimit: { type: Number, default: 100000 },
-    // Bank account details
-    bankName: { type: String },
-    bankHolder: { type: String },
-    accountNumber: { type: String },
+    bankName: encryptedString,
+    bankHolder: encryptedString,
+    accountNumber: encryptedString,
     ifscCode: { type: String },
     bankVerified: { type: Boolean, default: false },
     bankVerifiedAt: { type: Date },
-    // PayLater fields
     paylaterLimit: { type: Number, default: 0 },
     paylaterUsed: { type: Number, default: 0 },
     paylaterEligible: { type: Boolean, default: false },
     paylaterCreditScore: { type: Number, default: 0 },
     paylaterMaxLimit: { type: Number, default: 1000000 },
-    // UPI ID
-    upiId: { type: String },
-}, { timestamps: true })
+    upiId: encryptedString,
+}, { timestamps: true, toJSON: { getters: true }, toObject: { getters: true } })
 
 export default mongoose.models.Wallet || mongoose.model('Wallet', WalletSchema)

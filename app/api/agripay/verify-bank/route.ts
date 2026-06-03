@@ -26,23 +26,19 @@ export async function POST(request: NextRequest) {
             wallet = await Wallet.create({ userId, balance: 0 })
         }
 
-        const updated = await Wallet.findByIdAndUpdate(
-            wallet._id,
-            {
-                bankName, bankHolder,
-                accountNumber, // In production: encrypt this
-                ifscCode: ifscCode.toUpperCase(),
-                bankVerified: true,
-                bankVerifiedAt: new Date(),
-                isKYC: true,
-            },
-            { new: true }
-        )
+        wallet.bankName = bankName
+        wallet.bankHolder = bankHolder
+        wallet.accountNumber = accountNumber
+        wallet.ifscCode = ifscCode.toUpperCase()
+        wallet.bankVerified = true
+        wallet.bankVerifiedAt = new Date()
+        wallet.isKYC = true
+        await wallet.save()
 
         return NextResponse.json({
             success: true,
             message: `Bank account verified and linked successfully!`,
-            wallet: updated,
+            wallet,
         })
     } catch (error) {
         console.error('Bank verify error:', error)

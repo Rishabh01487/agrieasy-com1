@@ -1,4 +1,17 @@
 import mongoose from 'mongoose'
+import { encrypt, decrypt } from '@/lib/encryption'
+
+const encryptedString = {
+  type: String,
+  set(this: any, v: string) {
+    if (!v || v.includes(':')) return v
+    return encrypt(v)
+  },
+  get(this: any, v: string) {
+    if (!v || !v.includes(':')) return v
+    return decrypt(v)
+  },
+}
 
 const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
@@ -8,7 +21,7 @@ const UserSchema = new mongoose.Schema({
   address: { type: String, required: true },
 
   // Farmer specific
-  aadharNumber: { type: String },
+  aadharNumber: encryptedString,
   farmerName: { type: String },
 
   // Buyer specific
@@ -22,9 +35,9 @@ const UserSchema = new mongoose.Schema({
   fleetSize: { type: Number },
 
   // Driver specific
-  licenseNumber: { type: String },
+  licenseNumber: encryptedString,
   driverName: { type: String },
-  transporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, // which transporter the driver belongs to
+  transporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 
   location: {
     latitude: Number,
@@ -32,6 +45,6 @@ const UserSchema = new mongoose.Schema({
   },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
-})
+}, { toJSON: { getters: true }, toObject: { getters: true } })
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)
