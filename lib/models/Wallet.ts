@@ -6,11 +6,14 @@ const encryptedString = {
   type: String,
   set(this: any, v: string) {
     if (!v || v.includes(':')) return v
-    return encrypt(v)
+    try { return encrypt(v) } catch {
+      console.warn('ENCRYPTION_KEY not set — storing plaintext')
+      return v
+    }
   },
   get(this: any, v: string) {
     if (!v || !v.includes(':')) return v
-    return decrypt(v)
+    try { return decrypt(v) } catch { return v }
   },
 }
 
