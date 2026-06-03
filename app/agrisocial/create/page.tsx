@@ -60,15 +60,25 @@ function CreateContent() {
 
     useEffect(() => () => { stopCamera(); if (timerRef.current) clearInterval(timerRef.current) }, [stopCamera])
 
+    useEffect(() => {
+        if (mode === 'camera' && streamRef.current && videoRef.current) {
+            videoRef.current.srcObject = streamRef.current
+            videoRef.current.play()
+        }
+    }, [mode])
+
     const startCamera = async () => {
         setCamError('')
+        setMode('camera')
+        await new Promise(r => setTimeout(r, 100))
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: postType === 'krishiclip' })
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: postType === 'krishiclip' })
             streamRef.current = stream
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
-            setMode('camera')
         } catch (e) {
             console.error(e)
+            stopCamera()
+            setMode('choose')
             setCamError('Camera access denied. Please allow camera permission in your browser settings, or use "Upload from Gallery" instead.')
         }
     }
