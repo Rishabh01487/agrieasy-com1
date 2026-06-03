@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Vehicle from '@/lib/models/Vehicle'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   await dbConnect()
@@ -34,10 +37,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
+  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 5, message: 'Too many vehicle adds.' })
+  if (rl) return rl
+
   await dbConnect()
   try {
     const {
-      transporterId,
       vehicleType,
       registrationNumber,
       capacity,
@@ -47,12 +55,12 @@ export async function POST(request: NextRequest) {
       driverLicense,
     } = await request.json()
 
-    if (!transporterId || !vehicleType || !registrationNumber || !capacity || !pricePerKm || !driverName || !driverPhone || !driverLicense) {
-      return NextResponse.json({ error: 'Missing required fields: transporterId, vehicleType, registrationNumber, capacity, pricePerKm, driverName, driverPhone, driverLicense' }, { status: 400 })
+    if (!vehicleType || !registrationNumber || !capacity || !pricePerKm || !driverName || !driverPhone || !driverLicense) {
+      return NextResponse.json({ error: 'Missing required fields: vehicleType, registrationNumber, capacity, pricePerKm, driverName, driverPhone, driverLicense' }, { status: 400 })
     }
 
     const vehicle = await Vehicle.create({
-      transporterId,
+      transporterId: auth.userId,
       vehicleType,
       registrationNumber: registrationNumber.toUpperCase(),
       capacity,
@@ -62,6 +70,8 @@ export async function POST(request: NextRequest) {
       driverLicense,
       availability: true,
     })
+
+    await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Vehicle', resourceId: vehicle._id.toString(), details: { vehicleType, registrationNumber }, request })
 
     return NextResponse.json({ success: true, vehicle }, { status: 201 })
   } catch (error: unknown) {
@@ -74,11 +84,18 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
+  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many updates.' })
+  if (rl) return rl
+
   await dbConnect()
   try {
     const { vehicleId, availability } = await request.json()
     if (!vehicleId) return NextResponse.json({ error: 'vehicleId required' }, { status: 400 })
     const vehicle = await Vehicle.findByIdAndUpdate(vehicleId, { availability }, { new: true })
+    await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'Vehicle', resourceId: vehicleId, details: { availability }, request })
     return NextResponse.json({ success: true, vehicle })
   } catch (error) {
     console.error('Update vehicle error:', error)

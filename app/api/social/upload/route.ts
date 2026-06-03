@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -8,6 +10,12 @@ cloudinary.config({
 })
 
 export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
+  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 5, message: 'Too many uploads. Try again later.' })
+  if (rl) return rl
+
   try {
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -19,7 +27,6 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
 
-    // Try Cloudinary if configured
     if (process.env.CLOUDINARY_CLOUD_NAME) {
       return new Promise<NextResponse>((resolve) => {
         const uploadStream = cloudinary.uploader.upload_stream(
@@ -39,7 +46,6 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Fallback: base64 data URL
     const base64 = buffer.toString('base64')
     const dataUrl = `data:${file.type || 'image/jpeg'};base64,${base64}`
     return NextResponse.json({ url: dataUrl })

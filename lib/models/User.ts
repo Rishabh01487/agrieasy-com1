@@ -48,16 +48,15 @@ const UserSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { toJSON: { getters: true }, toObject: { getters: true } })
 
-UserSchema.pre('validate', function(next) {
+UserSchema.pre('validate', function(this: any) {
   if (this.aadharNumber && this.isModified('aadharNumber')) {
     const r = validateAadhar(this.aadharNumber)
-    if (!r.valid) return next(new Error(r.message))
+    if (!r.valid) throw new Error(r.message)
   }
   if (this.licenseNumber && this.isModified('licenseNumber')) {
     const r = validateDrivingLicense(this.licenseNumber)
-    if (!r.valid) return next(new Error(r.message))
+    if (!r.valid) throw new Error(r.message)
   }
-  next()
 })
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)

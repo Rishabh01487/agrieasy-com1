@@ -2,13 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import dbConnect from '@/lib/mongodb'
 import Transaction from '@/lib/models/Transaction'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
+function getRazorpay() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('Razorpay not configured')
+  }
+  return new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  })
+}
 
 export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
+  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many payment requests.' })
+  if (rl) return rl
+
   await dbConnect()
 
   try {
@@ -18,14 +32,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    // Create Razorpay order
+    const razorpay = getRazorpay()
     const order = await razorpay.orders.create({
-      amount: amount * 100, // Amount in paise
+      amount: amount * 100,
       currency: 'INR',
       receipt: billingId.toString(),
     })
 
-    // Save transaction record
     const transaction = await Transaction.create({
       billingId,
       farmerId,
@@ -34,6 +47,8 @@ export async function POST(request: NextRequest) {
       razorpayOrderId: order.id,
       paymentStatus: 'pending',
     })
+
+    await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'PaymentOrder', resourceId: transaction._id.toString(), details: { billingId, amount, orderId: order.id }, request })
 
     return NextResponse.json({
       success: true,

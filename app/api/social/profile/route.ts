@@ -3,16 +3,19 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import User from '@/lib/models/User'
 import Follow from '@/lib/models/Follow'
+import { authenticateRequest } from '@/lib/auth'
 
-// GET /api/social/profile?userId=&viewerId=
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
         const { searchParams } = new URL(req.url)
         const userId = searchParams.get('userId')
-        const viewerId = searchParams.get('viewerId')
 
         if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+
+        const auth = authenticateRequest(req)
+        const viewerId = auth?.userId || searchParams.get('viewerId')
+
         const user = await User.findById(userId).select('farmerName firmName role phone createdAt').lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 

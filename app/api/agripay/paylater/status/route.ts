@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
-import PayLater from '@/lib/models/PayLater'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
     await dbConnect()
     try {
-        const userId = request.nextUrl.searchParams.get('userId')
-        if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-
-        const wallet = await Wallet.findOne({ userId })
+        const wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
 
         return NextResponse.json({

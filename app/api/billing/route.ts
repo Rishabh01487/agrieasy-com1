@@ -1,18 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Billing from '@/lib/models/Billing'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
 
 export async function GET(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
   await dbConnect()
 
   try {
     const searchParams = request.nextUrl.searchParams
-    const buyerId = searchParams.get('buyerId')
-    const farmerId = searchParams.get('farmerId')
+    const role = searchParams.get('role')
 
     const query: { buyerId?: string; farmerId?: string } = {}
-    if (buyerId) query.buyerId = buyerId
-    if (farmerId) query.farmerId = farmerId
+    if (role === 'farmer') query.farmerId = auth.userId
+    else query.buyerId = auth.userId
 
     const billings = await Billing.find(query)
       .populate('farmerId', 'farmerName phone')
@@ -26,6 +30,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
   await dbConnect()
 
   try {
@@ -55,6 +62,8 @@ export async function POST(request: NextRequest) {
       transportationCost: transportationCost || 0,
       status: 'pending',
     })
+
+    await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Billing', resourceId: billing._id.toString(), details: { bookingId, totalAmount }, request })
 
     return NextResponse.json({ success: true, billing }, { status: 201 })
   } catch (error) {

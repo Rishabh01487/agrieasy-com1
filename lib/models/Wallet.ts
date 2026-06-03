@@ -34,14 +34,14 @@ const WalletSchema = new mongoose.Schema({
     paylaterCreditScore: { type: Number, default: 0 },
     paylaterMaxLimit: { type: Number, default: 1000000 },
     upiId: encryptedString,
+    razorpayFundAccountId: { type: String },
 }, { timestamps: true, toJSON: { getters: true }, toObject: { getters: true } })
 
-WalletSchema.pre('validate', function(next) {
+WalletSchema.pre('validate', function(this: any) {
   if (this.upiId && this.isModified('upiId')) {
     const r = validateUpiId(this.upiId)
-    if (!r.valid) return next(new Error(r.message))
+    if (!r.valid) throw new Error(r.message)
   }
-  next()
 })
 
 export default mongoose.models.Wallet || mongoose.model('Wallet', WalletSchema)

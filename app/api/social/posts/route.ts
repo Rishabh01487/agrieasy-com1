@@ -3,8 +3,10 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import User from '@/lib/models/User'
 import Follow from '@/lib/models/Follow'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
-// GET /api/social/posts?userId=&page=&category=&all=true
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
@@ -17,20 +19,16 @@ export async function GET(req: NextRequest) {
         const skip = (page - 1) * limit
         const query: Record<string, unknown> = { isActive: true, type: 'post' }
 
-        // Add category filter if provided
         if (category && category !== 'all') query.category = category
 
         if (userId && !all) {
-            // Get personalized feed: posts from followed users + own posts
             const following = await Follow.find({ followerId: userId }).select('followingId')
             const followingIds = following.map(f => f.followingId)
 
             if (followingIds.length > 0) {
-                // Has follows — show personalized feed
                 followingIds.push(userId as unknown as typeof followingIds[0])
                 query.userId = { $in: followingIds }
             }
-            // If no follows, don't restrict — show all posts (fall through)
         }
 
         const posts = await Post.find(query)
@@ -47,29 +45,34 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/posts
 export async function POST(req: NextRequest) {
     try {
+        const auth = authenticateRequest(req)
+        if (!auth) return unauthorized()
+
+        const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Slow down! Too many posts.' })
+        if (rl) return rl
+
         await dbConnect()
         const body = await req.json()
-        const { userId, type, mediaUrl, mediaType, caption, hashtags, category, location } = body
+        const { type, mediaUrl, mediaType, caption, hashtags, category, location } = body
 
-        if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
         if (!type || !['post', 'krishiclip'].includes(type)) return NextResponse.json({ error: 'Invalid type' }, { status: 400 })
         if (!caption && !mediaUrl) return NextResponse.json({ error: 'Add a caption or media' }, { status: 400 })
 
-        const user = await User.findById(userId)
+        const user = await User.findById(auth.userId)
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-        // Parse hashtags from caption if not explicitly passed
         const extractedTags = caption ? (caption.match(/#\w+/g) || []).map((t: string) => t.toLowerCase()) : []
         const allTags = [...new Set([...(hashtags || []), ...extractedTags])]
 
         const post = await Post.create({
-            userId, type, mediaUrl: mediaUrl || '', mediaType: mediaType || 'text',
+            userId: auth.userId, type, mediaUrl: mediaUrl || '', mediaType: mediaType || 'text',
             caption: caption || '', hashtags: allTags, category: category || 'general',
             location: location || '',
         })
+
+        await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Post', resourceId: post._id.toString(), details: { type, category }, request: req })
 
         return NextResponse.json({ post }, { status: 201 })
     } catch (e) {

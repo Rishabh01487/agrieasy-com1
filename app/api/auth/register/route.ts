@@ -3,11 +3,16 @@ import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import * as bcryptModule from 'bcryptjs'
 import { validateAadhar, validatePhone, validateGstin } from '@/lib/validators'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByIp } from '@/lib/rate-limit'
 
 const bcrypt = (bcryptModule as any).default || bcryptModule
 
 export async function POST(request: NextRequest) {
   try {
+    const rl = rateLimitByIp(request, { windowMs: 60_000, max: 3, message: 'Too many registration attempts. Try again later.' })
+    if (rl) return rl
+
     await dbConnect()
     const { email, phone, password, role, address, firmName, gstin, aadharNumber, farmerName, transporterCompanyName, transporterGstin } = await request.json()
 
@@ -55,6 +60,8 @@ export async function POST(request: NextRequest) {
       transporterCompanyName: role === 'transporter' ? transporterCompanyName : undefined,
       transporterGstin: role === 'transporter' ? transporterGstin : undefined,
     })
+
+    await logAudit({ userId: user._id.toString(), action: 'CREATE', resource: 'User', resourceId: user._id.toString(), details: { role, email }, request })
 
     return NextResponse.json({ success: true, userId: user._id }, { status: 201 })
   } catch (error: unknown) {

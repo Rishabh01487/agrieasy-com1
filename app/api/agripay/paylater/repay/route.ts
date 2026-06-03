@@ -3,6 +3,9 @@ import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
 import PayLater from '@/lib/models/PayLater'
 import Transaction from '@/lib/models/Transaction'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 const INTEREST_RATE = 0.099
 const DEFAULT_INTEREST_RATE = 0.11
@@ -27,19 +30,25 @@ async function calculateInterest(loan: any) {
 }
 
 export async function POST(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
+    const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many repayment requests. Try again later.' })
+    if (rl) return rl
+
     await dbConnect()
     try {
-        const { userId, loanId, amount } = await request.json()
-        if (!userId || !loanId || !amount || amount < 1) {
-            return NextResponse.json({ error: 'userId, loanId, and amount (min ₹1) required' }, { status: 400 })
+        const { loanId, amount } = await request.json()
+        if (!loanId || !amount || amount < 1) {
+            return NextResponse.json({ error: 'loanId and amount (min ₹1) required' }, { status: 400 })
         }
 
-        const wallet = await Wallet.findOne({ userId })
+        const wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
 
         const loan = await PayLater.findById(loanId)
         if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 })
-        if (loan.userId.toString() !== userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+        if (loan.userId.toString() !== auth.userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
         if (loan.status === 'closed') return NextResponse.json({ error: 'Loan already closed' }, { status: 400 })
 
         const currentDue = await calculateInterest(loan)
@@ -53,7 +62,7 @@ export async function POST(request: NextRequest) {
         await Wallet.findByIdAndUpdate(wallet._id, { $inc: { balance: -actualRepay } })
 
         const transaction = await Transaction.create({
-            fromUserId: userId,
+            fromUserId: auth.userId,
             amount: actualRepay,
             type: 'paylater_repay',
             status: 'success',
@@ -64,8 +73,6 @@ export async function POST(request: NextRequest) {
         })
 
         const newAmountDue = Math.round((currentDue - actualRepay) * 100) / 100
-        const totalRepaid = (loan.totalRepaid || 0) + actualRepay
-
         const newStatus = newAmountDue <= 0 ? 'closed' : newAmountDue < loan.loanAmount ? 'partially_repaid' : 'active'
 
         await PayLater.findByIdAndUpdate(loanId, {
@@ -84,6 +91,8 @@ export async function POST(request: NextRequest) {
         }
 
         const updatedWallet = await Wallet.findById(wallet._id)
+
+        await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'PayLaterRepayment', resourceId: loanId, details: { amount: actualRepay, newStatus }, request })
 
         return NextResponse.json({
             success: true,

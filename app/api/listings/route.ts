@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import dns from 'dns'
 import dbConnect from '@/lib/mongodb'
 import Listing from '@/lib/models/Listing'
-import '@/lib/models/User' // Required for populate('buyerId') to work
+import '@/lib/models/User'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 // Force Node.js runtime (not Edge) so DNS and MongoDB work
 export const runtime = 'nodejs'
@@ -37,23 +40,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to fetch listings', detail: e.message }, { status: 500 })
   }
 }
-
-
 export async function POST(request: NextRequest) {
+  const auth = authenticateRequest(request)
+  if (!auth) return unauthorized()
+
+  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many listing requests.' })
+  if (rl) return rl
+
   await dbConnect()
 
   try {
     const {
-      buyerId, commodity, quantity, unit,
+      commodity, quantity, unit,
       pricePerUnit, quality, paymentConditions, firmLocation,
     } = await request.json()
 
-    if (!buyerId || !commodity || !quantity || !pricePerUnit || !firmLocation) {
-      return NextResponse.json({ error: 'Missing required fields: buyerId, commodity, quantity, pricePerUnit, firmLocation' }, { status: 400 })
+    if (!commodity || !quantity || !pricePerUnit || !firmLocation) {
+      return NextResponse.json({ error: 'Missing required fields: commodity, quantity, pricePerUnit, firmLocation' }, { status: 400 })
     }
 
     const listing = await Listing.create({
-      buyerId,
+      buyerId: auth.userId,
       commodity,
       quantity,
       unit: unit || 'kg',
@@ -63,6 +70,8 @@ export async function POST(request: NextRequest) {
       firmLocation,
       isActive: true,
     })
+
+    await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Listing', resourceId: listing._id.toString(), details: { commodity, quantity, pricePerUnit }, request })
 
     return NextResponse.json({ success: true, listing }, { status: 201 })
   } catch (error) {

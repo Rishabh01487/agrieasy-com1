@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
 
 export async function POST(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
     await dbConnect()
     try {
-        const { userId } = await request.json()
-        if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-
-        let wallet = await Wallet.findOne({ userId })
+        let wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found. Open AgriPay first.' }, { status: 404 })
 
         if (wallet.paylaterEligible) {
@@ -24,6 +26,8 @@ export async function POST(request: NextRequest) {
             paylaterLimit: limit,
             paylaterUsed: 0,
         }, { new: true })
+
+        await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'PayLaterEnable', details: { creditScore, limit }, request })
 
         return NextResponse.json({
             success: true,

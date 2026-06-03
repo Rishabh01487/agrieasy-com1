@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Follow from '@/lib/models/Follow'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
-// POST /api/social/follow  { followerId, followingId }
 export async function POST(req: NextRequest) {
     try {
-        await dbConnect()
-        const { followerId, followingId } = await req.json()
-        if (!followerId || !followingId) return NextResponse.json({ error: 'followerId and followingId required' }, { status: 400 })
-        if (followerId === followingId) return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 })
+        const auth = authenticateRequest(req)
+        if (!auth) return unauthorized()
 
-        const existing = await Follow.findOne({ followerId, followingId })
+        const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 15, message: 'Slow down! Too many follow actions.' })
+        if (rl) return rl
+
+        await dbConnect()
+        const { followingId } = await req.json()
+        if (!followingId) return NextResponse.json({ error: 'followingId required' }, { status: 400 })
+        if (auth.userId === followingId) return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 })
+
+        const existing = await Follow.findOne({ followerId: auth.userId, followingId })
         if (existing) {
-            await Follow.deleteOne({ followerId, followingId })
+            await Follow.deleteOne({ followerId: auth.userId, followingId })
+            await logAudit({ userId: auth.userId, action: 'DELETE', resource: 'Follow', resourceId: followingId, details: { followed: false }, request: req })
             return NextResponse.json({ following: false })
         } else {
-            await Follow.create({ followerId, followingId })
+            await Follow.create({ followerId: auth.userId, followingId })
+            await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Follow', resourceId: followingId, details: { followed: true }, request: req })
             return NextResponse.json({ following: true })
         }
     } catch (e) {
@@ -24,7 +34,6 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// GET /api/social/follow?userId=&targetId=  → check if following
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()

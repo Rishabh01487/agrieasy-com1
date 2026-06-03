@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { validateUpiId } from '@/lib/validators'
+import { logAudit } from '@/lib/audit'
+import { createFundAccount } from '@/lib/razorpay'
 
 export async function POST(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
     await dbConnect()
     try {
-        const { userId, bankName, accountNumber, ifscCode, bankHolder, upiId } = await request.json()
-        if (!userId || !bankName || !accountNumber || !ifscCode || !bankHolder) {
+        const { bankName, accountNumber, ifscCode, bankHolder, upiId } = await request.json()
+        if (!bankName || !accountNumber || !ifscCode || !bankHolder) {
             return NextResponse.json({ error: 'All fields required: bankName, accountNumber, ifscCode, bankHolder' }, { status: 400 })
         }
 
@@ -25,9 +31,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Account number must be 9-18 digits' }, { status: 400 })
         }
 
-        let wallet = await Wallet.findOne({ userId })
+        let wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) {
-            wallet = await Wallet.create({ userId, balance: 0 })
+            wallet = await Wallet.create({ userId: auth.userId, balance: 0 })
         }
 
         wallet.bankName = bankName
@@ -39,6 +45,14 @@ export async function POST(request: NextRequest) {
         wallet.bankVerifiedAt = new Date()
         wallet.isKYC = true
         await wallet.save()
+
+        const fundAccount = await createFundAccount(auth.userId, { accountNumber, ifscCode, bankHolder })
+        if (fundAccount) {
+            wallet.razorpayFundAccountId = fundAccount.fundAccountId
+            await wallet.save()
+        }
+
+        await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'BankVerification', details: { bankName, hasUpi: !!upiId, payoutReady: !!fundAccount }, request })
 
         return NextResponse.json({
             success: true,
@@ -52,11 +66,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
     await dbConnect()
     try {
-        const userId = request.nextUrl.searchParams.get('userId')
-        if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-        const wallet = await Wallet.findOne({ userId })
+        const wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) return NextResponse.json({ bankVerified: false })
         return NextResponse.json({
             bankVerified: wallet.bankVerified || false,

@@ -3,7 +3,9 @@ import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
 import PayLater from '@/lib/models/PayLater'
 import Transaction from '@/lib/models/Transaction'
-import User from '@/lib/models/User'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 const INTEREST_RATE = 0.099
 const DEFAULT_INTEREST_RATE = 0.11
@@ -30,18 +32,17 @@ async function calculateInterest(loan: any) {
 }
 
 export async function GET(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
     await dbConnect()
     try {
-        const userId = request.nextUrl.searchParams.get('userId')
-        if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
-
-        const wallet = await Wallet.findOne({ userId })
+        const wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
 
-        const activeLoans = await PayLater.find({ userId, status: { $in: ['active', 'partially_repaid'] } }).sort({ borrowedAt: -1 })
-        const closedLoans = await PayLater.find({ userId, status: 'closed' }).sort({ borrowedAt: -1 }).limit(10)
+        const activeLoans = await PayLater.find({ userId: auth.userId, status: { $in: ['active', 'partially_repaid'] } }).sort({ borrowedAt: -1 })
+        const closedLoans = await PayLater.find({ userId: auth.userId, status: 'closed' }).sort({ borrowedAt: -1 }).limit(10)
 
-        // Calculate current amounts with interest
         const enrichedLoans = await Promise.all(activeLoans.map(async (loan) => {
             const currentDue = await calculateInterest(loan)
             return { ...loan.toObject(), amountDue: currentDue }
@@ -65,18 +66,24 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
+    const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 5, message: 'Too many loan requests. Try again later.' })
+    if (rl) return rl
+
     await dbConnect()
     try {
-        const { userId, amount } = await request.json()
-        if (!userId || !amount || amount < 1) {
-            return NextResponse.json({ error: 'userId and amount (min ₹1) required' }, { status: 400 })
+        const { amount } = await request.json()
+        if (!amount || amount < 1) {
+            return NextResponse.json({ error: 'amount (min ₹1) required' }, { status: 400 })
         }
 
         if (amount > MAX_LOAN_AMOUNT) {
             return NextResponse.json({ error: `Maximum loan amount is ₹${MAX_LOAN_AMOUNT.toLocaleString('en-IN')}` }, { status: 400 })
         }
 
-        const wallet = await Wallet.findOne({ userId })
+        const wallet = await Wallet.findOne({ userId: auth.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
         if (!wallet.paylaterEligible) return NextResponse.json({ error: 'You are not eligible for PayLater yet. Complete KYC and build credit history.' }, { status: 400 })
         if (wallet.paylaterUsed + amount > wallet.paylaterLimit) {
@@ -87,7 +94,7 @@ export async function POST(request: NextRequest) {
         dueDate.setDate(dueDate.getDate() + RETURN_PERIOD_DAYS)
 
         const transaction = await Transaction.create({
-            toUserId: userId,
+            toUserId: auth.userId,
             amount,
             type: 'paylater_borrow',
             status: 'success',
@@ -97,7 +104,7 @@ export async function POST(request: NextRequest) {
         })
 
         const loan = await PayLater.create({
-            userId,
+            userId: auth.userId,
             loanAmount: amount,
             amountDue: amount,
             borrowedAt: new Date(),
@@ -112,6 +119,8 @@ export async function POST(request: NextRequest) {
         })
 
         const updatedWallet = await Wallet.findById(wallet._id)
+
+        await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'PayLaterLoan', resourceId: loan._id.toString(), details: { amount, dueDate: dueDate.toISOString() }, request })
 
         return NextResponse.json({
             success: true,

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function GET(
   _request: NextRequest,
@@ -15,9 +18,7 @@ export async function GET(
       .populate('comments.userId', 'farmerName firmName')
       .lean()
 
-    if (!post) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
-    }
+    if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
 
     return NextResponse.json({ post })
   } catch {
@@ -32,21 +33,20 @@ export async function DELETE(
   const { postId } = await params
 
   try {
+    const auth = authenticateRequest(request)
+    if (!auth) return unauthorized()
+
+    const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Slow down!' })
+    if (rl) return rl
+
     await dbConnect()
-    const { userId } = await request.json()
-    if (!userId) {
-      return NextResponse.json({ error: 'userId required' }, { status: 400 })
-    }
 
     const post = await Post.findById(postId)
-    if (!post) {
-      return NextResponse.json({ error: 'Post not found' }, { status: 404 })
-    }
-    if (post.userId.toString() !== userId) {
-      return NextResponse.json({ error: 'Not authorized to delete this post' }, { status: 403 })
-    }
+    if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+    if (post.userId.toString() !== auth.userId) return forbidden('Not authorized to delete this post')
 
     await Post.findByIdAndDelete(postId)
+    await logAudit({ userId: auth.userId, action: 'DELETE', resource: 'Post', resourceId: postId, request })
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 })
