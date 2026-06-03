@@ -73,22 +73,24 @@ function CreateContent() {
         }
     }
 
-    const capturePhoto = () => {
+    const capturePhoto = async () => {
         if (!videoRef.current) return
+        const vw = videoRef.current.videoWidth || 1280, vh = videoRef.current.videoHeight || 720
+        let w = vw, h = vh
+        if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920 }
         const canvas = document.createElement('canvas')
-        canvas.width = videoRef.current.videoWidth || 1280
-        canvas.height = videoRef.current.videoHeight || 720
+        canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d')
         if (!ctx) return
         ctx.filter = buildFilterString()
-        ctx.drawImage(videoRef.current, 0, 0)
+        ctx.drawImage(videoRef.current, 0, 0, w, h)
         canvas.toBlob(blob => {
             if (!blob) return
             const url = URL.createObjectURL(blob)
             setMediaFile({ url, type: 'image', blob })
             stopCamera()
             setMode('preview')
-        }, 'image/jpeg', 0.92)
+        }, 'image/jpeg', 0.85)
     }
 
     const getSupportedMimeType = () => {
@@ -121,8 +123,6 @@ function CreateContent() {
 
     const stopRecording = () => { mediaRecorderRef.current?.stop() }
 
-    const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB
-
     const compressImage = async (blob: Blob): Promise<Blob> => {
         const img = new Image()
         const url = URL.createObjectURL(blob)
@@ -140,10 +140,6 @@ function CreateContent() {
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        if (file.size > MAX_FILE_SIZE * 2) {
-            setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max is ~4MB for uploads. Try a shorter video or smaller photo.`)
-            return
-        }
         let blob: Blob = file
         if (file.type.startsWith('image')) {
             try { blob = await compressImage(file) } catch { blob = file }
@@ -172,17 +168,32 @@ function CreateContent() {
         let mediaType = 'text'
 
         if (mediaFile?.blob) {
-            const ext = mediaFile.blob.type.includes('mp4') ? 'mp4' : mediaFile.blob.type.includes('webm') ? 'webm' : 'jpg'
-            const form = new FormData()
-            form.append('file', mediaFile.blob, `upload.${ext}`)
-            form.append('userId', userId)
             try {
-                const res = await fetch('/api/social/upload', { method: 'POST', body: form })
-                const d = await res.json()
-                if (res.ok) { mediaUrl = d.url; mediaType = mediaFile.type }
-                else { setError('Upload failed: ' + (d.error || 'Unknown')); setSubmitting(false); return }
+                const sigRes = await fetch('/api/social/upload-signature')
+                const sig = await sigRes.json()
+                if (sig.available) {
+                    const resourceType = mediaFile.type === 'video' ? 'video' : 'image'
+                    const fd = new FormData()
+                    fd.append('file', mediaFile.blob)
+                    fd.append('api_key', sig.apiKey)
+                    fd.append('timestamp', sig.timestamp.toString())
+                    fd.append('signature', sig.signature)
+                    fd.append('folder', sig.folder)
+                    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
+                    const cld = await cldRes.json()
+                    if (cldRes.ok) { mediaUrl = cld.secure_url; mediaType = mediaFile.type }
+                    else { setError('Upload failed: ' + (cld.error?.message || 'Cloudinary error')); setSubmitting(false); return }
+                } else {
+                    const form = new FormData()
+                    form.append('file', mediaFile.blob)
+                    form.append('userId', userId)
+                    const res = await fetch('/api/social/upload', { method: 'POST', body: form })
+                    const d = await res.json()
+                    if (res.ok) { mediaUrl = d.url; mediaType = mediaFile.type }
+                    else { setError('Upload failed: ' + (d.error || 'Unknown')); setSubmitting(false); return }
+                }
             } catch {
-                setError('Upload failed. The file may be too large (Vercel limit ~4.5MB). Try a smaller photo or shorter video, or paste a URL instead.'); setSubmitting(false); return
+                setError('Upload failed. If the file is large, paste a direct URL instead.'); setSubmitting(false); return
             }
         }
 
