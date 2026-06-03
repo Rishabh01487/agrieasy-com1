@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
+import { validateUpiId } from '@/lib/validators'
 
 export async function POST(request: NextRequest) {
     await dbConnect()
     try {
-        const { userId, bankName, accountNumber, ifscCode, bankHolder } = await request.json()
+        const { userId, bankName, accountNumber, ifscCode, bankHolder, upiId } = await request.json()
         if (!userId || !bankName || !accountNumber || !ifscCode || !bankHolder) {
             return NextResponse.json({ error: 'All fields required: bankName, accountNumber, ifscCode, bankHolder' }, { status: 400 })
         }
 
-        // Validate IFSC format: 4 letters + 0 + 6 alphanumeric
+        if (upiId) {
+            const upiCheck = validateUpiId(upiId)
+            if (!upiCheck.valid) return NextResponse.json({ error: upiCheck.message }, { status: 400 })
+        }
+
         const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/
         if (!ifscRegex.test(ifscCode.toUpperCase())) {
             return NextResponse.json({ error: 'Invalid IFSC code format (e.g., SBIN0001234)' }, { status: 400 })
         }
 
-        // Validate account number (9-18 digits)
         if (!/^\d{9,18}$/.test(accountNumber)) {
             return NextResponse.json({ error: 'Account number must be 9-18 digits' }, { status: 400 })
         }
@@ -30,6 +34,7 @@ export async function POST(request: NextRequest) {
         wallet.bankHolder = bankHolder
         wallet.accountNumber = accountNumber
         wallet.ifscCode = ifscCode.toUpperCase()
+        if (upiId) wallet.upiId = upiId
         wallet.bankVerified = true
         wallet.bankVerifiedAt = new Date()
         wallet.isKYC = true
@@ -57,11 +62,11 @@ export async function GET(request: NextRequest) {
             bankVerified: wallet.bankVerified || false,
             bankName: wallet.bankName,
             bankHolder: wallet.bankHolder,
-            // Mask account number: show only last 4 digits
             accountNumberMasked: wallet.accountNumber
                 ? `XXXX XXXX ${wallet.accountNumber.slice(-4)}`
                 : null,
             ifscCode: wallet.ifscCode,
+            upiId: wallet.upiId || null,
         })
     } catch (error) {
         console.error(error)

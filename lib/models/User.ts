@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { encrypt, decrypt } from '@/lib/encryption'
+import { validateAadhar, validateDrivingLicense } from '@/lib/validators'
 
 const encryptedString = {
   type: String,
@@ -46,5 +47,17 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 }, { toJSON: { getters: true }, toObject: { getters: true } })
+
+UserSchema.pre('validate', function(next) {
+  if (this.aadharNumber && this.isModified('aadharNumber')) {
+    const r = validateAadhar(this.aadharNumber)
+    if (!r.valid) return next(new Error(r.message))
+  }
+  if (this.licenseNumber && this.isModified('licenseNumber')) {
+    const r = validateDrivingLicense(this.licenseNumber)
+    if (!r.valid) return next(new Error(r.message))
+  }
+  next()
+})
 
 export default mongoose.models.User || mongoose.model('User', UserSchema)

@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { encrypt, decrypt } from '@/lib/encryption'
+import { validateUpiId } from '@/lib/validators'
 
 const encryptedString = {
   type: String,
@@ -34,5 +35,13 @@ const WalletSchema = new mongoose.Schema({
     paylaterMaxLimit: { type: Number, default: 1000000 },
     upiId: encryptedString,
 }, { timestamps: true, toJSON: { getters: true }, toObject: { getters: true } })
+
+WalletSchema.pre('validate', function(next) {
+  if (this.upiId && this.isModified('upiId')) {
+    const r = validateUpiId(this.upiId)
+    if (!r.valid) return next(new Error(r.message))
+  }
+  next()
+})
 
 export default mongoose.models.Wallet || mongoose.model('Wallet', WalletSchema)
