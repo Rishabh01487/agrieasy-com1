@@ -63,7 +63,7 @@ function CreateContent() {
     const startCamera = async () => {
         setCamError('')
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: postType === 'krishiclip' })
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: postType === 'krishiclip' })
             streamRef.current = stream
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
             setMode('camera')
@@ -91,13 +91,20 @@ function CreateContent() {
         }, 'image/jpeg', 0.92)
     }
 
+    const getSupportedMimeType = () => {
+        const types = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm;codecs=h264,opus', 'video/webm', 'video/mp4']
+        return types.find(t => MediaRecorder.isTypeSupported(t)) || ''
+    }
+
     const startRecording = () => {
         if (!streamRef.current) return
         chunksRef.current = []
-        const mr = new MediaRecorder(streamRef.current, { mimeType: 'video/webm;codecs=vp9,opus' })
+        const mimeType = getSupportedMimeType()
+        const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : {})
         mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
         mr.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: 'video/webm' })
+            const blobMime = mimeType || 'video/webm'
+            const blob = new Blob(chunksRef.current, { type: blobMime })
             const url = URL.createObjectURL(blob)
             setMediaFile({ url, type: 'video', blob })
             stopCamera()
@@ -114,12 +121,36 @@ function CreateContent() {
 
     const stopRecording = () => { mediaRecorderRef.current?.stop() }
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const MAX_FILE_SIZE = 4 * 1024 * 1024 // 4MB
+
+    const compressImage = async (blob: Blob): Promise<Blob> => {
+        const img = new Image()
+        const url = URL.createObjectURL(blob)
+        await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
+        URL.revokeObjectURL(url)
+        let w = img.width, h = img.height
+        if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920 }
+        const canvas = document.createElement('canvas')
+        canvas.width = w; canvas.height = h
+        const ctx = canvas.getContext('2d')!
+        ctx.drawImage(img, 0, 0, w, h)
+        return new Promise(resolve => canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.8) as unknown as void)
+    }
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        const url = URL.createObjectURL(file)
+        if (file.size > MAX_FILE_SIZE * 2) {
+            setError(`File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max is ~4MB for uploads. Try a shorter video or smaller photo.`)
+            return
+        }
+        let blob: Blob = file
+        if (file.type.startsWith('image')) {
+            try { blob = await compressImage(file) } catch { blob = file }
+        }
+        const url = URL.createObjectURL(blob)
         const type = file.type.startsWith('video') ? 'video' : 'image'
-        setMediaFile({ url, type, blob: file })
+        setMediaFile({ url, type, blob })
         setMode('preview')
     }
 
@@ -141,9 +172,9 @@ function CreateContent() {
         let mediaType = 'text'
 
         if (mediaFile?.blob) {
-            // Upload file via FormData
+            const ext = mediaFile.blob.type.includes('mp4') ? 'mp4' : mediaFile.blob.type.includes('webm') ? 'webm' : 'jpg'
             const form = new FormData()
-            form.append('file', mediaFile.blob, `upload.${mediaFile.type === 'video' ? 'webm' : 'jpg'}`)
+            form.append('file', mediaFile.blob, `upload.${ext}`)
             form.append('userId', userId)
             try {
                 const res = await fetch('/api/social/upload', { method: 'POST', body: form })
@@ -151,7 +182,7 @@ function CreateContent() {
                 if (res.ok) { mediaUrl = d.url; mediaType = mediaFile.type }
                 else { setError('Upload failed: ' + (d.error || 'Unknown')); setSubmitting(false); return }
             } catch {
-                setError('Upload failed. Try using a URL instead.'); setSubmitting(false); return
+                setError('Upload failed. The file may be too large (Vercel limit ~4.5MB). Try a smaller photo or shorter video, or paste a URL instead.'); setSubmitting(false); return
             }
         }
 
