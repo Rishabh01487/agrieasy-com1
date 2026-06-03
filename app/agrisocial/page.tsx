@@ -44,9 +44,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [imgErr, setImgErr] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
-    const authorName = typeof post.userId === 'object' ? (post.userId.farmerName || post.userId.firmName || 'User') : 'User'
-    const authorRole = typeof post.userId === 'object' ? post.userId.role : ''
-    const authorId = typeof post.userId === 'object' ? post.userId._id : post.userId
+    if (!post.userId || typeof post.userId !== 'object') return null
+    const authorName = post.userId.farmerName || post.userId.firmName || 'User'
+    const authorRole = post.userId.role || ''
+    const authorId = post.userId._id
     const isOwner = viewerId && viewerId === authorId
 
     const handleLike = async () => {
@@ -55,7 +56,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         setLiked(newLiked)
         setLikesCount(c => newLiked ? c + 1 : Math.max(0, c - 1))
         onLike(post._id, newLiked, newLiked ? likesCount + 1 : likesCount - 1)
-        await fetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) })
+        try { await fetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) }) } catch {}
     }
 
     const handleComment = async () => {
@@ -74,22 +75,24 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         if (!viewerId) return
         const newSaved = !saved
         setSaved(newSaved)
-        await fetch(`/api/social/save`, {
+        try { await fetch(`/api/social/save`, {
             method: newSaved ? 'POST' : 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: newSaved ? JSON.stringify({ userId: viewerId, postId: post._id }) : undefined,
-        })
+        }) } catch {}
     }
 
     const handleDelete = async () => {
         if (!viewerId) return
-        const res = await fetch(`/api/social/posts/${post._id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: viewerId }),
-        })
-        if (res.ok) onDelete?.(post._id)
-        else setShowDeleteConfirm(false)
+        try {
+            const res = await fetch(`/api/social/posts/${post._id}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: viewerId }),
+            })
+            if (res.ok) onDelete?.(post._id)
+            else setShowDeleteConfirm(false)
+        } catch { setShowDeleteConfirm(false) }
     }
 
     const ytId = post.mediaUrl ? (post.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
@@ -214,13 +217,13 @@ export default function AgriSocialFeed() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
     const [category, setCategory] = useState('all')
-    const [userId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
+    const [userId] = useState(() => { try { return typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '' } catch { return '' } })
     const router = useRouter()
 
     const fetchPosts = useCallback(async (uid: string, cat: string) => {
-        setLoading(true)
-        setError('')
         try {
+            setLoading(true)
+            setError('')
             const params = new URLSearchParams({ page: '1' })
             if (uid) params.set('userId', uid)
             if (cat && cat !== 'all') params.set('category', cat)
@@ -231,8 +234,9 @@ export default function AgriSocialFeed() {
         } catch {
             setError('Could not load posts. Please check your connection.')
             setPosts([])
+        } finally {
+            setLoading(false)
         }
-        setLoading(false)
     }, [])
 
     useEffect(() => {
