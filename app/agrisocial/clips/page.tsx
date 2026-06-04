@@ -33,9 +33,10 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         }
     }, [isActive])
 
-    const authorName = typeof clip.userId === 'object' ? (clip.userId.farmerName || clip.userId.firmName || 'User') : 'User'
-    const authorRole = typeof clip.userId === 'object' ? clip.userId.role : ''
-    const authorId = typeof clip.userId === 'object' ? clip.userId._id : clip.userId
+    const isDeletedUser = !clip.userId || typeof clip.userId !== 'object'
+    const authorName = isDeletedUser ? 'Unknown User' : (clip.userId.farmerName || clip.userId.firmName || 'User')
+    const authorRole = isDeletedUser ? '' : clip.userId.role
+    const authorId = isDeletedUser ? '' : clip.userId._id
     const isOwner = viewerId && viewerId === authorId
 
     const handleLike = async () => {
@@ -129,7 +130,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
 
             {/* Bottom info */}
             <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '72px' }}>
-                <Link href={`/agrisocial/profile/${typeof clip.userId === 'object' ? clip.userId._id : clip.userId}`} style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', display: 'block', marginBottom: '4px' }}>
+                <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', display: 'block', marginBottom: '4px' }}>
                     @{authorName} · {roleLabel[authorRole || ''] || '👤'}
                 </Link>
                 {clip.caption && <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.85rem', margin: '0 0 4px', lineHeight: 1.4 }}>{clip.caption}</p>}
