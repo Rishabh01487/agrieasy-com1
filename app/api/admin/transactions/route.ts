@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Transaction from '@/lib/models/Transaction'
-import { authenticateRequest, forbidden } from '@/lib/auth'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request, ['admin'])
-  if (!auth || auth.role !== 'admin') return forbidden()
+  if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden()
 
   await dbConnect()
 

@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
         if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
 
         const auth = authenticateRequest(req)
-        const viewerId = auth?.userId || searchParams.get('viewerId')
+        const viewerId = auth?.user.userId || searchParams.get('viewerId')
 
         const user = await User.findById(userId).select('farmerName firmName role phone createdAt').lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })

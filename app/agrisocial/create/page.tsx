@@ -3,12 +3,8 @@
 import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-
-const C = {
-    bg: '#fffbf5', white: '#ffffff', orange: '#ea580c', orLight: '#fff7ed',
-    orMid: '#fed7aa', orDark: '#9a3412', text: '#1c1917', muted: '#78716c', border: '#fed7aa',
-    red: '#ef4444', green: '#16a34a',
-}
+import { authFetch } from '@/lib/auth-fetch'
+import { SOCIAL, SHARED } from '@/lib/styles'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
@@ -179,7 +175,7 @@ function CreateContent() {
 
         if (mediaFile?.blob) {
             try {
-                const sigRes = await fetch('/api/social/upload-signature')
+                const sigRes = await authFetch('/api/social/upload-signature')
                 const sig = await sigRes.json()
                 if (sig.available) {
                     const resourceType = mediaFile.type === 'video' ? 'video' : 'image'
@@ -194,20 +190,16 @@ function CreateContent() {
                     if (cldRes.ok) { mediaUrl = cld.secure_url; mediaType = mediaFile.type }
                     else { setError('Upload failed: ' + (cld.error?.message || 'Cloudinary error')); setSubmitting(false); return }
                 } else {
-                    const form = new FormData()
-                    form.append('file', mediaFile.blob)
-                    form.append('userId', userId)
-                    const res = await fetch('/api/social/upload', { method: 'POST', body: form })
-                    const d = await res.json()
-                    if (res.ok) { mediaUrl = d.url; mediaType = mediaFile.type }
-                    else { setError('Upload failed: ' + (d.error || 'Unknown')); setSubmitting(false); return }
+                    setError('Media upload requires Cloudinary configuration. Please contact admin.')
+                    setSubmitting(false)
+                    return
                 }
             } catch {
                 setError('Upload failed. If the file is large, paste a direct URL instead.'); setSubmitting(false); return
             }
         }
 
-        const res = await fetch('/api/social/posts', {
+        const res = await authFetch('/api/social/posts', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId, type: postType, caption, mediaUrl, mediaType, category, location }),
         })
@@ -216,29 +208,29 @@ function CreateContent() {
         router.push(postType === 'krishiclip' ? '/agrisocial/clips' : '/agrisocial')
     }
 
-    const inp: React.CSSProperties = { width: '100%', padding: '11px 14px', background: C.orLight, border: `1.5px solid ${C.border}`, borderRadius: '10px', color: C.text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box' }
+    const inp: React.CSSProperties = { width: '100%', padding: '13px 16px', background: SOCIAL.primaryLight, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', color: SOCIAL.text, fontSize: '0.9rem', outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font, transition: 'border-color 0.2s, box-shadow 0.2s' }
 
     return (
-        <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter","Segoe UI",sans-serif' }}>
+        <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
             {/* Nav */}
-            <nav style={{ background: C.white, borderBottom: `1px solid ${C.border}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px', position: 'sticky', top: 0, zIndex: 100, boxShadow: '0 1px 6px rgba(234,88,12,0.06)' }}>
+            <nav style={{ background: 'rgba(255,255,255,0.85)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px', position: 'sticky', top: 0, zIndex: 100, boxShadow: SHARED.shadow, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <button onClick={() => { if (mode === 'choose') router.push('/agrisocial'); else if (mode === 'preview' || mode === 'camera') { stopCamera(); setMode('choose'); setMediaFile(null) } else if (mode === 'details') setMode('preview') }}
-                    style={{ background: 'none', border: 'none', color: C.orange, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>← Back</button>
-                <span style={{ flex: 1, fontWeight: 800, color: C.orDark, fontSize: '1rem' }}>
+                    style={{ background: 'none', border: 'none', color: SOCIAL.primary, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease' }}>← Back</button>
+                <span style={{ flex: 1, fontWeight: 800, color: SOCIAL.textSecondary, fontSize: '1rem' }}>
                     {mode === 'choose' ? 'New Post' : mode === 'camera' ? (isRecording ? '🔴 Recording' : '📷 Camera') : mode === 'preview' ? '✨ Filters' : '📝 Details'}
                 </span>
-                {mode === 'preview' && <button onClick={() => setMode('details')} style={{ background: C.orange, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>Next →</button>}
-                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: C.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1 }}>{submitting ? 'Posting…' : '✓ Share'}</button>}
+                {mode === 'preview' && <button onClick={() => setMode('details')} style={{ background: SOCIAL.primary, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>Next →</button>}
+                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? 'Posting…' : '✓ Share'}</button>}
             </nav>
 
             {/* ── CHOOSE MODE ── */}
             {mode === 'choose' && (
                 <div style={{ maxWidth: '500px', margin: '0 auto', padding: '24px 16px' }}>
                     {/* Post/KrishiClip toggle */}
-                    <div style={{ display: 'flex', background: C.orLight, borderRadius: '14px', padding: '5px', gap: '4px', marginBottom: '24px', border: `1px solid ${C.border}` }}>
+                    <div style={{ display: 'flex', background: SOCIAL.primaryLight, borderRadius: '14px', padding: '5px', gap: '4px', marginBottom: '24px', border: `1px solid ${SOCIAL.border}` }}>
                         {(['post', 'krishiclip'] as const).map(t => (
                             <button key={t} onClick={() => setPostType(t)}
-                                style={{ flex: 1, padding: '12px', borderRadius: '11px', border: 'none', cursor: 'pointer', background: postType === t ? C.white : 'transparent', color: postType === t ? C.orDark : C.muted, fontWeight: 800, fontSize: '0.9rem', boxShadow: postType === t ? '0 1px 6px rgba(234,88,12,0.12)' : 'none' }}>
+                                style={{ flex: 1, padding: '12px', borderRadius: '11px', border: 'none', cursor: 'pointer', background: postType === t ? SOCIAL.white : 'transparent', color: postType === t ? SOCIAL.textSecondary : SOCIAL.muted, fontWeight: 800, fontSize: '0.9rem', boxShadow: postType === t ? SHARED.shadowMd : 'none', transition: 'all 0.2s ease' }}>
                                 {t === 'post' ? '📷 Post' : '🎬 KrishiClip'}
                             </button>
                         ))}
@@ -247,7 +239,7 @@ function CreateContent() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {/* Camera */}
                         <button onClick={startCamera}
-                            style={{ background: `linear-gradient(135deg, ${C.orange}, ${C.orDark})`, border: 'none', borderRadius: '16px', padding: '28px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 4px 16px rgba(234,88,12,0.35)' }}>
+                            style={{ background: SOCIAL.gradient, border: 'none', borderRadius: '16px', padding: '28px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: SHARED.shadowLg, transition: 'all 0.2s ease' }}>
                             <span style={{ fontSize: '2.8rem' }}>{postType === 'krishiclip' ? '🎥' : '📸'}</span>
                             <div style={{ textAlign: 'left' }}>
                                 <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{postType === 'krishiclip' ? 'Record a KrishiClip' : 'Open Camera'}</div>
@@ -257,27 +249,27 @@ function CreateContent() {
 
                         {/* Upload */}
                         <button onClick={() => fileInputRef.current?.click()}
-                            style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: '16px', padding: '22px', color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 2px 8px rgba(234,88,12,0.07)' }}>
+                            style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '22px', color: SOCIAL.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease' }}>
                             <span style={{ fontSize: '2.8rem' }}>🖼️</span>
                             <div style={{ textAlign: 'left' }}>
-                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: C.orDark }}>Upload from Gallery</div>
-                                <div style={{ fontSize: '0.8rem', color: C.muted, marginTop: '2px' }}>Choose a photo or video from your device</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: SOCIAL.textSecondary }}>Upload from Gallery</div>
+                                <div style={{ fontSize: '0.8rem', color: SOCIAL.muted, marginTop: '2px' }}>Choose a photo or video from your device</div>
                             </div>
                         </button>
                         <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleFileUpload} />
 
                         {/* Text post */}
                         <button onClick={() => setMode('details')}
-                            style={{ background: C.white, border: `1.5px solid ${C.border}`, borderRadius: '16px', padding: '22px', color: C.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '22px', color: SOCIAL.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', transition: 'all 0.2s ease' }}>
                             <span style={{ fontSize: '2.8rem' }}>✍️</span>
                             <div style={{ textAlign: 'left' }}>
-                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: C.orDark }}>Text / Caption Only</div>
-                                <div style={{ fontSize: '0.8rem', color: C.muted, marginTop: '2px' }}>Share tips, prices, news — no media needed</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem', color: SOCIAL.textSecondary }}>Text / Caption Only</div>
+                                <div style={{ fontSize: '0.8rem', color: SOCIAL.muted, marginTop: '2px' }}>Share tips, prices, news — no media needed</div>
                             </div>
                         </button>
                     </div>
 
-                    {camError && <div style={{ marginTop: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '12px 16px', color: C.red, fontSize: '0.85rem' }}>⚠️ {camError}</div>}
+                    {camError && <div style={{ marginTop: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '12px 16px', color: SOCIAL.red, fontSize: '0.85rem' }}>⚠️ {camError}</div>}
                 </div>
             )}
 
@@ -301,8 +293,8 @@ function CreateContent() {
                         {FILTERS.map((f, i) => (
                             <button key={f.name} onClick={() => setSelectedFilter(i)}
                                 style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #6b7280, #374151)', border: `2px solid ${selectedFilter === i ? C.orange : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style }} />
-                                <span style={{ color: selectedFilter === i ? C.orMid : 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontWeight: 700 }}>{f.name}</span>
+                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #6b7280, #374151)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style, transition: 'all 0.2s ease' }} />
+                                <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontWeight: 700 }}>{f.name}</span>
                             </button>
                         ))}
                     </div>
@@ -310,15 +302,15 @@ function CreateContent() {
                     {/* Capture controls */}
                     <div style={{ position: 'absolute', bottom: '20px', left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px' }}>
                         <button onClick={() => fileInputRef.current?.click()}
-                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>
+                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease' }}>
                             🖼️
                         </button>
                         {postType === 'post' ? (
                             <button onClick={capturePhoto}
-                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.4)', cursor: 'pointer', boxShadow: '0 0 0 3px rgba(234,88,12,0.7)' }} />
+                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.4)', cursor: 'pointer', boxShadow: `0 0 0 3px ${SOCIAL.primary}b3`, transition: 'all 0.2s ease' }} />
                         ) : (
                             <button onClick={isRecording ? stopRecording : startRecording}
-                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: isRecording ? C.red : '#fff', border: `4px solid ${isRecording ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.4)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px ${isRecording ? 'rgba(239,68,68,0.7)' : 'rgba(234,88,12,0.7)'}` }}>
+                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: isRecording ? SOCIAL.red : '#fff', border: `4px solid ${isRecording ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.4)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px ${isRecording ? 'rgba(239,68,68,0.7)' : SOCIAL.primary + 'b3'}`, transition: 'all 0.2s ease' }}>
                                 {isRecording ? <span style={{ display: 'block', width: '22px', height: '22px', borderRadius: '4px', background: '#fff' }} /> : null}
                             </button>
                         )}
@@ -349,11 +341,11 @@ function CreateContent() {
                             {FILTERS.map((f, i) => (
                                 <button key={f.name} onClick={() => setSelectedFilter(i)}
                                     style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                    <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', border: `2px solid ${selectedFilter === i ? C.orange : 'rgba(255,255,255,0.15)'}` }}>
+                                    <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.15)'}`, transition: 'all 0.2s ease' }}>
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img src={mediaFile.url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: f.style === 'none' ? 'none' : f.style }} />
                                     </div>
-                                    <span style={{ color: selectedFilter === i ? C.orMid : 'rgba(255,255,255,0.55)', fontSize: '0.62rem', fontWeight: 700 }}>{f.name}</span>
+                                    <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.55)', fontSize: '0.62rem', fontWeight: 700 }}>{f.name}</span>
                                 </button>
                             ))}
                         </div>
@@ -365,12 +357,12 @@ function CreateContent() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>☀️ Bright</span>
-                                <input type="range" min={50} max={150} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: C.orange }} />
+                                <input type="range" min={50} max={150} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{brightness}%</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>◉ Contrast</span>
-                                <input type="range" min={50} max={150} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: C.orange }} />
+                                <input type="range" min={50} max={150} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{contrast}%</span>
                             </div>
                         </div>
@@ -393,22 +385,22 @@ function CreateContent() {
                         </div>
                     )}
 
-                    <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: SHARED.shadowMd }}>
                         {/* Caption */}
                         <div>
-                            <label style={{ color: C.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caption</label>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caption</label>
                             <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder={postType === 'krishiclip' ? 'Tell people about this KrishiClip… #farming' : 'What\'s happening on your farm today? #farming'} rows={3}
-                                style={{ ...inp, resize: 'vertical', lineHeight: 1.5, fontFamily: 'inherit' }} />
-                            <p style={{ color: C.muted, fontSize: '0.7rem', margin: '3px 0 0', textAlign: 'right' }}>{caption.length}/2200</p>
+                                style={{ ...inp, resize: 'vertical', lineHeight: 1.5 } as React.CSSProperties} />
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: '3px 0 0', textAlign: 'right' }}>{caption.length}/2200</p>
                         </div>
 
                         {/* Category */}
                         <div>
-                            <label style={{ color: C.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</label>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</label>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {CATEGORIES.map(c => (
                                     <button key={c} onClick={() => setCategory(c)}
-                                        style={{ padding: '5px 12px', borderRadius: '100px', border: `1.5px solid ${category === c ? C.orange : C.border}`, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: category === c ? C.orange : C.white, color: category === c ? '#fff' : C.muted }}>
+                                        style={{ padding: '5px 12px', borderRadius: '100px', border: `1.5px solid ${category === c ? SOCIAL.primary : SOCIAL.border}`, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: category === c ? SOCIAL.primary : SOCIAL.white, color: category === c ? '#fff' : SOCIAL.muted, transition: 'all 0.2s ease' }}>
                                         {c}
                                     </button>
                                 ))}
@@ -417,32 +409,32 @@ function CreateContent() {
 
                         {/* Location */}
                         <div>
-                            <label style={{ color: C.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Location (optional)</label>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Location (optional)</label>
                             <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g., Nashik, Maharashtra" style={inp} />
                         </div>
 
-                        {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: C.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
+                        {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
 
-                        <div style={{ background: C.orLight, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '10px 14px', fontSize: '0.78rem', color: C.muted }}>
+                        <div style={{ background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, borderRadius: '10px', padding: '10px 14px', fontSize: '0.78rem', color: SOCIAL.muted }}>
                             💡 Media uploaded from camera or gallery will be stored locally for demo purposes. Connect cloud storage (Cloudinary etc.) for production.
                         </div>
 
                         <button onClick={handlePost} disabled={submitting}
-                            style={{ width: '100%', padding: '14px', background: C.orange, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1 }}>
+                            style={{ width: '100%', padding: '14px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
                             {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : '📢 Share Post'}
                         </button>
                     </div>
 
                     {/* Bottom nav link */}
                     <div style={{ textAlign: 'center', marginTop: '16px' }}>
-                        <Link href="/agrisocial" style={{ color: C.muted, fontSize: '0.85rem', textDecoration: 'none' }}>← Cancel &amp; go back to feed</Link>
+                        <Link href="/agrisocial" style={{ color: SOCIAL.muted, fontSize: '0.85rem', textDecoration: 'none', transition: 'all 0.2s ease' }}>← Cancel &amp; go back to feed</Link>
                     </div>
                 </div>
             )}
 
             <style>{`
         input[type=range] { height: 4px; border-radius: 2px; }
-        textarea:focus, input[type=text]:focus { border-color: ${C.orange} !important; }
+        textarea:focus, input[type=text]:focus { border-color: ${SOCIAL.primary} !important; }
         ::-webkit-scrollbar { display: none; }
       `}</style>
         </div>
@@ -451,7 +443,7 @@ function CreateContent() {
 
 export default function CreatePost() {
     return (
-        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fffbf5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c', fontWeight: 700 }}>Loading…</div>}>
+        <Suspense fallback={<div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.primary, fontWeight: 700, fontFamily: SHARED.font }}>Loading…</div>}>
             <CreateContent />
         </Suspense>
     )

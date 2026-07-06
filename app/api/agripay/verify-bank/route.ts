@@ -31,9 +31,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Account number must be 9-18 digits' }, { status: 400 })
         }
 
-        let wallet = await Wallet.findOne({ userId: auth.userId })
+        let wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) {
-            wallet = await Wallet.create({ userId: auth.userId, balance: 0 })
+            wallet = await Wallet.create({ userId: auth.user.userId, balance: 0 })
         }
 
         wallet.bankName = bankName
@@ -46,13 +46,13 @@ export async function POST(request: NextRequest) {
         wallet.isKYC = true
         await wallet.save()
 
-        const fundAccount = await createFundAccount(auth.userId, { accountNumber, ifscCode, bankHolder })
+        const fundAccount = await createFundAccount(auth.user.userId, { accountNumber, ifscCode, bankHolder })
         if (fundAccount) {
             wallet.razorpayFundAccountId = fundAccount.fundAccountId
             await wallet.save()
         }
 
-        await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'BankVerification', details: { bankName, hasUpi: !!upiId, payoutReady: !!fundAccount }, request })
+        await logAudit({ userId: auth.user.userId, action: 'UPDATE', resource: 'BankVerification', details: { bankName, hasUpi: !!upiId, payoutReady: !!fundAccount }, request })
 
         return NextResponse.json({
             success: true,
@@ -71,7 +71,7 @@ export async function GET(request: NextRequest) {
 
     await dbConnect()
     try {
-        const wallet = await Wallet.findOne({ userId: auth.userId })
+        const wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) return NextResponse.json({ bankVerified: false })
         return NextResponse.json({
             bankVerified: wallet.bankVerified || false,

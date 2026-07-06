@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb'
 import Billing from '@/lib/models/Billing'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
+import { parsePagination, paginationMeta } from '@/lib/api-response'
 
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
@@ -15,14 +16,18 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role')
 
     const query: { buyerId?: string; farmerId?: string } = {}
-    if (role === 'farmer') query.farmerId = auth.userId
-    else query.buyerId = auth.userId
+    if (role === 'farmer') query.farmerId = auth.user.userId
+    else query.buyerId = auth.user.userId
 
+    const { page, limit, skip } = parsePagination(searchParams, 100, 20)
+    const total = await Billing.countDocuments(query)
     const billings = await Billing.find(query)
       .populate('farmerId', 'farmerName phone')
       .populate('bookingId')
+      .skip(skip)
+      .limit(limit)
 
-    return NextResponse.json({ billings })
+    return NextResponse.json({ success: true, data: { billings }, meta: paginationMeta(page, limit, total) })
   } catch (error) {
     console.error('Fetch billings error:', error)
     return NextResponse.json({ error: 'Failed to fetch billings' }, { status: 500 })
@@ -63,7 +68,7 @@ export async function POST(request: NextRequest) {
       status: 'pending',
     })
 
-    await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Billing', resourceId: billing._id.toString(), details: { bookingId, totalAmount }, request })
+    await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Billing', resourceId: billing._id.toString(), details: { bookingId, totalAmount }, request })
 
     return NextResponse.json({ success: true, billing }, { status: 201 })
   } catch (error) {

@@ -3,6 +3,8 @@ import dbConnect from '@/lib/mongodb'
 import Wallet from '@/lib/models/Wallet'
 import Transaction from '@/lib/models/Transaction'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { validateBody, withdrawSchema } from '@/lib/validation'
+import { validationError } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { createPayout, isPayoutsEnabled } from '@/lib/razorpay'
@@ -11,17 +13,17 @@ export async function POST(request: NextRequest) {
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
 
-    const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 3, message: 'Too many withdrawal requests.' })
+    const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 3, message: 'Too many withdrawal requests.' })
     if (rl) return rl
 
     await dbConnect()
     try {
-        const { amount } = await request.json()
-        if (!amount || amount < 1) {
-            return NextResponse.json({ error: 'amount (min ₹1) required' }, { status: 400 })
-        }
+        const body = await request.json()
+        const v = validateBody(withdrawSchema, body)
+        if (!v.success) return validationError('Invalid withdrawal data', v.errors)
+        const { amount } = v.data
 
-        const wallet = await Wallet.findOne({ userId: auth.userId })
+        const wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
         if (!wallet.bankVerified) return NextResponse.json({ error: 'Verify your bank account first before withdrawing' }, { status: 400 })
         if (wallet.balance < amount) return NextResponse.json({ error: `Insufficient balance. Available: ₹${wallet.balance}` }, { status: 400 })
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
         }
 
         await Transaction.create({
-            fromUserId: auth.userId,
+            fromUserId: auth.user.userId,
             amount,
             type: 'send',
             status,
@@ -59,7 +61,7 @@ export async function POST(request: NextRequest) {
             referenceId: payoutId,
         })
 
-        await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Withdrawal', details: { amount, status, payoutId }, request })
+        await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Withdrawal', details: { amount, status, payoutId }, request })
 
         const msg = status === 'success'
             ? `₹${amount} sent to your bank account`
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            newBalance: wallet.balance - amount,
+            newBalance: debited.balance,
             message: msg,
             status,
         })

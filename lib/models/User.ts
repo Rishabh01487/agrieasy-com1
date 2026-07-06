@@ -62,4 +62,7 @@ UserSchema.pre('validate', function(this: any) {
   }
 })
 
+UserSchema.index({ role: 1 })
+UserSchema.index({ createdAt: -1 })
+
 export default mongoose.models.User || mongoose.model('User', UserSchema)

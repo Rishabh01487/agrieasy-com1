@@ -2,41 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-
-const C = {
-  bg: '#0f0f1a',
-  card: '#1a1a2e',
-  accent: '#6d28d9',
-  accentHover: '#7c3aed',
-  text: '#e2e8f0',
-  muted: '#94a3b8',
-  border: '#2d2d44',
-  red: '#ef4444',
-  green: '#22c55e',
-}
-
-const sidebarLink = (active: boolean): React.CSSProperties => ({
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  padding: '10px 16px',
-  borderRadius: 8,
-  background: active ? C.accent : 'transparent',
-  color: active ? '#fff' : C.muted,
-  textDecoration: 'none',
-  fontSize: 14,
-  fontWeight: active ? 600 : 400,
-  marginBottom: 4,
-})
+import { usePathname, useRouter } from 'next/navigation'
+import { ADMIN, SHARED } from '@/lib/styles'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
+  const path = usePathname()
   const [user, setUser] = useState<{ id: string; email: string; role: string } | null>(null)
-  const [path, setPath] = useState('')
 
   useEffect(() => {
-    setPath(window.location.pathname)
     const token = localStorage.getItem('token')
     if (token) {
       try {
@@ -62,14 +36,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const containerStyle: React.CSSProperties = {
     display: 'flex',
     minHeight: '100vh',
-    background: C.bg,
-    color: C.text,
+    background: ADMIN.bg,
+    color: ADMIN.text,
+    fontFamily: SHARED.font,
   }
 
   const sidebarStyle: React.CSSProperties = {
     width: 240,
-    background: C.card,
-    borderRight: `1px solid ${C.border}`,
+    background: ADMIN.sidebar,
+    borderRight: `1px solid ${ADMIN.border}`,
     padding: '24px 12px',
     display: 'flex',
     flexDirection: 'column',
@@ -79,23 +54,42 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     flex: 1,
     padding: 32,
     overflowY: 'auto',
+    fontFamily: SHARED.font,
   }
+
+  const getSidebarLinkStyle = (active: boolean): React.CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 16px',
+    borderRadius: 8,
+    background: active ? ADMIN.sidebarActive : 'transparent',
+    color: active ? SHARED.white : ADMIN.muted,
+    textDecoration: 'none',
+    fontSize: 14,
+    fontWeight: active ? 600 : 400,
+    marginBottom: 4,
+    fontFamily: SHARED.font,
+    borderLeft: active ? `3px solid ${ADMIN.primary}` : '3px solid transparent',
+    transition: 'background 0.2s, color 0.2s, border-color 0.2s',
+    cursor: 'pointer',
+  })
 
   return (
     <div style={containerStyle}>
       <div style={sidebarStyle}>
-        <div style={{ fontSize: 20, fontWeight: 700, color: C.accent, marginBottom: 32, paddingLeft: 4 }}>
+        <div style={{ fontSize: 20, fontWeight: 700, color: ADMIN.primary, marginBottom: 32, paddingLeft: 16, fontFamily: SHARED.font, letterSpacing: '0.02em' }}>
           Admin
         </div>
         <nav>
           {links.map(l => (
-            <Link key={l.href} href={l.href} style={sidebarLink(path === l.href)}>
+            <Link key={l.href} href={l.href} style={getSidebarLinkStyle(path === l.href)}>
               {l.label}
             </Link>
           ))}
         </nav>
         <div style={{ marginTop: 'auto' }}>
-          <Link href="/" style={{ ...sidebarLink(false), color: C.red }}>← Exit Admin</Link>
+          <Link href="/" style={{ ...getSidebarLinkStyle(false), color: ADMIN.red }}>← Exit Admin</Link>
         </div>
       </div>
       <div style={mainStyle}>{children}</div>

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 
-  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many payment requests.' })
+  const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many payment requests.' })
   if (rl) return rl
 
   await dbConnect()
@@ -32,29 +32,39 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
+    const parsedAmount = Number(amount)
+    if (!parsedAmount || parsedAmount < 1) {
+      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
+    }
+
     const razorpay = getRazorpay()
     const order = await razorpay.orders.create({
-      amount: amount * 100,
+      amount: parsedAmount * 100,
       currency: 'INR',
       receipt: billingId.toString(),
     })
 
+    // FIX: Use correct Transaction model fields
     const transaction = await Transaction.create({
-      billingId,
-      farmerId,
-      buyerId,
-      amount,
+      fromUserId: auth.user.userId,
+      toUserId: farmerId,
+      amount: parsedAmount,
+      type: 'booking_pay',
+      status: 'pending',
+      description: `Payment for billing ${billingId}`,
+      category: 'booking',
+      paymentMethod: 'upi',
       razorpayOrderId: order.id,
-      paymentStatus: 'pending',
+      referenceId: billingId,
     })
 
-    await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'PaymentOrder', resourceId: transaction._id.toString(), details: { billingId, amount, orderId: order.id }, request })
+    await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'PaymentOrder', resourceId: transaction._id.toString(), details: { billingId, amount: parsedAmount, orderId: order.id }, request })
 
     return NextResponse.json({
       success: true,
       orderId: order.id,
       transactionId: transaction._id,
-      amount,
+      amount: parsedAmount,
     })
   } catch (error) {
     console.error('Payment error:', error)

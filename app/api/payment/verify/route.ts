@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 
-  const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many verification requests.' })
+  const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many verification requests.' })
   if (rl) return rl
 
   await dbConnect()
@@ -30,18 +30,31 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment gateway not configured' }, { status: 500 })
     }
 
+    if (!transactionId) {
+      return NextResponse.json({ error: 'Missing transaction ID' }, { status: 400 })
+    }
+
     const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex')
     if (expected !== razorpaySignature) {
       return NextResponse.json({ error: 'Payment signature mismatch' }, { status: 400 })
     }
 
-    const transaction = await Transaction.findByIdAndUpdate(transactionId, {
-      razorpayPaymentId,
-      paymentStatus: 'completed',
-      completedAt: new Date(),
-    })
+    // FIX: Use correct field names matching Transaction model
+    const transaction = await Transaction.findByIdAndUpdate(
+      transactionId,
+      {
+        status: 'success',               // FIX: was 'paymentStatus: completed'
+        razorpayPaymentId,
+        referenceId: razorpayPaymentId,
+      },
+      { new: true }
+    )
 
-    await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'PaymentVerification', resourceId: transactionId, details: { razorpayOrderId, razorpayPaymentId }, request })
+    if (!transaction) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
+    }
+
+    await logAudit({ userId: auth.user.userId, action: 'UPDATE', resource: 'PaymentVerification', resourceId: transactionId, details: { razorpayOrderId, razorpayPaymentId }, request })
 
     return NextResponse.json({
       success: true,

@@ -14,7 +14,6 @@ const handler = NextAuth({
     },
     callbacks: {
         async jwt({ token, account, profile }) {
-            // Persist OAuth access_token and profile to the token
             if (account) {
                 token.accessToken = account.access_token
                 token.id = profile?.sub
@@ -22,14 +21,37 @@ const handler = NextAuth({
             return token
         },
         async session({ session, token }) {
-            // Send token properties to the client
             if (session.user) {
                 (session.user as { id?: string }).id = token.id as string
             }
             return session
         },
-        async redirect({ baseUrl }) {
+        async redirect({ url, baseUrl }) {
+            if (url.startsWith('/')) return `${baseUrl}${url}`
+            else if (new URL(url).origin === baseUrl) return url
             return baseUrl
+        },
+        async signIn({ account, profile }) {
+            if (account?.provider === 'google' && profile?.email) {
+                const dbConnect = (await import('@/lib/mongodb')).default
+                const bcrypt = (await import('bcryptjs')).default
+                const User = (await import('@/lib/models/User')).default
+                await dbConnect()
+                const existingUser = await User.findOne({ email: profile.email })
+                if (!existingUser) {
+                    const crypto = await import('crypto')
+                    const randomPassword = crypto.randomBytes(32).toString('hex')
+                    await User.create({
+                        email: profile.email,
+                        phone: (profile as Record<string, unknown>).phone_number as string || '',
+                        password: await bcrypt.hash(randomPassword, 10),
+                        role: 'buyer',
+                        address: '',
+                        firmName: profile.name || '',
+                    })
+                }
+            }
+            return true
         },
     },
     pages: {

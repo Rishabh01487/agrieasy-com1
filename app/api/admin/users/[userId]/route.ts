@@ -6,13 +6,15 @@ import Transaction from '@/lib/models/Transaction'
 import Post from '@/lib/models/Post'
 import { authenticateRequest, forbidden, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
+import { invalidate } from '@/lib/cache'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const auth = authenticateRequest(request, ['admin'])
-  if (!auth || auth.role !== 'admin') return forbidden()
+  if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden()
 
   const { userId } = await params
   await dbConnect()
@@ -39,7 +41,8 @@ export async function PATCH(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const auth = authenticateRequest(request, ['admin'])
-  if (!auth || auth.role !== 'admin') return forbidden()
+  if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden()
 
   const { userId } = await params
   await dbConnect()
@@ -55,7 +58,9 @@ export async function PATCH(
     const user = await User.findByIdAndUpdate(userId, sanitized, { new: true }).select('-password')
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'User', resourceId: userId, details: sanitized, request })
+    await logAudit({ userId: auth.user.userId, action: 'UPDATE', resource: 'User', resourceId: userId, details: sanitized, request })
+
+    await invalidate('admin:stats', 'admin')
 
     return NextResponse.json({ success: true, user })
   } catch (error) {
@@ -69,10 +74,11 @@ export async function DELETE(
   { params }: { params: Promise<{ userId: string }> }
 ) {
   const auth = authenticateRequest(request, ['admin'])
-  if (!auth || auth.role !== 'admin') return forbidden()
+  if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden()
 
   const { userId } = await params
-  if (userId === auth.userId) return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
+  if (userId === auth.user.userId) return NextResponse.json({ error: 'Cannot delete yourself' }, { status: 400 })
 
   await dbConnect()
 
@@ -86,7 +92,9 @@ export async function DELETE(
       Transaction.deleteMany({ $or: [{ fromUserId: userId }, { toUserId: userId }] }),
     ])
 
-    await logAudit({ userId: auth.userId, action: 'DELETE', resource: 'User', resourceId: userId, details: { role: user.role }, request })
+    await logAudit({ userId: auth.user.userId, action: 'DELETE', resource: 'User', resourceId: userId, details: { role: user.role }, request })
+
+    await invalidate('admin:stats', 'admin')
 
     return NextResponse.json({ success: true })
   } catch (error) {

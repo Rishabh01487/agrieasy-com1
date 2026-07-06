@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
 
     await dbConnect()
     try {
-        const wallet = await Wallet.findOne({ userId: auth.userId })
+        const wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found' }, { status: 404 })
 
         return NextResponse.json({

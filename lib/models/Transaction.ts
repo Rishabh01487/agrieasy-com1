@@ -25,9 +25,17 @@ const TransactionSchema = new mongoose.Schema({
   },
   referenceId: { type: String },
   razorpayOrderId: { type: String },
+  razorpayPaymentId: { type: String },
   paylaterId: { type: mongoose.Schema.Types.ObjectId, ref: 'PayLater' },
   note: { type: String },
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true })
+
+TransactionSchema.index({ fromUserId: 1, createdAt: -1 })
+TransactionSchema.index({ toUserId: 1, createdAt: -1 })
+TransactionSchema.index({ type: 1, createdAt: -1 })
+TransactionSchema.index({ status: 1, createdAt: -1 })
+TransactionSchema.index({ fromUserId: 1, type: 1 })
+TransactionSchema.index({ paylaterId: 1 })
 
 export default mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema)

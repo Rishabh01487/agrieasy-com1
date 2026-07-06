@@ -15,7 +15,7 @@ function getSecret(): string {
   return s
 }
 
-export function authenticateRequest(req: NextRequest, allowedRoles?: string[]): AuthUser | null {
+export function authenticateRequest(req: NextRequest, allowedRoles?: string[]): { user: AuthUser; roleMatch: boolean } | null {
   const authHeader = req.headers.get('authorization')
   let token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
   if (!token) token = req.cookies.get('token')?.value || null
@@ -23,11 +23,17 @@ export function authenticateRequest(req: NextRequest, allowedRoles?: string[]): 
 
   try {
     const payload = jwt.verify(token, getSecret()) as AuthUser
-    if (allowedRoles && !allowedRoles.includes(payload.role)) return null
-    return payload
+    if (allowedRoles && !allowedRoles.includes(payload.role)) {
+      return { user: payload, roleMatch: false }
+    }
+    return { user: payload, roleMatch: true }
   } catch {
     return null
   }
+}
+
+export function getUser(auth: NonNullable<ReturnType<typeof authenticateRequest>>): AuthUser {
+  return auth.user
 }
 
 export function unauthorized(message = 'Authentication required'): NextResponse {

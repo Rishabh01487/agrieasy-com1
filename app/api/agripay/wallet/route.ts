@@ -11,12 +11,12 @@ export async function GET(request: NextRequest) {
 
     await dbConnect()
     try {
-        let wallet = await Wallet.findOne({ userId: auth.userId })
+        let wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) {
-            const user = await User.findById(auth.userId)
+            const user = await User.findById(auth.user.userId)
             if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
             const agripayId = `${user.phone}@agripay`
-            wallet = await Wallet.create({ userId: auth.userId, balance: 0, agripayId })
+            wallet = await Wallet.create({ userId: auth.user.userId, balance: 0, agripayId })
         }
         return NextResponse.json({ wallet })
     } catch (error) {
@@ -31,13 +31,13 @@ export async function POST(request: NextRequest) {
 
     await dbConnect()
     try {
-        const existing = await Wallet.findOne({ userId: auth.userId })
+        const existing = await Wallet.findOne({ userId: auth.user.userId })
         if (existing) return NextResponse.json({ wallet: existing })
-        const user = await User.findById(auth.userId)
+        const user = await User.findById(auth.user.userId)
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
         const agripayId = `${user.phone}@agripay`
-        const wallet = await Wallet.create({ userId: auth.userId, balance: 0, agripayId })
-        await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Wallet', details: { agripayId }, request })
+        const wallet = await Wallet.create({ userId: auth.user.userId, balance: 0, agripayId })
+        await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Wallet', details: { agripayId }, request })
 
         return NextResponse.json({ success: true, wallet }, { status: 201 })
     } catch (error) {

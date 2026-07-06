@@ -4,6 +4,8 @@ import Wallet from '@/lib/models/Wallet'
 import Transaction from '@/lib/models/Transaction'
 import User from '@/lib/models/User'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { validateBody, transferSchema } from '@/lib/validation'
+import { validationError } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 
@@ -11,28 +13,32 @@ export async function POST(request: NextRequest) {
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
 
-    const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Too many transfer requests. Try again later.' })
+    const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many transfer requests. Try again later.' })
     if (rl) return rl
 
     await dbConnect()
     try {
-        const { toIdentifier, amount, description, category, note, paymentMethod } = await request.json()
-        if (!toIdentifier || !amount || amount < 1) {
-            return NextResponse.json({ error: 'toIdentifier and amount (min ₹1) required' }, { status: 400 })
+        const body = await request.json()
+        const v = validateBody(transferSchema, body)
+        if (!v.success) return validationError('Invalid transfer data', v.errors)
+        const data = v.data
+        const { toIdentifier, amount, note, paymentMethod } = data
+        const method = paymentMethod
+
+        // FIX: Support AgriPay ID lookup (phone@agripay format)
+        let query: Record<string, unknown>
+        if (data.toIdentifier.includes('@agripay')) {
+            const phonePart = data.toIdentifier.replace('@agripay', '').replace('+91', '').trim()
+            query = phonePart.length === 10 ? { phone: phonePart } : { $or: [{ phone: data.toIdentifier }, { email: data.toIdentifier }] }
+        } else {
+            query = { $or: [{ phone: data.toIdentifier }, { email: data.toIdentifier }] }
         }
 
-        if (paymentMethod && !['wallet', 'paylater'].includes(paymentMethod)) {
-            return NextResponse.json({ error: 'Only wallet and paylater transfers are supported. Use payment gateway for other methods.' }, { status: 400 })
-        }
-        const method = 'wallet'
+        const toUser = await User.findOne(query)
+        if (!toUser) return NextResponse.json({ error: 'Recipient not found. Check their phone number or email.' }, { status: 404 })
+        if (toUser._id.toString() === auth.user.userId) return NextResponse.json({ error: 'Cannot send money to yourself' }, { status: 400 })
 
-        const toUser = await User.findOne({
-            $or: [{ phone: toIdentifier }, { email: toIdentifier }],
-        })
-        if (!toUser) return NextResponse.json({ error: 'Recipient not found. Check their phone number or AgriPay ID.' }, { status: 404 })
-        if (toUser._id.toString() === auth.userId) return NextResponse.json({ error: 'Cannot send money to yourself' }, { status: 400 })
-
-        const fromWallet = await Wallet.findOne({ userId: auth.userId })
+        const fromWallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!fromWallet) return NextResponse.json({ error: 'Your wallet not found. Open AgriPay first.' }, { status: 404 })
 
         if (fromWallet.balance < amount) return NextResponse.json({ error: `Insufficient balance. Available: ₹${fromWallet.balance}` }, { status: 400 })
@@ -52,38 +58,38 @@ export async function POST(request: NextRequest) {
         }
         await Wallet.findByIdAndUpdate(toWallet._id, { $inc: { balance: amount } })
 
-        const txType = 'send'
+        const recipientLabel = toUser.phone || toUser.email || 'user'
 
         await Transaction.create({
-            fromUserId: auth.userId,
+            fromUserId: auth.user.userId,
             toUserId: toUser._id,
             amount,
-            type: txType,
+            type: 'send',
             status: 'success',
-            description: description || `Sent to ${toUser.phone} via ${method.toUpperCase()}`,
-            category: category || 'transfer',
+            description: `Sent to ${recipientLabel} via ${method.toUpperCase()}`,
+            category: 'transfer',
             paymentMethod: method,
             note,
         })
         await Transaction.create({
-            fromUserId: auth.userId,
+            fromUserId: auth.user.userId,
             toUserId: toUser._id,
             amount,
             type: 'receive',
             status: 'success',
-            description: description || `Received from AgriPay via ${method.toUpperCase()}`,
-            category: category || 'transfer',
+            description: `Received from AgriPay user via ${method.toUpperCase()}`,
+            category: 'transfer',
             paymentMethod: method,
             note,
         })
 
         const updatedFromWallet = await Wallet.findById(fromWallet._id)
-        await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Transfer', details: { toUserId: toUser._id.toString(), amount, method }, request })
+        await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Transfer', details: { toUserId: toUser._id.toString(), amount, method }, request })
 
         return NextResponse.json({
             success: true,
             newBalance: updatedFromWallet?.balance,
-            message: `₹${amount} sent successfully to ${toUser.phone} via ${method.toUpperCase()}!`,
+            message: `₹${amount} sent successfully to ${recipientLabel} via ${method.toUpperCase()}!`,
             paymentMethod: method,
         })
     } catch (error) {

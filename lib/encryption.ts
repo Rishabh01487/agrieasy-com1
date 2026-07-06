@@ -24,7 +24,7 @@ export function encrypt(text: string): string {
 export function decrypt(encryptedText: string): string {
   if (!encryptedText) return encryptedText
   const parts = encryptedText.split(':')
-  if (parts.length !== 3) return encryptedText
+  if (parts.length !== 3) throw new Error('Invalid encrypted text format')
   const key = getKey()
   const iv = Buffer.from(parts[0], 'hex')
   const tag = Buffer.from(parts[1], 'hex')

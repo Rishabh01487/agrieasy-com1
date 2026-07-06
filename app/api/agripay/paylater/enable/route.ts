@@ -10,11 +10,16 @@ export async function POST(request: NextRequest) {
 
     await dbConnect()
     try {
-        let wallet = await Wallet.findOne({ userId: auth.userId })
+        let wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found. Open AgriPay first.' }, { status: 404 })
 
         if (wallet.paylaterEligible) {
             return NextResponse.json({ success: true, message: 'PayLater already enabled', wallet })
+        }
+
+        // FIX: Require bank verification before enabling PayLater
+        if (!wallet.bankVerified) {
+            return NextResponse.json({ error: 'Please verify your bank account first before enabling PayLater.' }, { status: 400 })
         }
 
         const creditScore = Math.min(100, (wallet.isKYC || wallet.bankVerified ? 40 : 0) + 30)
@@ -27,7 +32,7 @@ export async function POST(request: NextRequest) {
             paylaterUsed: 0,
         }, { new: true })
 
-        await logAudit({ userId: auth.userId, action: 'UPDATE', resource: 'PayLaterEnable', details: { creditScore, limit }, request })
+        await logAudit({ userId: auth.user.userId, action: 'UPDATE', resource: 'PayLaterEnable', details: { creditScore, limit }, request })
 
         return NextResponse.json({
             success: true,

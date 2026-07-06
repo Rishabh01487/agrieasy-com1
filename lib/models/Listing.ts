@@ -18,4 +18,10 @@ const ListingSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 })
 
+ListingSchema.index({ buyerId: 1, createdAt: -1 })
+ListingSchema.index({ isActive: 1, createdAt: -1 })
+ListingSchema.index({ commodity: 1 })
+ListingSchema.index({ location: 1 })
+ListingSchema.index({ '$**': 'text' })
+
 export default mongoose.models.Listing || mongoose.model('Listing', ListingSchema)

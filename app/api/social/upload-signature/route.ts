@@ -19,13 +19,17 @@ export async function GET(request: NextRequest) {
 
     const timestamp = Math.round(Date.now() / 1000)
     const folder = 'agrieasy'
-    const params = { timestamp, folder }
+    const params = {
+      timestamp,
+      folder,
+      allowed_formats: 'jpg,jpeg,png,webp,gif,mp4',
+      max_file_size: 10485760, // 10MB
+    }
     const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET)
 
     return NextResponse.json({
       available: true,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY,
       signature,
       timestamp,
       folder,

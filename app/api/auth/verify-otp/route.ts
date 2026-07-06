@@ -5,38 +5,42 @@ import jwt from 'jsonwebtoken'
 import { rateLimitByIp } from '@/lib/rate-limit'
 import { verifyOtp } from '@/lib/otp'
 import { logAudit } from '@/lib/audit'
+import { validateBody, verifyOtpSchema } from '@/lib/validation'
+import { apiSuccess, validationError, badRequest, notFound, apiError, ErrorCodes } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
-  const rl = rateLimitByIp(request, { windowMs: 60_000, max: 5, message: 'Too many attempts. Try again in a minute.' })
+  const rl = await rateLimitByIp(request, { windowMs: 60_000, max: 5, message: 'Too many attempts. Try again in a minute.' })
   if (rl) return rl
 
   try {
     await dbConnect()
-    const { phone, otp } = await request.json()
-    if (!phone || !otp) return NextResponse.json({ error: 'Phone and OTP required' }, { status: 400 })
+    const body = await request.json()
 
-    if (!verifyOtp(phone, otp)) {
-      return NextResponse.json({ error: 'Invalid or expired OTP' }, { status: 400 })
+    const v = validateBody(verifyOtpSchema, body)
+    if (!v.success) return validationError('Invalid phone or OTP', v.errors)
+    const data = v.data
+
+    if (!(await verifyOtp(data.phone, data.otp))) {
+      return badRequest('Invalid or expired OTP')
     }
 
-    const user = await User.findOne({ phone })
-    if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    const user = await User.findOne({ phone: data.phone })
+    if (!user) return notFound('User')
 
     const secret = process.env.JWT_SECRET
     if (!secret || secret === 'your-secret-key') {
-      return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+      return apiError(ErrorCodes.INTERNAL_ERROR, 'Server misconfigured')
     }
 
     const payload = { userId: user._id.toString(), email: user.email, role: user.role }
     const token = jwt.sign(payload, secret, { expiresIn: '7d' })
 
-    const response = NextResponse.json({
-      success: true,
+    const successBody = apiSuccess({
       token,
-      user: { id: user._id, email: user.email, phone: user.phone, role: user.role },
+      user: { id: user._id.toString(), email: user.email, phone: user.phone, role: user.role },
     })
 
-    response.cookies.set('token', token, {
+    successBody.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -46,10 +50,10 @@ export async function POST(request: NextRequest) {
 
     await logAudit({ userId: user._id.toString(), action: 'LOGIN', resource: 'User', resourceId: user._id.toString(), details: { method: 'otp', role: user.role }, request })
 
-    return response
+    return successBody
   } catch (error: unknown) {
     console.error('Verify OTP error:', error)
     const message = error instanceof Error ? error.message : 'Verification failed'
-    return NextResponse.json({ error: message }, { status: 500 })
+    return apiError(ErrorCodes.INTERNAL_ERROR, message)
   }
 }

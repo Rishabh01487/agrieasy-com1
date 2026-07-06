@@ -1,24 +1,86 @@
-const otpStore = new Map<string, { otp: string; expiresAt: number }>()
+/**
+ * OTP storage with Upstash Redis primary + in-memory fallback.
+ *
+ * When UPSTASH_REDIS_REST_URL is set, OTPs are stored in Upstash (works
+ * across Vercel serverless instances).  Otherwise it falls back to a
+ * local Map — correct for single-process dev, but NOT for production
+ * serverless deployment.
+ */
+
+import { randomInt } from 'crypto'
+import { Redis } from '@upstash/redis'
+
+// ── Redis client (lazy, created once) ──────────────────────────────
+let _redis: Redis | null | undefined // undefined = not checked yet
+
+async function getRedis(): Promise<Redis | null> {
+  if (_redis !== undefined) return _redis
+
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN
+
+  if (url && token) {
+    _redis = new Redis({ url, token })
+    console.log('[otp] Upstash Redis client initialized')
+  } else {
+    _redis = null
+    console.warn('[otp] UPSTASH_REDIS_REST_URL/TOKEN not set — using in-memory fallback (not safe for serverless)')
+  }
+  return _redis
+}
+
+// ── In-memory fallback ─────────────────────────────────────────────
+const fallback = new Map<string, { otp: string; expiresAt: number }>()
+
+const KEY_TTL = 5 * 60 // 5 minutes
+
+// ── Public API (all async to keep signature uniform) ────────────────
 
 export function generateOtp(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  return randomInt(100000, 1000000).toString()
 }
 
-export function storeOtp(phone: string, otp: string): void {
-  otpStore.set(phone, { otp, expiresAt: Date.now() + 5 * 60 * 1000 })
+export async function storeOtp(phone: string, otp: string): Promise<void> {
+  const redis = await getRedis()
+  const payload = JSON.stringify({ otp, expiresAt: Date.now() + KEY_TTL * 1000 })
+
+  if (redis) {
+    await redis.set(`otp:${phone}`, payload, { ex: KEY_TTL })
+  } else {
+    fallback.set(phone, { otp, expiresAt: Date.now() + KEY_TTL * 1000 })
+  }
 }
 
-export function verifyOtp(phone: string, otp: string): boolean {
-  const record = otpStore.get(phone)
+export async function verifyOtp(phone: string, otp: string): Promise<boolean> {
+  const redis = await getRedis()
+
+  if (redis) {
+    const raw = await redis.get(`otp:${phone}`)
+    if (!raw) return false
+
+    const record: { otp: string; expiresAt: number } = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (Date.now() > record.expiresAt) {
+      await redis.del(`otp:${phone}`)
+      return false
+    }
+    if (record.otp !== otp) return false
+    await redis.del(`otp:${phone}`)
+    return true
+  }
+
+  // In-memory fallback
+  const record = fallback.get(phone)
   if (!record) return false
   if (Date.now() > record.expiresAt) {
-    otpStore.delete(phone)
+    fallback.delete(phone)
     return false
   }
   if (record.otp !== otp) return false
-  otpStore.delete(phone)
+  fallback.delete(phone)
   return true
 }
+
+// ── SMS sending (unchanged) ────────────────────────────────────────
 
 export async function sendSms(phone: string, message: string): Promise<void> {
   console.log(`[SMS to ${phone}]: ${message}`)

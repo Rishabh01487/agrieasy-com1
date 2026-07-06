@@ -13,4 +13,9 @@ const BillingSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
+BillingSchema.index({ farmerId: 1, createdAt: -1 })
+BillingSchema.index({ buyerId: 1, createdAt: -1 })
+BillingSchema.index({ bookingId: 1 })
+BillingSchema.index({ status: 1 })
+
 export default mongoose.models.Billing || mongoose.model('Billing', BillingSchema)

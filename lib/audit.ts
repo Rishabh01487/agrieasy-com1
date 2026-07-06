@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import dbConnect from '@/lib/mongodb'
 import AuditLog from '@/lib/models/AuditLog'
 
 interface AuditParams {
@@ -12,6 +13,7 @@ interface AuditParams {
 
 export async function logAudit(params: AuditParams): Promise<void> {
   try {
+    await dbConnect()
     const ip = params.request
       ? params.request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
         || params.request.headers.get('x-real-ip')

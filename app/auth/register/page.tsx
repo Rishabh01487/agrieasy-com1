@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { signIn } from 'next-auth/react'
 import Link from 'next/link'
+import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
 
 type FormData = {
   role: 'farmer' | 'buyer' | 'transporter'
@@ -34,17 +35,6 @@ interface NominatimResult {
   address?: NominatimAddress
   shortLabel?: string
 }
-
-const C = {
-  bg: '#faf7ff', white: '#ffffff', brinjal: '#6d28d9', brLight: '#ede9fe',
-  brMid: '#c4b5fd', brDark: '#4c1d95', text: '#1e1b4b', muted: '#6b7280', border: '#ddd6fe',
-}
-const inp: React.CSSProperties = {
-  width: '100%', padding: '10px 14px', borderRadius: '10px',
-  border: `1.5px solid ${C.border}`, color: C.text, fontSize: '0.9rem',
-  background: C.white, outline: 'none', boxSizing: 'border-box',
-}
-const lbl: React.CSSProperties = { color: C.brDark, fontSize: '0.82rem', fontWeight: 700, display: 'block', marginBottom: '5px' }
 
 function AddressAutocomplete({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   const [suggestions, setSuggestions] = useState<NominatimResult[]>([])
@@ -89,15 +79,15 @@ function AddressAutocomplete({ value, onChange, placeholder }: { value: string; 
       <input
         type="text" value={value} onChange={handleChange}
         placeholder={placeholder || 'Type your address…'}
-        style={inp}
+        style={inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' })}
         onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
         onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
       />
       {showDropdown && suggestions.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: C.white, border: `1.5px solid ${C.border}`, borderRadius: '10px', zIndex: 100, boxShadow: '0 4px 16px rgba(109,40,217,0.12)', overflow: 'hidden', marginTop: '4px' }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: AUTH.white, border: `1.5px solid ${AUTH.border}`, borderRadius: '12px', zIndex: 100, boxShadow: '0 4px 16px rgba(109,40,217,0.12)', overflow: 'hidden', marginTop: '4px' }}>
           {suggestions.map(s => (
             <button key={s.place_id} type="button" onMouseDown={() => { onChange(s.shortLabel || s.display_name); setSuggestions([]); setShowDropdown(false) }}
-              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: C.text, fontSize: '0.85rem', borderBottom: `1px solid ${C.bg}` }}>
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: AUTH.text, fontSize: '0.85rem', borderBottom: `1px solid ${AUTH.bg}`, fontFamily: SHARED.font, transition: 'background 0.15s' }}>
               📍 {s.shortLabel || s.display_name}
             </button>
           ))}
@@ -150,18 +140,21 @@ export default function Register() {
   // Keep react-hook-form address in sync
   useEffect(() => { setValue('address', address) }, [address, setValue])
 
-  return (
-    <div style={{ minHeight: '100vh', background: C.bg, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 24px', fontFamily: '"Inter","Segoe UI",sans-serif', position: 'relative', overflow: 'hidden' }}>
-      <div style={{ position: 'fixed', top: '-60px', right: '-60px', width: '320px', height: '320px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(109,40,217,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '-60px', left: '-60px', width: '280px', height: '280px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(196,181,253,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+  const lbl = labelStyle({ text: AUTH.text, muted: AUTH.muted })
+  const inp = inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' })
 
-      <div style={{ position: 'relative', zIndex: 1, background: C.white, border: `1px solid ${C.border}`, borderRadius: '24px', padding: '36px', width: '100%', maxWidth: '460px', boxShadow: '0 4px 24px rgba(109,40,217,0.1)' }}>
-        <Link href="/" style={{ color: C.muted, textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '20px' }}>← Back to home</Link>
+  return (
+    <div style={{ minHeight: '100vh', background: AUTH.bg, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '40px 24px', fontFamily: SHARED.font, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: AUTH.gradientBlob1, pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: AUTH.gradientBlob2, pointerEvents: 'none' }} />
+
+      <div style={{ position: 'relative', zIndex: 1, background: AUTH.white, borderRadius: '24px', padding: '36px', width: '100%', maxWidth: '460px', boxShadow: SHARED.shadowXl, border: `1px solid transparent`, backgroundImage: `linear-gradient(${AUTH.white}, ${AUTH.white}), ${AUTH.gradient}`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
+        <Link href="/" style={{ color: AUTH.muted, textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '20px', fontFamily: SHARED.font }}>← Back to home</Link>
 
         <div style={{ textAlign: 'center', marginBottom: '22px' }}>
           <img src="/icons/icon-192.png" alt="logo" style={{ width: '52px', height: '52px', borderRadius: '12px', marginBottom: '12px', boxShadow: '0 2px 12px rgba(109,40,217,0.2)' }} />
-          <h2 style={{ color: C.brDark, fontSize: '1.5rem', fontWeight: 800, margin: 0, marginBottom: '5px' }}>Create Account</h2>
-          <p style={{ color: C.muted, fontSize: '0.875rem' }}>Join farmers &amp; buyers on AgriEasy</p>
+          <h2 style={{ color: AUTH.text, fontSize: '1.5rem', fontWeight: 800, margin: 0, marginBottom: '5px', fontFamily: SHARED.font }}>Create Account</h2>
+          <p style={{ color: AUTH.muted, fontSize: '0.875rem', fontFamily: SHARED.font }}>Join farmers &amp; buyers on AgriEasy</p>
         </div>
 
         {/* Role selector */}
@@ -169,11 +162,12 @@ export default function Register() {
           {(['farmer', 'buyer', 'transporter'] as const).map(r => (
             <button key={r} onClick={() => setRole(r)} type="button" style={{
               flex: 1, padding: '10px 6px', borderRadius: '12px', cursor: 'pointer',
-              background: role === r ? C.brLight : C.bg,
-              border: `1.5px solid ${role === r ? C.brinjal : C.border}`,
-              color: role === r ? C.brinjal : C.muted,
+              background: role === r ? AUTH.primaryLight : AUTH.bg,
+              border: `1.5px solid ${role === r ? AUTH.primary : AUTH.border}`,
+              color: role === r ? AUTH.primary : AUTH.muted,
               fontWeight: 700, fontSize: '0.82rem', transition: 'all 0.2s',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+              fontFamily: SHARED.font,
             }}>
               {r === 'farmer' ? '🌾' : r === 'buyer' ? '🛒' : '🚛'}{' '}
               {r === 'farmer' ? 'Farmer' : r === 'buyer' ? 'Buyer' : 'Transporter'}
@@ -182,7 +176,7 @@ export default function Register() {
         </div>
 
         {/* Google Sign Up */}
-        <button onClick={() => signIn('google', { callbackUrl: `/${role}/dashboard` })} style={{ width: '100%', padding: '11px', borderRadius: '12px', background: C.bg, border: `1.5px solid ${C.border}`, color: C.text, fontSize: '0.93rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px' }}>
+        <button onClick={() => signIn('google', { callbackUrl: `/${role}/dashboard` })} style={{ width: '100%', padding: '11px', borderRadius: '12px', background: AUTH.bg, border: `1.5px solid ${AUTH.border}`, color: AUTH.text, fontSize: '0.93rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px', fontFamily: SHARED.font, transition: 'background 0.2s, border-color 0.2s' }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -193,13 +187,13 @@ export default function Register() {
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ flex: 1, height: '1px', background: C.border }} />
-          <span style={{ color: C.muted, fontSize: '0.78rem' }}>or register with email</span>
-          <div style={{ flex: 1, height: '1px', background: C.border }} />
+          <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
+          <span style={{ color: AUTH.muted, fontSize: '0.78rem', fontFamily: SHARED.font }}>or register with email</span>
+          <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
         </div>
 
         {error && (
-          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#dc2626', fontSize: '0.875rem', fontWeight: 600 }}>
+          <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#dc2626', fontSize: '0.875rem', fontWeight: 600, fontFamily: SHARED.font }}>
             ⚠️ {error}
           </div>
         )}
@@ -208,22 +202,22 @@ export default function Register() {
           <div>
             <label style={lbl}>Email</label>
             <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} />
-            {errors.email && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.email.message}</p>}
+            {errors.email && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.email.message}</p>}
           </div>
           <div>
             <label style={lbl}>Password</label>
             <input type="password" {...register('password', { required: 'Password required', minLength: { value: 8, message: 'Min 8 characters' } })} placeholder="Min 8 characters" style={inp} />
-            {errors.password && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.password.message}</p>}
+            {errors.password && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.password.message}</p>}
           </div>
           <div>
             <label style={lbl}>Phone</label>
             <input type="text" {...register('phone', { required: 'Phone is required' })} placeholder="+91 XXXXX XXXXX" style={inp} />
-            {errors.phone && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.phone.message}</p>}
+            {errors.phone && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.phone.message}</p>}
           </div>
           <div>
-            <label style={lbl}>Address <span style={{ color: C.muted, fontWeight: 400 }}>(start typing — suggestions will appear)</span></label>
+            <label style={lbl}>Address <span style={{ color: AUTH.muted, fontWeight: 400 }}>(start typing — suggestions will appear)</span></label>
             <AddressAutocomplete value={address} onChange={setAddress} placeholder="Village, City, State…" />
-            {!address && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', display: 'none' }}>Address is required</p>}
+            {!address && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>Address is required</p>}
           </div>
 
           {role === 'buyer' && (
@@ -231,12 +225,12 @@ export default function Register() {
               <div>
                 <label style={lbl}>Firm Name</label>
                 <input type="text" {...register('firmName', { required: 'Firm name is required' })} placeholder="Your company name" style={inp} />
-                {errors.firmName && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.firmName.message}</p>}
+                {errors.firmName && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.firmName.message}</p>}
               </div>
               <div>
                 <label style={lbl}>GSTIN</label>
                 <input type="text" {...register('gstin', { required: 'GSTIN is required' })} placeholder="22AAAAA0000A1Z5" style={inp} />
-                {errors.gstin && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.gstin.message}</p>}
+                {errors.gstin && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.gstin.message}</p>}
               </div>
             </>
           )}
@@ -244,7 +238,7 @@ export default function Register() {
             <div>
               <label style={lbl}>Aadhar Number</label>
               <input type="text" {...register('aadhar', { required: 'Aadhar is required' })} placeholder="XXXX XXXX XXXX" style={inp} />
-              {errors.aadhar && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.aadhar.message}</p>}
+              {errors.aadhar && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.aadhar.message}</p>}
             </div>
           )}
 
@@ -253,7 +247,7 @@ export default function Register() {
               <div>
                 <label style={lbl}>Company / Firm Name</label>
                 <input type="text" {...register('companyName', { required: 'Company name is required' })} placeholder="e.g., Gupta Transport Co." style={inp} />
-                {errors.companyName && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px' }}>{errors.companyName.message}</p>}
+                {errors.companyName && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.companyName.message}</p>}
               </div>
               <div>
                 <label style={lbl}>GSTIN (if applicable)</label>
@@ -262,17 +256,17 @@ export default function Register() {
             </>
           )}
 
-          <button type="submit" disabled={isLoading} style={{ padding: '13px', background: C.brinjal, color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 700, fontSize: '0.97rem', cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, marginTop: '4px' }}>
+          <button type="submit" disabled={isLoading} style={{ padding: '13px', background: AUTH.gradient, color: '#fff', border: 'none', borderRadius: '14px', fontWeight: 700, fontSize: '0.97rem', cursor: isLoading ? 'not-allowed' : 'pointer', opacity: isLoading ? 0.7 : 1, marginTop: '4px', fontFamily: SHARED.font, boxShadow: '0 4px 14px rgba(124,58,237,0.35)', transition: 'transform 0.15s, box-shadow 0.2s' }}>
             {isLoading ? 'Creating account…' : `Create ${role === 'farmer' ? '🌾 Farmer' : role === 'buyer' ? '🛒 Buyer' : '🚛 Transporter'} Account`}
           </button>
         </form>
 
-        <p style={{ color: C.muted, textAlign: 'center', marginTop: '18px', fontSize: '0.875rem' }}>
+        <p style={{ color: AUTH.muted, textAlign: 'center', marginTop: '18px', fontSize: '0.875rem', fontFamily: SHARED.font }}>
           Already have an account?{' '}
-          <Link href="/auth/login" style={{ color: C.brinjal, fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
+          <Link href="/auth/login" style={{ color: AUTH.primary, fontWeight: 700, textDecoration: 'none' }}>Sign in</Link>
         </p>
       </div>
-      <style>{`input:focus, textarea:focus { border-color: #6d28d9 !important; box-shadow: 0 0 0 3px rgba(109,40,217,0.1) !important; }`}</style>
+      <style>{`input:focus, textarea:focus { border-color: ${AUTH.primary} !important; box-shadow: 0 0 0 3px rgba(124,58,237,0.12) !important; transition: border-color 0.2s, box-shadow 0.2s; }`}</style>
     </div>
   )
 }

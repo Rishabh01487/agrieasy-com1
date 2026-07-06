@@ -4,28 +4,32 @@ import Follow from '@/lib/models/Follow'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
+import { validationError } from '@/lib/api-response'
+import { objectIdSchema } from '@/lib/validation'
 
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()
 
-        const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 15, message: 'Slow down! Too many follow actions.' })
+        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 15, message: 'Slow down! Too many follow actions.' })
         if (rl) return rl
 
         await dbConnect()
-        const { followingId } = await req.json()
-        if (!followingId) return NextResponse.json({ error: 'followingId required' }, { status: 400 })
-        if (auth.userId === followingId) return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 })
+        const body = await req.json()
+        const v = objectIdSchema.safeParse(body.followingId)
+        if (!v.success) return validationError('Invalid followingId', v.error.issues.map(i => ({ field: 'followingId', message: i.message })))
+        const followingId = v.data
+        if (auth.user.userId === followingId) return NextResponse.json({ error: 'Cannot follow yourself' }, { status: 400 })
 
-        const existing = await Follow.findOne({ followerId: auth.userId, followingId })
+        const existing = await Follow.findOne({ followerId: auth.user.userId, followingId })
         if (existing) {
-            await Follow.deleteOne({ followerId: auth.userId, followingId })
-            await logAudit({ userId: auth.userId, action: 'DELETE', resource: 'Follow', resourceId: followingId, details: { followed: false }, request: req })
+            await Follow.deleteOne({ followerId: auth.user.userId, followingId })
+            await logAudit({ userId: auth.user.userId, action: 'DELETE', resource: 'Follow', resourceId: followingId, details: { followed: false }, request: req })
             return NextResponse.json({ following: false })
         } else {
-            await Follow.create({ followerId: auth.userId, followingId })
-            await logAudit({ userId: auth.userId, action: 'CREATE', resource: 'Follow', resourceId: followingId, details: { followed: true }, request: req })
+            await Follow.create({ followerId: auth.user.userId, followingId })
+            await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Follow', resourceId: followingId, details: { followed: true }, request: req })
             return NextResponse.json({ following: true })
         }
     } catch (e) {

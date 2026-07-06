@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
+import { escapeRegex } from '@/lib/auth-fetch'
 
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request, ['admin'])
-  if (!auth || auth.role !== 'admin') return forbidden()
+  if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden()
 
   await dbConnect()
 
@@ -20,11 +22,11 @@ export async function GET(request: NextRequest) {
     if (role) query.role = role
     if (search) {
       query.$or = [
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { farmerName: { $regex: search, $options: 'i' } },
-        { firmName: { $regex: search, $options: 'i' } },
-        { transporterCompanyName: { $regex: search, $options: 'i' } },
+        { email: { $regex: escapeRegex(search), $options: 'i' } },
+        { phone: { $regex: escapeRegex(search), $options: 'i' } },
+        { farmerName: { $regex: escapeRegex(search), $options: 'i' } },
+        { firmName: { $regex: escapeRegex(search), $options: 'i' } },
+        { transporterCompanyName: { $regex: escapeRegex(search), $options: 'i' } },
       ]
     }
 

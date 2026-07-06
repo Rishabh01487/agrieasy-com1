@@ -26,4 +26,8 @@ const VehicleSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 }, { timestamps: true })
 
+VehicleSchema.index({ transporterId: 1 })
+VehicleSchema.index({ vehicleType: 1, availability: 1 })
+VehicleSchema.index({ capacity: 1 })
+
 export default mongoose.models.Vehicle || mongoose.model('Vehicle', VehicleSchema)

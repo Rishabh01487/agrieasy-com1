@@ -36,17 +36,17 @@ export async function DELETE(
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
 
-    const rl = rateLimitByUser(auth.userId, { windowMs: 60_000, max: 10, message: 'Slow down!' })
+    const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Slow down!' })
     if (rl) return rl
 
     await dbConnect()
 
     const post = await Post.findById(postId)
     if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
-    if (post.userId.toString() !== auth.userId) return forbidden('Not authorized to delete this post')
+    if (post.userId.toString() !== auth.user.userId) return forbidden('Not authorized to delete this post')
 
     await Post.findByIdAndDelete(postId)
-    await logAudit({ userId: auth.userId, action: 'DELETE', resource: 'Post', resourceId: postId, request })
+    await logAudit({ userId: auth.user.userId, action: 'DELETE', resource: 'Post', resourceId: postId, request })
     return NextResponse.json({ success: true })
   } catch {
     return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 })
