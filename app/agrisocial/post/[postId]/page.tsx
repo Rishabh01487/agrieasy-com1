@@ -6,16 +6,25 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 
-const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
+const roleLabel: Record<string, string> = { farmer: 'Farmer', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
-interface Comment { _id: string; userId: User | { farmerName?: string; firmName?: string }; text: string; createdAt: string }
+interface Comment { _id: string; userId: User | string; text: string; createdAt: string; parentId?: string | null; likes?: string[]; likesCount?: number }
 interface Post {
-    _id: string; userId: User; type: string; mediaUrl?: string; mediaType?: string
+    _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments: Comment[]; createdAt: string; location?: string; views?: number
-    savedBy?: string[]; savedCount?: number
+    savedBy?: string[]; savedCount?: number; sharedCount?: number
+}
+
+function timeAgo(iso: string) {
+    const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    if (s < 60) return `${s}s`
+    if (s < 3600) return `${Math.floor(s / 60)}m`
+    if (s < 86400) return `${Math.floor(s / 3600)}h`
+    if (s < 604800) return `${Math.floor(s / 86400)}d`
+    return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
 export default function PostDetail({ params }: { params: Promise<{ postId: string }> }) {
@@ -32,6 +41,9 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const [posting, setPosting] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [deleting, setDeleting] = useState(false)
+    const [carouselIdx, setCarouselIdx] = useState(0)
+    const [shareCopied, setShareCopied] = useState(false)
+    const [replyTo, setReplyTo] = useState<string | null>(null)
 
     useEffect(() => {
         const load = async () => {
@@ -64,25 +76,28 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
         setSaved(newSaved)
         try {
             if (newSaved) {
-                await authFetch(`/api/social/save`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: viewerId, postId: post._id }),
-                })
+                await authFetch(`/api/social/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) })
             } else {
                 await authFetch(`/api/social/save?postId=${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
             }
         } catch {}
     }
 
+    const handleShare = async () => {
+        if (!post) return
+        try { await authFetch(`/api/social/posts/${post._id}/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }) } catch {}
+        const url = `${window.location.origin}/agrisocial/post/${post._id}`
+        try {
+            await navigator.clipboard.writeText(url)
+            setShareCopied(true)
+            setTimeout(() => setShareCopied(false), 1800)
+        } catch { window.open(url, '_blank') }
+    }
+
     const handleDelete = async () => {
         if (!viewerId || !post) return
         setDeleting(true)
-        const res = await authFetch(`/api/social/posts/${post._id}`, {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: viewerId }),
-        })
+        const res = await authFetch(`/api/social/posts/${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId }) })
         if (res.ok) router.push('/agrisocial')
         else setShowDeleteConfirm(false)
         setDeleting(false)
@@ -92,19 +107,23 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
         if (!commentText.trim() || !viewerId || !post) return
         setPosting(true)
         try {
-            const res = await authFetch('/api/social/comment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id, text: commentText }) })
+            const res = await authFetch('/api/social/comment', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: viewerId, postId: post._id, text: commentText, parentId: replyTo }),
+            })
             if (res.ok) {
                 const d = await res.json()
                 setComments(c => [...c, d.comment])
                 setCommentText('')
+                setReplyTo(null)
             }
         } catch {}
         finally { setPosting(false) }
     }
 
-    if (loading) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.primary, fontWeight: 700, fontFamily: SHARED.font }}>🌾 Loading…</div>
+    if (loading) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.primary, fontWeight: 700, fontFamily: SHARED.font }}>Loading…</div>
     if (!post) return (
-        <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', fontFamily: SHARED.font }}>
+        <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, fontFamily: SHARED.font }}>
             <span style={{ fontSize: '3rem' }}>🔍</span>
             <p style={{ color: SOCIAL.muted }}>Post not found</p>
             <Link href="/agrisocial" style={{ color: SOCIAL.primary, fontWeight: 700, textDecoration: 'none' }}>← Back to Feed</Link>
@@ -116,134 +135,198 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const authorRole = isDeletedUser ? '' : (post.userId.role || '')
     const authorId = isDeletedUser ? '' : post.userId._id
     const ytId = post.mediaUrl ? (post.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
+    const carouselImages = (post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls : (post.mediaUrl ? [post.mediaUrl] : []))
+        .filter(u => u && (u.startsWith('http') || u.startsWith('/')))
+
+    // Build a threaded comment view (top-level + their replies)
+    const topLevel = comments.filter(c => !c.parentId)
+    const repliesOf = (id: string) => comments.filter(c => c.parentId === id)
 
     return (
         <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
-            <nav style={{ background: 'rgba(255,255,255,0.85)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 50, boxShadow: SHARED.shadow, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                <button onClick={() => router.back()} style={{ color: SOCIAL.primary, background: 'none', border: 'none', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', transition: 'all 0.2s ease' }}>← Back</button>
+            <nav style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '0 20px', height: '56px', display: 'flex', alignItems: 'center', gap: 12, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
+                <button onClick={() => router.back()} style={{ color: SOCIAL.primary, background: 'none', border: 'none', fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer' }}>← Back</button>
                 <span style={{ color: SOCIAL.muted }}>›</span>
                 <span style={{ fontWeight: 700, color: SOCIAL.text }}>{post.type === 'krishiclip' ? '🎬 KrishiClip' : '📷 Post'}</span>
             </nav>
 
-            <div style={{ maxWidth: '680px', margin: '0 auto', padding: '20px 16px 60px' }}>
-                <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '18px', overflow: 'hidden', boxShadow: SHARED.shadowMd }}>
-                    {/* Author header */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '18px' }}>
-                        <Link href={`/agrisocial/profile/${authorId}`} style={{ width: '48px', height: '48px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1.3rem', textDecoration: 'none', flexShrink: 0, transition: 'all 0.2s ease' }}>
+            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 60px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 0, background: SOCIAL.white, borderRadius: 12, boxShadow: SHARED.shadowMd, overflow: 'hidden' }}>
+                {/* Media */}
+                <div style={{ background: '#000', position: 'relative', minHeight: 400 }}>
+                    {ytId ? (
+                        <div style={{ position: 'relative', paddingBottom: '100%', height: 0 }}>
+                            <iframe src={`https://www.youtube.com/embed/${ytId}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title="Post" />
+                        </div>
+                    ) : post.mediaUrl && post.mediaType === 'image' && carouselImages.length > 0 ? (
+                        <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={carouselImages[carouselIdx]} alt="post" style={{ width: '100%', height: '100%', maxHeight: '85vh', objectFit: 'contain', display: 'block' }} />
+                            {carouselImages.length > 1 && (
+                                <>
+                                    <div style={{ position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+                                        {carouselImages.map((_, i) => (
+                                            <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#3b82f6' : 'rgba(255,255,255,0.5)' }} />
+                                        ))}
+                                    </div>
+                                    {carouselIdx > 0 && <button onClick={() => setCarouselIdx(i => Math.max(0, i - 1))} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: '1.4rem' }}>‹</button>}
+                                    {carouselIdx < carouselImages.length - 1 && <button onClick={() => setCarouselIdx(i => Math.min(carouselImages.length - 1, i + 1))} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: '1.4rem' }}>›</button>}
+                                    <div style={{ position: 'absolute', bottom: 12, right: 16, background: 'rgba(0,0,0,0.55)', color: '#fff', padding: '3px 10px', borderRadius: 100, fontSize: '0.74rem', fontWeight: 700 }}>{carouselIdx + 1}/{carouselImages.length}</div>
+                                </>
+                            )}
+                        </>
+                    ) : post.mediaUrl && post.mediaType === 'video' ? (
+                        <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '85vh', display: 'block' }} />
+                    ) : (
+                        <div style={{ height: '100%', minHeight: 400, background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '4rem' }}>📢</div>
+                    )}
+                </div>
+
+                {/* Right panel: author + actions + comments */}
+                <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '85vh', borderLeft: `1px solid ${SOCIAL.border}` }}>
+                    {/* Author */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${SOCIAL.border}` }}>
+                        <Link href={`/agrisocial/profile/${authorId}`} style={{ width: 40, height: 40, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.1rem', textDecoration: 'none', flexShrink: 0 }}>
                             {authorName[0]?.toUpperCase()}
                         </Link>
-                        <div style={{ flex: 1 }}>
-                            <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', display: 'block' }}>{authorName}</Link>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <span style={{ color: SOCIAL.muted, fontSize: '0.75rem' }}>{roleLabel[authorRole || ''] || '👤 User'}</span>
-                                {post.location && <span style={{ color: SOCIAL.muted, fontSize: '0.75rem' }}>📍 {post.location}</span>}
-                                <span style={{ background: `${SOCIAL.primary}15`, color: SOCIAL.primary, padding: '2px 8px', borderRadius: '100px', fontSize: '0.68rem', fontWeight: 700 }}>
-                                    {catIcon[post.category]} {post.category}
-                                </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', display: 'block' }}>{authorName}</Link>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span style={{ color: SOCIAL.muted, fontSize: '0.72rem' }}>{roleLabel[authorRole || ''] || 'User'}</span>
+                                {post.location && <span style={{ color: SOCIAL.muted, fontSize: '0.72rem' }}>· 📍 {post.location}</span>}
+                                <span style={{ color: SOCIAL.muted, fontSize: '0.72rem' }}>· {timeAgo(post.createdAt)}</span>
                             </div>
                         </div>
-                        <span style={{ color: SOCIAL.muted, fontSize: '0.72rem' }}>{new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                        <span style={{ background: SOCIAL.primaryLight, color: SOCIAL.primary, padding: '3px 10px', borderRadius: 100, fontSize: '0.68rem', fontWeight: 700 }}>
+                            {catIcon[post.category]} {post.category}
+                        </span>
                     </div>
-
-                    {/* Media */}
-                    {ytId ? (
-                        <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, background: '#000' }}>
-                            <iframe src={`https://www.youtube.com/embed/${ytId}`} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen title="KrishiClip" />
-                        </div>
-                    ) : post.mediaUrl && post.mediaType === 'image' ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={post.mediaUrl} alt="post" style={{ width: '100%', maxHeight: '600px', objectFit: 'cover', display: 'block' }} />
-                    ) : post.mediaUrl && post.mediaType === 'video' ? (
-                        <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
-                    ) : null}
-
-                    {/* Caption */}
-                    {post.caption && (
-                        <div style={{ padding: '18px', borderBottom: `1px solid ${SOCIAL.primaryLight}` }}>
-                            <p style={{ color: SOCIAL.text, fontSize: '0.95rem', margin: '0 0 8px', lineHeight: 1.6 }}>
-                                <strong>{authorName}</strong>{' '}{post.caption}
-                            </p>
-                            {post.hashtags?.length > 0 && (
-                                <p style={{ color: SOCIAL.primary, fontSize: '0.85rem', margin: '6px 0 0' }}>{post.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Action bar */}
-                    <div style={{ padding: '14px 18px', borderBottom: `1px solid ${SOCIAL.primaryLight}`, display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: liked ? SOCIAL.red : SOCIAL.muted, fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s ease' }}>
-                            <span style={{ fontSize: '1.4rem' }}>{liked ? '❤️' : '🤍'}</span>
-                            <span>{likesCount} {likesCount === 1 ? 'like' : 'likes'}</span>
-                        </button>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: SOCIAL.muted, fontWeight: 700, fontSize: '0.9rem' }}>
-                            <span style={{ fontSize: '1.4rem' }}>💬</span>
-                            <span>{comments.length} {comments.length === 1 ? 'comment' : 'comments'}</span>
-                        </div>
-                        <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: saved ? SOCIAL.primary : SOCIAL.muted, fontWeight: 700, fontSize: '0.9rem', transition: 'all 0.2s ease' }}>
-                            <span style={{ fontSize: '1.4rem' }}>{saved ? '🔖' : '🏷️'}</span>
-                            <span>{saved ? 'Saved' : 'Save'}</span>
-                        </button>
-                        {viewerId && viewerId === authorId && (
-                            <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', color: SOCIAL.muted, fontWeight: 700, fontSize: '0.9rem', marginLeft: 'auto', transition: 'all 0.2s ease' }}>
-                                <span style={{ fontSize: '1.2rem' }}>🗑️</span>
-                                <span>Delete</span>
-                            </button>
-                        )}
-                        {post.type === 'krishiclip' && !(viewerId && viewerId === authorId) && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: SOCIAL.muted, fontWeight: 700, fontSize: '0.9rem', marginLeft: 'auto' }}>
-                                <span style={{ fontSize: '1.2rem' }}>👁️</span>
-                                <span>{post.views || 0} views</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Delete confirm */}
-                    {showDeleteConfirm && (
-                        <div style={{ padding: '14px 18px', textAlign: 'center', borderBottom: `1px solid ${SOCIAL.primaryLight}` }}>
-                            <p style={{ color: SOCIAL.red, fontSize: '0.9rem', margin: '0 0 10px', fontWeight: 600 }}>Delete this {post.type === 'krishiclip' ? 'KrishiClip' : 'post'}?</p>
-                            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                <button onClick={handleDelete} disabled={deleting} style={{ background: SOCIAL.red, border: 'none', borderRadius: '8px', padding: '7px 18px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', opacity: deleting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                                    {deleting ? 'Deleting…' : 'Yes, delete'}
-                                </button>
-                                <button onClick={() => setShowDeleteConfirm(false)} style={{ background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, borderRadius: '8px', padding: '7px 18px', color: SOCIAL.muted, fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', transition: 'all 0.2s ease' }}>Cancel</button>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Comments list */}
-                    <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
-                        {comments.length === 0 ? (
-                            <p style={{ color: SOCIAL.muted, fontSize: '0.85rem', padding: '18px', textAlign: 'center' }}>No comments yet. Be the first! 🌾</p>
-                        ) : comments.map((c, i) => {
-                            const commenterName = typeof c.userId === 'object' ? ((c.userId as User).farmerName || (c.userId as User).firmName || 'User') : 'User'
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+                        {/* Caption as first comment */}
+                        {post.caption && (
+                            <div style={{ display: 'flex', gap: 10, padding: '10px 16px' }}>
+                                <Link href={`/agrisocial/profile/${authorId}`} style={{ width: 32, height: 32, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none', flexShrink: 0 }}>{authorName[0]?.toUpperCase()}</Link>
+                                <div>
+                                    <p style={{ color: SOCIAL.text, fontSize: '0.86rem', margin: 0, lineHeight: 1.5 }}>
+                                        <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{authorName}</Link>{' '}
+                                        {post.hashtags?.length > 0
+                                            ? post.caption.split(/(#[\w]+)/g).map((part, i) =>
+                                                part.startsWith('#')
+                                                    ? <Link key={i} href={`/agrisocial/search?tag=${encodeURIComponent(part)}`} style={{ color: SOCIAL.primary, textDecoration: 'none' }}>{part}</Link>
+                                                    : <span key={i}>{part}</span>
+                                            )
+                                            : post.caption}
+                                    </p>
+                                    {post.hashtags?.length > 0 && (
+                                        <p style={{ color: SOCIAL.primary, fontSize: '0.8rem', margin: '4px 0 0' }}>{post.hashtags.map(h => h.startsWith('#') ? h : `#${h}`).join(' ')}</p>
+                                    )}
+                                    <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: '4px 0 0' }}>{timeAgo(post.createdAt)}</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {topLevel.length === 0 && !post.caption && (
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.86rem', padding: '24px', textAlign: 'center' }}>No comments yet. Be the first! 🌾</p>
+                        )}
+
+                        {topLevel.map((c, i) => {
+                            const cn = typeof c.userId === 'object' ? ((c.userId as User).farmerName || (c.userId as User).firmName || 'User') : 'User'
+                            const cid = typeof c.userId === 'object' ? (c.userId as User)._id : ''
+                            const replies = repliesOf(c._id)
                             return (
-                                <div key={i} style={{ display: 'flex', gap: '10px', padding: '12px 18px', borderBottom: i < comments.length - 1 ? `1px solid ${SOCIAL.bg}` : 'none' }}>
-                                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', flexShrink: 0 }}>
-                                        {commenterName[0]?.toUpperCase()}
+                                <div key={i}>
+                                    <div style={{ display: 'flex', gap: 10, padding: '8px 16px' }}>
+                                        <Link href={`/agrisocial/profile/${cid}`} style={{ width: 32, height: 32, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none', flexShrink: 0 }}>{cn[0]?.toUpperCase()}</Link>
+                                        <div style={{ flex: 1 }}>
+                                            <p style={{ color: SOCIAL.text, fontSize: '0.86rem', margin: 0, lineHeight: 1.5 }}>
+                                                <Link href={`/agrisocial/profile/${cid}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{cn}</Link>{' '}{c.text}
+                                            </p>
+                                            <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                                                <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>{timeAgo(c.createdAt)}</span>
+                                                {(c.likesCount || 0) > 0 && <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>❤️ {c.likesCount}</span>}
+                                                {viewerId && <button onClick={() => setReplyTo(replyTo === c._id ? null : c._id)} style={{ background: 'none', border: 'none', color: SOCIAL.muted, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>Reply</button>}
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p style={{ color: SOCIAL.text, fontSize: '0.875rem', margin: 0 }}><strong>{commenterName}</strong>{' '}{c.text}</p>
-                                        <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: '3px 0 0' }}>{new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</p>
-                                    </div>
+                                    {/* Replies (indented) */}
+                                    {replies.map((r, ri) => {
+                                        const rn = typeof r.userId === 'object' ? ((r.userId as User).farmerName || (r.userId as User).firmName || 'User') : 'User'
+                                        const rid = typeof r.userId === 'object' ? (r.userId as User)._id : ''
+                                        return (
+                                            <div key={ri} style={{ display: 'flex', gap: 10, padding: '6px 16px 6px 58px' }}>
+                                                <Link href={`/agrisocial/profile/${rid}`} style={{ width: 28, height: 28, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.75rem', textDecoration: 'none', flexShrink: 0 }}>{rn[0]?.toUpperCase()}</Link>
+                                                <div>
+                                                    <p style={{ color: SOCIAL.text, fontSize: '0.84rem', margin: 0, lineHeight: 1.5 }}>
+                                                        <Link href={`/agrisocial/profile/${rid}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{rn}</Link>{' '}{r.text}
+                                                    </p>
+                                                    <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>{timeAgo(r.createdAt)}</span>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             )
                         })}
                     </div>
 
-                    {/* Add comment */}
-                    {viewerId ? (
-                        <div style={{ padding: '14px 18px', display: 'flex', gap: '8px', borderTop: `1px solid ${SOCIAL.border}` }}>
-                            <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleComment()}
-                                placeholder="Add a comment…"
-                                style={{ flex: 1, padding: '9px 14px', background: SOCIAL.primaryLight, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '100px', fontSize: '0.875rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font, transition: 'border-color 0.2s, box-shadow 0.2s' }} />
-                            <button onClick={handleComment} disabled={posting || !commentText.trim()}
-                                style={{ background: SOCIAL.primary, border: 'none', borderRadius: '100px', padding: '9px 18px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', opacity: posting || !commentText.trim() ? 0.6 : 1, transition: 'all 0.2s ease' }}>
-                                Post
+                    {/* Action bar */}
+                    <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+                            <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: liked ? SOCIAL.red : SOCIAL.text, fontWeight: 700, fontSize: '0.86rem' }}>
+                                <span style={{ fontSize: '1.4rem' }}>{liked ? '❤️' : '🤍'}</span>
                             </button>
+                            <button onClick={() => {}} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem' }}>
+                                <span style={{ fontSize: '1.4rem' }}>💬</span>
+                            </button>
+                            <Link href={`/agrisocial/dm?sharePost=${post._id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none' }}>
+                                <span style={{ fontSize: '1.4rem' }}>✈️</span>
+                            </Link>
+                            <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', marginLeft: 'auto' }}>
+                                <span style={{ fontSize: '1.4rem' }}>🔗</span>
+                            </button>
+                            <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: saved ? SOCIAL.primary : SOCIAL.text, fontWeight: 700, fontSize: '0.86rem' }}>
+                                <span style={{ fontSize: '1.4rem' }}>{saved ? '🔖' : '🏷️'}</span>
+                            </button>
+                            {viewerId && viewerId === authorId && (
+                                <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.muted, fontWeight: 700, fontSize: '0.86rem' }}>
+                                    <span style={{ fontSize: '1.2rem' }}>🗑️</span>
+                                </button>
+                            )}
                         </div>
-                    ) : (
-                        <div style={{ padding: '14px 18px', textAlign: 'center', borderTop: `1px solid ${SOCIAL.border}` }}>
-                            <Link href="/auth/login" style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.875rem' }}>Log in to comment</Link>
+                        <p style={{ color: SOCIAL.text, fontSize: '0.84rem', fontWeight: 700, margin: '0 0 4px' }}>{likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}</p>
+                        <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '0 0 6px' }}>{new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}{post.type === 'krishiclip' && ` · 👁️ ${post.views || 0} views`}{(post.sharedCount || 0) > 0 && ` · 🔗 ${post.sharedCount} shares`}</p>
+                        {shareCopied && <p style={{ color: SOCIAL.green, fontSize: '0.74rem', margin: '0 0 6px' }}>✓ Link copied</p>}
+
+                        {replyTo && (
+                            <div style={{ background: SOCIAL.primaryLight, padding: '4px 10px', borderRadius: 6, marginBottom: 6, fontSize: '0.74rem', color: SOCIAL.primary, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Replying to comment</span>
+                                <button onClick={() => setReplyTo(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: SOCIAL.primary, fontWeight: 700 }}>✕</button>
+                            </div>
+                        )}
+
+                        {viewerId ? (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleComment()}
+                                    placeholder={replyTo ? 'Reply…' : 'Add a comment…'}
+                                    style={{ flex: 1, padding: '9px 14px', background: SOCIAL.bg, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 100, fontSize: '0.86rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }} />
+                                <button onClick={handleComment} disabled={posting || !commentText.trim()}
+                                    style={{ background: 'none', border: 'none', color: SOCIAL.primary, fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer', opacity: posting || !commentText.trim() ? 0.5 : 1 }}>
+                                    Post
+                                </button>
+                            </div>
+                        ) : (
+                            <Link href="/auth/login" style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.86rem' }}>Log in to comment</Link>
+                        )}
+                    </div>
+
+                    {showDeleteConfirm && (
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.95)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, zIndex: 10 }}>
+                            <p style={{ color: SOCIAL.red, fontSize: '0.95rem', fontWeight: 600, margin: 0 }}>Delete this {post.type === 'krishiclip' ? 'KrishiClip' : 'post'}?</p>
+                            <div style={{ display: 'flex', gap: 10 }}>
+                                <button onClick={handleDelete} disabled={deleting} style={{ background: SOCIAL.red, border: 'none', borderRadius: 8, padding: '8px 20px', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: '0.86rem', opacity: deleting ? 0.7 : 1 }}>{deleting ? 'Deleting…' : 'Yes, delete'}</button>
+                                <button onClick={() => setShowDeleteConfirm(false)} style={{ background: SOCIAL.bg, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, padding: '8px 20px', color: SOCIAL.muted, fontWeight: 700, cursor: 'pointer', fontSize: '0.86rem' }}>Cancel</button>
+                            </div>
                         </div>
                     )}
                 </div>

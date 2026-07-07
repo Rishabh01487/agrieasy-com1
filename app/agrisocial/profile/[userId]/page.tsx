@@ -6,17 +6,19 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 
-interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; createdAt?: string }
-interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string }
+interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string }
+interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[] }
+
+const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 
 export default function AgriSocialProfile({ params }: { params: Promise<{ userId: string }> }) {
     const { userId: profileId } = use(params)
-    const [data, setData] = useState<{ user: UserInfo; posts: Post[]; clips: Post[]; stats: Record<string, number>; isFollowing: boolean } | null>(null)
+    const router = useRouter()
+    const [data, setData] = useState<{ user: UserInfo; posts: Post[]; clips: Post[]; saved: Post[]; stats: Record<string, number>; isFollowing: boolean; isOwnProfile?: boolean } | null>(null)
     const [loading, setLoading] = useState(true)
-    const [tab, setTab] = useState<'posts' | 'clips'>('posts')
+    const [tab, setTab] = useState<'posts' | 'clips' | 'saved'>('posts')
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [following, setFollowing] = useState(false)
-    const router = useRouter()
 
     useEffect(() => {
         const load = async () => {
@@ -46,91 +48,111 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
         }
     }
 
-    if (loading) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.primary, fontWeight: 700, fontFamily: SHARED.font }}>🌾 Loading profile…</div>
+    const handleMessage = async () => {
+        if (!viewerId) { router.push('/auth/login'); return }
+        router.push(`/agrisocial/dm?userId=${profileId}`)
+    }
+
+    if (loading) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.primary, fontWeight: 700, fontFamily: SHARED.font }}>Loading profile…</div>
     if (!data?.user) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.muted, fontFamily: SHARED.font }}>Profile not found</div>
 
-    const { user, posts, clips, stats, isFollowing: _ } = data
+    const { user, posts, clips, saved, stats, isOwnProfile } = data
     const s = stats || {}
     const name = user.farmerName || user.firmName || 'User'
-    const displayPosts = tab === 'posts' ? posts : clips
-    const isOwnProfile = viewerId === profileId
+    const displayPosts = tab === 'posts' ? posts : tab === 'clips' ? clips : saved || []
+    const isOwn = isOwnProfile ?? (viewerId === profileId)
 
     return (
         <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
-            <nav style={{ background: 'rgba(255,255,255,0.85)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: '12px', position: 'sticky', top: 0, zIndex: 50, boxShadow: SHARED.shadow, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                <Link href="/agrisocial" style={{ color: SOCIAL.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem', transition: 'all 0.2s ease' }}>← AgriSocial</Link>
+            <nav style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '0 20px', height: '56px', display: 'flex', alignItems: 'center', gap: 12, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
+                <Link href="/agrisocial" style={{ color: SOCIAL.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem' }}>← AgriSocial</Link>
                 <span style={{ color: SOCIAL.muted }}>›</span>
                 <span style={{ fontWeight: 700, color: SOCIAL.text }}>{name}</span>
             </nav>
 
-            {/* Profile header */}
-            <div style={{ background: SOCIAL.white, borderBottom: `1px solid ${SOCIAL.border}`, padding: '24px', maxWidth: '700px', margin: '0 auto' }}>
-                {/* Banner */}
-                <div style={{ height: '100px', borderRadius: '14px', background: SOCIAL.gradient, marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}>
-                    <span style={{ fontSize: '2rem' }}>🌾🚜🌱</span>
+            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 80px' }}>
+                {/* Header */}
+                <div style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
+                    <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 144, height: 144, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '3.5rem', border: '4px solid #fff' }}>
+                            {name[0]?.toUpperCase()}
+                        </div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 280 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                            <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>{name}</h1>
+                            {isOwn ? (
+                                <>
+                                    <Link href="/agrisocial/create" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>+ New Post</Link>
+                                    <Link href="/agrisocial/saved" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>🔖 Saved</Link>
+                                </>
+                            ) : (
+                                <>
+                                    <button onClick={handleFollow} style={{ padding: '7px 22px', background: following ? SOCIAL.white : SOCIAL.primary, border: `1.5px solid ${following ? SOCIAL.border : SOCIAL.primary}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: following ? SOCIAL.text : '#fff', cursor: 'pointer' }}>
+                                        {following ? '✓ Following' : '+ Follow'}
+                                    </button>
+                                    <button onClick={handleMessage} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✈️ Message</button>
+                                </>
+                            )}
+                        </div>
+                        {/* Stats */}
+                        <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+                            <div><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
+                            <div><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></div>
+                            <div><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></div>
+                        </div>
+                        {/* Bio */}
+                        <div>
+                            <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
+                            {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.84rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
+                            {user.createdAt && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>}
+                            <p style={{ color: SOCIAL.primary, fontSize: '0.84rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} total likes · 🎬 {s.clipsCount || 0} KrishiClips</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '16px', marginBottom: '16px', marginTop: '-40px' }}>
-                    <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1.8rem', border: '3px solid #fff', flexShrink: 0 }}>
-                        {name[0]?.toUpperCase()}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                        <h2 style={{ color: SOCIAL.text, fontWeight: 900, margin: '0 0 2px', fontSize: '1.2rem' }}>{name}</h2>
-                        <p style={{ color: SOCIAL.muted, fontSize: '0.8rem', margin: 0 }}>{user.role === 'farmer' ? '🌾 Farmer' : user.role === 'buyer' ? '🛒 Buyer' : user.role === 'transporter' ? '🚛 Transporter' : '👤 AgriSocial Member'}</p>
-                    </div>
-                    {isOwnProfile ? (
-                        <Link href="/agrisocial/create" style={{ padding: '8px 16px', background: SOCIAL.primaryLight, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '10px', fontWeight: 700, fontSize: '0.8rem', color: SOCIAL.textSecondary, textDecoration: 'none', transition: 'all 0.2s ease' }}>Edit</Link>
-                    ) : (
-                        <button onClick={handleFollow} style={{ padding: '8px 20px', background: following ? SOCIAL.primaryLight : SOCIAL.primary, border: `1.5px solid ${following ? SOCIAL.border : SOCIAL.primary}`, borderRadius: '10px', fontWeight: 800, fontSize: '0.85rem', color: following ? SOCIAL.textSecondary : '#fff', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                            {following ? '✓ Following' : '+ Follow'}
-                        </button>
-                    )}
-                </div>
-
-                {/* Stats row */}
-                <div style={{ display: 'flex', gap: '8px' }}>
-                    {[['Posts', s.postsCount], ['KrishiClips', s.clipsCount], ['Followers', s.followersCount], ['Following', s.followingCount], ['❤️ Likes', s.totalLikes]].map(([l, v]) => (
-                        <div key={l as string} style={{ flex: 1, textAlign: 'center', background: SOCIAL.primaryLight, borderRadius: '10px', padding: '8px 4px', border: `1px solid ${SOCIAL.border}`, transition: 'all 0.2s ease' }}>
-                            <p style={{ color: SOCIAL.textSecondary, fontWeight: 900, fontSize: '1rem', margin: '0 0 2px' }}>{v as number}</p>
-                            <p style={{ color: SOCIAL.muted, fontSize: '0.6rem', fontWeight: 700, margin: 0 }}>{l as string}</p>
+                {/* Highlights (story highlights — empty placeholder row showing structure) */}
+                <div style={{ display: 'flex', gap: 16, padding: '12px 0 20px', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 4, overflowX: 'auto' }} className="no-scrollbar">
+                    {['🌾 Farm', '🚜 Equipment', '🌱 Harvest', '💰 Prices'].map((h, i) => (
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 80 }}>
+                            <div style={{ width: 70, height: 70, borderRadius: '50%', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>{h.split(' ')[0]}</div>
+                            <span style={{ color: SOCIAL.textSecondary, fontSize: '0.74rem', fontWeight: 600 }}>{h.split(' ')[1]}</span>
                         </div>
                     ))}
                 </div>
-            </div>
 
-            {/* Tabs */}
-            <div style={{ maxWidth: '700px', margin: '0 auto', background: SOCIAL.white, borderBottom: `1px solid ${SOCIAL.border}` }}>
-                <div style={{ display: 'flex' }}>
-                    {[['posts', '📷 Posts'], ['clips', '🎬 KrishiClips']].map(([k, l]) => (
-                        <button key={k} onClick={() => setTab(k as 'posts' | 'clips')}
-                            style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? SOCIAL.primary : 'transparent'}`, fontWeight: 700, fontSize: '0.875rem', color: tab === k ? SOCIAL.primary : SOCIAL.muted, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                {/* Tabs */}
+                <div style={{ display: 'flex', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 6 }}>
+                    {([['posts', `📷 Posts`], ['clips', `🎬 Clips`], ...(isOwn ? [['saved', `🔖 Saved`] as const] : [])] as const).map(([k, l]) => (
+                        <button key={k} onClick={() => setTab(k as 'posts' | 'clips' | 'saved')}
+                            style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? SOCIAL.primary : 'transparent'}`, fontWeight: 700, fontSize: '0.82rem', color: tab === k ? SOCIAL.primary : SOCIAL.muted, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                             {l}
                         </button>
                     ))}
                 </div>
-            </div>
 
-            {/* Grid */}
-            <div style={{ maxWidth: '700px', margin: '0 auto', padding: '4px' }}>
+                {/* Grid */}
                 {displayPosts.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '48px' }}>
-                        <div style={{ fontSize: '2.5rem', marginBottom: '8px' }}>{tab === 'posts' ? '📷' : '🎬'}</div>
-                        <p style={{ color: SOCIAL.muted }}>{isOwnProfile ? 'Share your first post!' : 'No posts yet'}</p>
-                        {isOwnProfile && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 20px', background: SOCIAL.primary, color: '#fff', borderRadius: '10px', fontWeight: 700, textDecoration: 'none', marginTop: '12px', transition: 'all 0.2s ease' }}>+ Create</Link>}
+                    <div style={{ textAlign: 'center', padding: 60 }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>{tab === 'posts' ? '📷' : tab === 'clips' ? '🎬' : '🔖'}</div>
+                        <p style={{ color: SOCIAL.muted }}>{isOwn ? (tab === 'saved' ? 'Save posts to see them here' : 'Share your first post!') : 'No posts yet'}</p>
+                        {isOwn && tab !== 'saved' && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 12, fontSize: '0.86rem' }}>+ Create</Link>}
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '6px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {displayPosts.map(p => (
                             <Link key={p._id} href={`/agrisocial/post/${p._id}`}
-                                style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: '8px', overflow: 'hidden', textDecoration: 'none', transition: 'all 0.2s ease' }}>
+                                style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 6, overflow: 'hidden', textDecoration: 'none' }}>
                                 {(!p.mediaUrl || p.mediaType !== 'image') && (
-                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '6px', textAlign: 'center' }}>
+                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 6, textAlign: 'center' }}>
                                         <span style={{ fontSize: '1.2rem' }}>{p.type === 'krishiclip' ? '🎬' : '📢'}</span>
-                                        <p style={{ color: '#fff', fontSize: '0.6rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
+                                        <p style={{ color: '#fff', fontSize: '0.62rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
                                     </div>
                                 )}
-                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)', padding: '5px 5px 4px', display: 'flex', gap: '6px' }}>
-                                    <span style={{ color: '#fff', fontSize: '0.6rem', fontWeight: 700 }}>❤️ {p.likesCount}</span>
+                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)', padding: '6px 6px 4px', display: 'flex', gap: 8 }}>
+                                    <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>❤️ {p.likesCount}</span>
+                                    <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>💬 {p.commentsCount}</span>
+                                    {p.type === 'krishiclip' && <span style={{ color: '#fff', fontSize: '0.6rem', fontWeight: 800, marginLeft: 'auto' }}>🎬</span>}
                                 </div>
                             </Link>
                         ))}

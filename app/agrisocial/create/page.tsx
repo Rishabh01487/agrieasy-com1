@@ -199,9 +199,21 @@ function CreateContent() {
             }
         }
 
+        // Extract hashtags from caption (Instagram-style: #word)
+        const hashtags = (caption.match(/#(\w+)/g) || []).map(t => t.slice(1).toLowerCase())
+
         const res = await authFetch('/api/social/posts', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, type: postType, caption, mediaUrl, mediaType, category, location }),
+            body: JSON.stringify({
+                userId,
+                type: postType,
+                content: caption,
+                mediaUrls: mediaUrl ? [mediaUrl] : [],
+                mediaType,
+                category,
+                location,
+                hashtags,
+            }),
         })
         const d = await res.json()
         if (!res.ok) { setError(d.error || 'Failed'); setSubmitting(false); return }
