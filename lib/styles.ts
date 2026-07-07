@@ -1,17 +1,14 @@
 /**
- * AgriEasy — Unified Design System
+ * AgriEasy — Unified Design System  (Blue & White edition)
  *
- * Four module-specific palettes built on a shared foundation.
- * Every page imports from here — no more per-file color constants.
+ * Every palette now ships the same blue-and-white identity so the whole
+ * product feels like one app. A few semantic accents (success / error /
+ * warning) are kept shared so status badges still read correctly.
  *
- * Design principles:
- *   - AgriPay:   Deep indigo/violet fintech — trust, money, premium
- *   - AgriSocial: Warm amber/orange social — energy, community, vibrancy
- *   - Auth:      Soft gradient purple — welcoming, onboarding
- *   - Admin:     Slate dark mode — authority, clarity, data-density
- *   - Buyer:     Emerald/teal — commerce, growth, marketplace
- *   - Farmer:    Forest green — agriculture, nature, harvest
- *   - Transporter: Deep blue — logistics, reliability, movement
+ * Brand blue ramp (Tailwind blue family):
+ *   50  #eff6ff   100 #dbeafe   200 #bfdbfe   300 #93c5fd
+ *   400 #60a5fa   500 #3b82f6   600 #2563eb   700 #1d4ed8
+ *   800 #1e40af   900 #1e3a8a
  */
 
 // ── Shared Foundation ──────────────────────────────────────────────
@@ -26,10 +23,10 @@ export const SHARED = {
   warningLight: '#fef3c7',
   info: '#2563eb',
   infoLight: '#dbeafe',
-  shadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-  shadowMd: '0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.06)',
-  shadowLg: '0 10px 25px -3px rgba(0,0,0,0.08), 0 4px 6px -4px rgba(0,0,0,0.06)',
-  shadowXl: '0 20px 50px -12px rgba(0,0,0,0.15)',
+  shadow: '0 1px 3px rgba(15,23,42,0.08), 0 1px 2px rgba(15,23,42,0.06)',
+  shadowMd: '0 4px 6px -1px rgba(15,23,42,0.10), 0 2px 4px -2px rgba(15,23,42,0.06)',
+  shadowLg: '0 10px 25px -3px rgba(15,23,42,0.12), 0 4px 6px -4px rgba(15,23,42,0.06)',
+  shadowXl: '0 20px 50px -12px rgba(15,23,42,0.22)',
   radius: '16px',
   radiusSm: '10px',
   radiusLg: '20px',
@@ -37,98 +34,131 @@ export const SHARED = {
   font: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
 } as const
 
-// ── AgriPay Palette (Deep Indigo Fintech) ─────────────────────────
+// ── Brand palette (single source of truth) ────────────────────────
+
+export const BRAND = {
+  // Brand blue ramp
+  blue50: '#eff6ff',
+  blue100: '#dbeafe',
+  blue200: '#bfdbfe',
+  blue300: '#93c5fd',
+  blue400: '#60a5fa',
+  blue500: '#3b82f6',
+  blue600: '#2563eb',
+  blue700: '#1d4ed8',
+  blue800: '#1e40af',
+  blue900: '#1e3a8a',
+  ink: '#0f172a',
+  inkSoft: '#1e293b',
+  muted: '#64748b',
+  border: '#e2e8f0',
+  borderSoft: '#eef2f7',
+  bg: '#f8fafc',
+  bgSub: '#f1f5f9',
+  white: '#ffffff',
+  gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
+  gradientDeep: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+  gradientSoft: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+  gradientInstagram: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 35%, #60a5fa 70%, #93c5fd 100%)',
+  gradientInstagramRing:
+    'linear-gradient(45deg, #2563eb 0%, #3b82f6 25%, #60a5fa 50%, #93c5fd 75%, #2563eb 100%)',
+} as const
+
+// ── AgriPay Palette (Blue & White) ─────────────────────────────────
 
 export const AGRI = {
-  bg: '#f5f3ff',
-  bgSub: '#ede9fe',
+  bg: '#f8fafc',
+  bgSub: '#f1f5f9',
   white: SHARED.white,
-  primary: '#6d28d9',
-  primaryHover: '#5b21b6',
-  primaryLight: '#ede9fe',
-  primarySoft: '#f5f3ff',
-  accent: '#7c3aed',
-  text: '#1e1b4b',
-  textSecondary: '#4c1d95',
-  muted: '#6b7280',
-  border: '#ddd6fe',
-  borderLight: '#e9e5f5',
+  primary: '#1d4ed8',
+  primaryHover: '#1e40af',
+  primaryLight: '#dbeafe',
+  primarySoft: '#eff6ff',
+  accent: '#3b82f6',
+  text: '#0f172a',
+  textSecondary: '#1e293b',
+  muted: '#64748b',
+  border: '#bfdbfe',
+  borderLight: '#eff6ff',
   card: SHARED.white,
   green: SHARED.success,
   greenLight: '#dcfce7',
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#f59e0b',
+  gold: '#d97706',
   goldLight: '#fef9c3',
-  gradient: 'linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%)',
-  gradientSoft: 'linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%)',
-  gradientCard: 'linear-gradient(145deg, #6d28d9 0%, #4c1d95 100%)',
+  gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #60a5fa 100%)',
+  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
+  gradientCard: 'linear-gradient(145deg, #1d4ed8 0%, #1e3a8a 100%)',
 }
 
-// ── AgriSocial Palette (Warm Amber Social) ────────────────────────
+// ── AgriSocial Palette (Blue & White — Instagram-style) ───────────
 
 export const SOCIAL = {
-  bg: '#fffbf5',
-  bgSub: '#fff7ed',
+  bg: '#fafbfc',
+  bgSub: '#f1f5f9',
   white: SHARED.white,
-  primary: '#ea580c',
-  primaryHover: '#c2410c',
-  primaryLight: '#fff7ed',
-  primarySoft: '#fffbf5',
-  accent: '#f97316',
-  text: '#1c1917',
-  textSecondary: '#44403c',
-  muted: '#78716c',
-  border: '#fed7aa',
-  borderLight: '#ffedd5',
+  primary: '#2563eb',
+  primaryHover: '#1d4ed8',
+  primaryLight: '#dbeafe',
+  primarySoft: '#eff6ff',
+  accent: '#3b82f6',
+  text: '#0f172a',
+  textSecondary: '#1e293b',
+  muted: '#64748b',
+  border: '#e2e8f0',
+  borderLight: '#eef2f7',
   card: SHARED.white,
   green: '#16a34a',
   greenLight: '#dcfce7',
   red: '#ef4444',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fb923c 100%)',
-  gradientSoft: 'linear-gradient(135deg, #fffbf5 0%, #fff7ed 100%)',
+  gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
+  gradientSoft: 'linear-gradient(135deg, #fafbfc 0%, #eff6ff 100%)',
+  gradientRing:
+    'linear-gradient(45deg, #2563eb 0%, #3b82f6 25%, #60a5fa 50%, #93c5fd 75%, #2563eb 100%)',
   clips: {
-    bg: '#000000',
-    card: '#1a1a1a',
-    text: '#f5f5f5',
-    muted: '#a3a3a3',
-    accent: '#ea580c',
+    bg: '#0a0f1e',
+    card: '#111827',
+    text: '#f8fafc',
+    muted: '#94a3b8',
+    accent: '#3b82f6',
+    gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 50%, #60a5fa 100%)',
   },
 }
 
-// ── Auth Palette (Soft Purple Welcome) ────────────────────────────
+// ── Auth Palette (Blue & White) ────────────────────────────────────
 
 export const AUTH = {
-  bg: '#faf5ff',
+  bg: '#f8fafc',
   white: SHARED.white,
-  primary: '#7c3aed',
-  primaryHover: '#6d28d9',
-  primaryLight: '#ede9fe',
-  text: '#1e1b4b',
-  muted: '#6b7280',
-  border: '#ddd6fe',
-  gradient: 'linear-gradient(135deg, #a78bfa 0%, #7c3aed 40%, #6d28d9 100%)',
-  gradientBlob1: 'radial-gradient(circle at 30% 20%, rgba(124,58,237,0.15) 0%, transparent 50%)',
-  gradientBlob2: 'radial-gradient(circle at 80% 80%, rgba(139,92,246,0.1) 0%, transparent 50%)',
+  primary: '#2563eb',
+  primaryHover: '#1d4ed8',
+  primaryLight: '#dbeafe',
+  text: '#0f172a',
+  muted: '#64748b',
+  border: '#bfdbfe',
+  gradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 40%, #1d4ed8 100%)',
+  gradientBlob1: 'radial-gradient(circle at 30% 20%, rgba(37,99,235,0.15) 0%, transparent 50%)',
+  gradientBlob2: 'radial-gradient(circle at 80% 80%, rgba(59,130,246,0.12) 0%, transparent 50%)',
 }
 
-// ── Admin Palette (Slate Dark Authority) ──────────────────────────
+// ── Admin Palette (Dark Slate — kept dark for data density) ───────
 
 export const ADMIN = {
-  bg: '#0f172a',
-  bgSub: '#1e293b',
-  card: '#1e293b',
-  cardHover: '#263348',
+  bg: '#0b1220',
+  bgSub: '#111a2e',
+  card: '#111a2e',
+  cardHover: '#1a2540',
   white: '#f8fafc',
-  primary: '#8b5cf6',
-  primaryHover: '#7c3aed',
-  primaryLight: '#1e1b4b',
+  primary: '#3b82f6',
+  primaryHover: '#2563eb',
+  primaryLight: '#0c1a36',
   text: '#e2e8f0',
   textSecondary: '#94a3b8',
   muted: '#64748b',
-  border: '#334155',
-  borderLight: '#1e293b',
+  border: '#1f2a44',
+  borderLight: '#111a2e',
   green: '#22c55e',
   greenLight: '#14532d',
   red: '#ef4444',
@@ -137,85 +167,89 @@ export const ADMIN = {
   blueLight: '#1e3a5f',
   yellow: '#eab308',
   yellowLight: '#422006',
-  gradient: 'linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%)',
-  sidebar: '#0c1322',
-  sidebarHover: '#1a2744',
-  sidebarActive: '#6d28d9',
+  gradient: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+  sidebar: '#070d1a',
+  sidebarHover: '#0f1a30',
+  sidebarActive: '#2563eb',
 }
 
-// ── Buyer Palette (Emerald Commerce) ──────────────────────────────
+// ── Buyer Palette (Blue & White) ──────────────────────────────────
 
 export const BUYER = {
-  bg: '#f0fdf4',
-  bgSub: '#dcfce7',
-  white: SHARED.white,
-  primary: '#059669',
-  primaryHover: '#047857',
-  primaryLight: '#d1fae5',
-  primarySoft: '#ecfdf5',
-  accent: '#10b981',
-  text: '#064e3b',
-  textSecondary: '#065f46',
-  muted: '#6b7280',
-  border: '#a7f3d0',
-  borderLight: '#d1fae5',
-  card: SHARED.white,
-  red: SHARED.error,
-  redLight: '#fef2f2',
-  gold: '#d97706',
-  goldLight: '#fef9c3',
-  gradient: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #34d399 100%)',
-  gradientSoft: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-}
-
-// ── Farmer Palette (Forest Agriculture) ───────────────────────────
-
-export const FARMER = {
-  bg: '#fefce8',
-  bgSub: '#fef9c3',
-  white: SHARED.white,
-  primary: '#65a30d',
-  primaryHover: '#4d7c0f',
-  primaryLight: '#ecfccb',
-  primarySoft: '#f7fee7',
-  accent: '#84cc16',
-  text: '#1a2e05',
-  textSecondary: '#365314',
-  muted: '#6b7280',
-  border: '#bef264',
-  borderLight: '#ecfccb',
-  card: SHARED.white,
-  red: SHARED.error,
-  redLight: '#fef2f2',
-  gold: '#d97706',
-  goldLight: '#fef9c3',
-  gradient: 'linear-gradient(135deg, #65a30d 0%, #84cc16 50%, #a3e635 100%)',
-  gradientSoft: 'linear-gradient(135deg, #fefce8 0%, #fef9c3 100%)',
-}
-
-// ── Transporter Palette (Deep Blue Logistics) ──────────────────────
-
-export const TRANSPORTER = {
-  bg: '#eff6ff',
-  bgSub: '#dbeafe',
+  bg: '#f8fafc',
+  bgSub: '#eff6ff',
   white: SHARED.white,
   primary: '#2563eb',
   primaryHover: '#1d4ed8',
   primaryLight: '#dbeafe',
   primarySoft: '#eff6ff',
   accent: '#3b82f6',
-  text: '#1e3a5f',
-  textSecondary: '#1e40af',
-  muted: '#6b7280',
-  border: '#93c5fd',
-  borderLight: '#dbeafe',
+  text: '#0f172a',
+  textSecondary: '#1e293b',
+  muted: '#64748b',
+  border: '#bfdbfe',
+  borderLight: '#eff6ff',
+  card: SHARED.white,
+  red: SHARED.error,
+  redLight: '#fef2f2',
+  gold: '#d97706',
+  goldLight: '#fef9c3',
+  green: SHARED.success,
+  greenLight: '#dcfce7',
+  gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
+  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
+}
+
+// ── Farmer Palette (Blue & White) ─────────────────────────────────
+
+export const FARMER = {
+  bg: '#f8fafc',
+  bgSub: '#eff6ff',
+  white: SHARED.white,
+  primary: '#1d4ed8',
+  primaryHover: '#1e3a8a',
+  primaryLight: '#dbeafe',
+  primarySoft: '#eff6ff',
+  accent: '#3b82f6',
+  text: '#0f172a',
+  textSecondary: '#1e293b',
+  muted: '#64748b',
+  border: '#bfdbfe',
+  borderLight: '#eff6ff',
+  card: SHARED.white,
+  red: SHARED.error,
+  redLight: '#fef2f2',
+  gold: '#d97706',
+  goldLight: '#fef9c3',
+  green: SHARED.success,
+  greenLight: '#dcfce7',
+  gradient: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%)',
+  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
+}
+
+// ── Transporter Palette (Blue & White) ────────────────────────────
+
+export const TRANSPORTER = {
+  bg: '#f8fafc',
+  bgSub: '#eff6ff',
+  white: SHARED.white,
+  primary: '#2563eb',
+  primaryHover: '#1d4ed8',
+  primaryLight: '#dbeafe',
+  primarySoft: '#eff6ff',
+  accent: '#3b82f6',
+  text: '#0f172a',
+  textSecondary: '#1e293b',
+  muted: '#64748b',
+  border: '#bfdbfe',
+  borderLight: '#eff6ff',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
   green: SHARED.success,
   greenLight: '#dcfce7',
   gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
-  gradientSoft: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
 }
 
 // ── Reusable Style Presets ─────────────────────────────────────────
@@ -288,7 +322,7 @@ export const navStyle = (palette: { white: string; border: string; primary?: str
   background: palette.white,
   borderBottom: `1px solid ${palette.border}`,
   padding: '14px 24px',
-  boxShadow: palette.shadow || '0 1px 4px rgba(0,0,0,0.04)',
+  boxShadow: palette.shadow || '0 1px 4px rgba(15,23,42,0.04)',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
 })
@@ -297,7 +331,7 @@ export const breadcrumbNav = (palette: { primary: string; muted: string; border:
   background: palette.white,
   borderBottom: `1px solid ${palette.border}`,
   padding: '14px 24px',
-  boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  boxShadow: '0 1px 4px rgba(15,23,42,0.04)',
 })
 
 // ── Status Colors (shared across modules) ─────────────────────────
