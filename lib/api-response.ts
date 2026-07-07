@@ -89,13 +89,36 @@ export function apiError(
     success: false,
     error: {
       code,
-      message: config.isProd ? message : message, // In production, could sanitize further
+      // In production, sanitize the message to avoid leaking internal details
+      // (e.g. Mongoose duplicate-key text, file paths, stack snippets). The
+      // raw message is still logged server-side via withErrorHandler.
+      message: config.isProd ? sanitizeErrorMessage(message) : message,
       ...(details && config.isDev ? { details } : {}),
       ...(requestId ? { requestId } : {}),
     },
   }
 
   return NextResponse.json(body, { status: httpStatus })
+}
+
+/**
+ * Strip obviously-sensitive substrings from error messages before showing
+ * them to clients in production. We keep the human-readable part but remove
+ * things like file paths, "at <stack>" frames, and DB connection strings.
+ */
+function sanitizeErrorMessage(message: string): string {
+  if (!message) return message
+  return message
+    // Strip anything that looks like a file path
+    .replace(/(?:\/[\w.-]+)+\/[\w.-]+:\d+:\d+/g, '[file]')
+    // Strip "at <function> (<file>)" stack frames
+    .replace(/\bat [\w.]+ \([^)]*\)/g, '')
+    // Strip mongo connection strings
+    .replace(/mongodb(\+srv)?:\/\/[^\s]+/g, '[mongo-uri]')
+    // Collapse whitespace left behind
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, 300) // hard cap
 }
 
 // ── Convenience wrappers ───────────────────────────────────────────

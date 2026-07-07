@@ -26,9 +26,15 @@ export async function POST(request: NextRequest) {
     await sendSms(data.phone, `Your AgriPay OTP is: ${otp}. Valid for 5 minutes.`)
 
     const smsConfigured = !!process.env.SMS_PROVIDER
+    const isDev = process.env.NODE_ENV === 'development'
     return apiSuccess({
       message: 'OTP sent to your phone',
-      ...(smsConfigured ? {} : { devOtp: otp }),
+      // Only expose the OTP in the response during local development AND when
+      // SMS is not configured. In production we NEVER return the OTP — it must
+      // be delivered out-of-band via SMS, otherwise any caller could request
+      // an OTP for a victim's phone and immediately read it from the response
+      // to bypass authentication entirely.
+      ...(isDev && !smsConfigured ? { devOtp: otp } : {}),
     })
   } catch (error) {
     console.error('Send OTP error:', error)

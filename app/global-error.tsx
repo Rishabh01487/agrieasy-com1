@@ -67,6 +67,7 @@ export default function GlobalError({
             >
               Try Again
             </button>
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- global-error.tsx renders its own <html><body>; <Link> requires the app router to be mounted, which it isn't here. */}
             <a
               href="/"
               style={{

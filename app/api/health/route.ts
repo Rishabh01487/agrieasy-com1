@@ -26,7 +26,15 @@ export async function GET(request: Request) {
       await mongoose.connection.db?.admin().ping()
       checks.mongodb = { status: 'up', latencyMs: Math.round(performance.now() - start) }
     } catch (e) {
-      checks.mongodb = { status: 'down', detail: e instanceof Error ? e.message : 'Connection failed' }
+      // Sanitize: don't leak raw DB error strings (may contain connection
+      // strings, hostnames, or auth details) to unauthenticated callers.
+      const detail = e instanceof Error ? e.message : 'Connection failed'
+      checks.mongodb = {
+        status: 'down',
+        detail: process.env.NODE_ENV === 'production'
+          ? 'Database unreachable'
+          : detail.replace(/mongodb(\+srv)?:\/\/[^\s]+/g, '[mongo-uri]').slice(0, 200),
+      }
     }
   } else {
     checks.mongodb = { status: 'up' } // Assume up if not deep-checking

@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
+
+  // Rate limit: signature generation is a precursor to uploads — prevent
+  // spamming Cloudinary signature generation.
+  const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 30, message: 'Too many upload requests. Slow down.' })
+  if (rl) return rl
 
   try {
     if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
