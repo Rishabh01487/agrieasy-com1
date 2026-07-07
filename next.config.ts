@@ -7,9 +7,6 @@ dns.setDefaultResultOrder("ipv4first");
 dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
 const nextConfig: NextConfig = {
-  turbopack: {
-    root: '/home/z/my-project/agrieasy-com1',
-  },
   devIndicators: false,
   // ─── Performance & Scalability ──────────────────────────────
   compress: true,                   // Gzip compression for all responses
