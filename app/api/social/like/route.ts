@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
+import Notification from '@/lib/models/Notification'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()
 
-        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 30, message: 'Slow down!' })
+        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 60, message: 'Slow down!' })
         if (rl) return rl
 
         await dbConnect()
@@ -33,9 +34,26 @@ export async function POST(req: NextRequest) {
             post.likes.push(auth.user.userId)
             post.likesCount = post.likes.length
         }
-
         await post.save()
-        await logAudit({ userId: auth.user.userId, action: alreadyLiked ? 'UPDATE' : 'CREATE', resource: 'Like', resourceId: postId, details: { liked: !alreadyLiked }, request: req })
+
+        await logAudit({
+            userId: auth.user.userId,
+            action: alreadyLiked ? 'UPDATE' : 'CREATE',
+            resource: 'Like', resourceId: postId,
+            details: { liked: !alreadyLiked },
+            request: req,
+        })
+
+        // Notify the post owner (unless they liked their own post)
+        const postOwnerId = post.userId.toString()
+        if (!alreadyLiked && postOwnerId !== auth.user.userId && Notification) {
+            await Notification.create({
+                userId: postOwnerId,
+                actorId: auth.user.userId,
+                type: 'like',
+                postId: post._id,
+            })
+        }
 
         return NextResponse.json({ liked: !alreadyLiked, likesCount: post.likesCount })
     } catch (e) {

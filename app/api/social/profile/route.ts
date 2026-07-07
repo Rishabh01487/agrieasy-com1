@@ -16,12 +16,16 @@ export async function GET(req: NextRequest) {
         const auth = authenticateRequest(req)
         const viewerId = auth?.user.userId || searchParams.get('viewerId')
 
-        const user = await User.findById(userId).select('farmerName firmName role phone createdAt').lean()
+        const user = await User.findById(userId).select('farmerName firmName role phone address email createdAt').lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-        const [posts, clips, followersCount, followingCount, isFollowing] = await Promise.all([
-            Post.find({ userId, type: 'post', isActive: true }).sort({ createdAt: -1 }).limit(30).lean(),
-            Post.find({ userId, type: 'krishiclip', isActive: true }).sort({ createdAt: -1 }).limit(30).lean(),
+        const [posts, clips, savedPosts, followersCount, followingCount, isFollowing] = await Promise.all([
+            Post.find({ userId, type: 'post', isActive: true }).sort({ createdAt: -1 }).limit(60).lean(),
+            Post.find({ userId, type: 'krishiclip', isActive: true }).sort({ createdAt: -1 }).limit(60).lean(),
+            viewerId && viewerId === userId
+                ? Post.find({ savedBy: viewerId, isActive: true }).sort({ createdAt: -1 }).limit(60)
+                    .populate('userId', 'farmerName firmName role').lean()
+                : Promise.resolve([]),
             Follow.countDocuments({ followingId: userId }),
             Follow.countDocuments({ followerId: userId }),
             viewerId ? Follow.findOne({ followerId: viewerId, followingId: userId }) : null,
@@ -30,9 +34,20 @@ export async function GET(req: NextRequest) {
         const totalLikes = [...posts, ...clips].reduce((sum, p) => sum + (p.likesCount || 0), 0)
 
         return NextResponse.json({
-            user, posts, clips,
-            stats: { postsCount: posts.length, clipsCount: clips.length, followersCount, followingCount, totalLikes },
+            user,
+            posts,
+            clips,
+            saved: savedPosts,
+            stats: {
+                postsCount: posts.length,
+                clipsCount: clips.length,
+                savedCount: savedPosts.length,
+                followersCount,
+                followingCount,
+                totalLikes,
+            },
             isFollowing: !!isFollowing,
+            isOwnProfile: viewerId === userId,
         })
     } catch (e) {
         console.error(e)

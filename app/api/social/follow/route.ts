@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Follow from '@/lib/models/Follow'
+import Notification from '@/lib/models/Notification'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()
 
-        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 15, message: 'Slow down! Too many follow actions.' })
+        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 30, message: 'Slow down! Too many follow actions.' })
         if (rl) return rl
 
         await dbConnect()
@@ -30,6 +31,16 @@ export async function POST(req: NextRequest) {
         } else {
             await Follow.create({ followerId: auth.user.userId, followingId })
             await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Follow', resourceId: followingId, details: { followed: true }, request: req })
+
+            // Notify the followed user
+            if (Notification) {
+                await Notification.create({
+                    userId: followingId,
+                    actorId: auth.user.userId,
+                    type: 'follow',
+                })
+            }
+
             return NextResponse.json({ following: true })
         }
     } catch (e) {
