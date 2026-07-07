@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
 
     await dbConnect()
     try {
-        let wallet = await Wallet.findOne({ userId: auth.user.userId })
+        const wallet = await Wallet.findOne({ userId: auth.user.userId })
         if (!wallet) return NextResponse.json({ error: 'Wallet not found. Open AgriPay first.' }, { status: 404 })
 
         if (wallet.paylaterEligible) {

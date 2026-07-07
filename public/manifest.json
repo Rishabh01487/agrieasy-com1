@@ -1,12 +1,12 @@
 {
     "name": "AgriEasy.com",
     "short_name": "AgriEasy",
-    "description": "India's agricultural marketplace — connecting farmers directly with buyers for seamless trade",
+    "description": "India's agricultural marketplace + AgriSocial community \u2014 connecting farmers, buyers, and transporters with Instagram-style social, direct messaging, wallet, and more.",
     "start_url": "/",
     "display": "standalone",
     "orientation": "portrait",
-    "background_color": "#0f172a",
-    "theme_color": "#10b981",
+    "background_color": "#f8fafc",
+    "theme_color": "#2563eb",
     "lang": "en-IN",
     "scope": "/",
     "categories": [
@@ -38,6 +38,16 @@
         }
     ],
     "shortcuts": [
+        {
+            "name": "AgriSocial Feed",
+            "url": "/agrisocial",
+            "icons": [
+                {
+                    "src": "/icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
         {
             "name": "Farmer Login",
             "url": "/auth/login?role=farmer",

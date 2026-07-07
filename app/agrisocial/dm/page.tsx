@@ -144,7 +144,7 @@ function AgriSocialDMInner() {
             }
             setActive(a => a ? { ...a, messages: [...(a.messages || []), optimistic] } : a)
 
-            let convId = activeId
+            const convId = activeId
             if (!convId) return
             const res = await authFetch('/api/social/dm/messages', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -161,7 +161,6 @@ function AgriSocialDMInner() {
         } catch {}
         setSending(false)
     }
-
     const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 
     return (
