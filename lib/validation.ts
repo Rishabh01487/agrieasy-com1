@@ -144,23 +144,60 @@ export const createVehicleSchema = z.object({
 })
 
 // ── Social schemas ─────────────────────────────────────────────────
+//
+// IMPORTANT: the enum values here MUST match the Mongoose Post model
+// in lib/models/Post.ts exactly, otherwise posts will fail to save.
+
+export const POST_CATEGORIES = [
+  'farming', 'agritrading', 'technique', 'equipment',
+  'weather', 'livestock', 'organic', 'general',
+] as const
+
+export const POST_TYPES = ['post', 'krishiclip'] as const
 
 export const createPostSchema = z.object({
-  content: optSanitizedString(z.string().max(500)),
+  content: optSanitizedString(z.string().max(2200)),
   mediaUrls: z.array(z.string().url()).max(10).optional().default([]),
-  type: z.enum(['post', 'clip']).default('post'),
-  category: z.enum([
-    'crop', 'livestock', 'equipment', 'market', 'weather',
-    'success_story', 'question', 'general',
-  ]).default('general'),
-  hashtags: z.array(sanitizedString(z.string().max(50))).max(10).optional().default([]),
-  cropTags: z.array(sanitizedString(z.string().max(50))).max(5).optional().default([]),
+  type: z.enum(POST_TYPES).default('post'),
+  mediaType: z.enum(['image', 'video', 'youtube', 'text']).optional(),
+  category: z.enum(POST_CATEGORIES).default('general'),
+  hashtags: z.array(sanitizedString(z.string().max(50))).max(30).optional().default([]),
   location: optSanitizedString(z.string().max(200)),
 })
 
 export const commentSchema = z.object({
   content: sanitizedString(z.string().min(1, 'Comment cannot be empty').max(500)),
+  parentId: objectIdSchema.optional(),
 })
+
+// ── Story schema (Instagram-style stories) ────────────────────────
+
+export const createStorySchema = z.object({
+  mediaUrl: z.string().url('Story media URL is required'),
+  mediaType: z.enum(['image', 'video']),
+  caption: optSanitizedString(z.string().max(500)),
+  duration: z.number().min(3).max(30).optional().default(5), // seconds
+})
+
+// ── Direct Message schema ─────────────────────────────────────────
+
+export const createConversationSchema = z.object({
+  participantId: objectIdSchema,
+})
+
+export const sendMessageSchema = z.object({
+  conversationId: objectIdSchema.optional(),
+  recipientId: objectIdSchema.optional(),
+  text: sanitizedString(z.string().min(1, 'Message cannot be empty').max(2000)),
+  mediaUrl: z.string().url().optional(),
+  mediaType: z.enum(['image', 'video']).optional(),
+})
+
+// ── Notification helpers ──────────────────────────────────────────
+
+export const NOTIFICATION_TYPES = [
+  'like', 'comment', 'follow', 'mention', 'message', 'comment_like', 'story',
+] as const
 
 // ── AgriPay schemas ────────────────────────────────────────────────
 
