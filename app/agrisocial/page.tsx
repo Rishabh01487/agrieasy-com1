@@ -43,6 +43,12 @@ function timeAgo(iso: string) {
     return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
+// Build an Instagram-style @handle from a name.
+// "Rishabh Gupta" → "@rishabhgupta"
+function makeHandle(name: string): string {
+    return '@' + (name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 function Avatar({ name, size = 44, ring = false, viewed = false, src }: { name: string; size?: number; ring?: boolean; viewed?: boolean; src?: string }) {
     const inner = src
         ? <img src={src} alt={name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
@@ -173,7 +179,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {authorName}
+                        {makeHandle(authorName)}
                     </Link>
                     <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {roleLabel[authorRole || ''] || 'User'}

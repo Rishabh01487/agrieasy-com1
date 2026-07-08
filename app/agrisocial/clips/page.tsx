@@ -139,7 +139,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             {/* Bottom info */}
             <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '72px' }}>
                 <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ color: SOCIAL.clips.text, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', display: 'block', marginBottom: '4px' }}>
-                    @{authorName} · {roleLabel[authorRole || ''] || '👤'}
+                    @{(authorName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')} · {roleLabel[authorRole || ''] || 'Member'}
                 </Link>
                 {clip.caption && <p style={{ color: 'rgba(245,245,245,0.9)', fontSize: '0.85rem', margin: '0 0 4px', lineHeight: 1.4 }}>{clip.caption}</p>}
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
