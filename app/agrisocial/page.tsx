@@ -250,9 +250,18 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 )}
             </div>
 
-            {/* Likes count */}
+            {/* Likes count + social proof ("Liked by X and N others") */}
             <div style={{ padding: '0 14px 6px' }}>
-                <p style={{ color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, margin: 0 }}>{likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}</p>
+                {likesCount > 0 ? (
+                    <p style={{ color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, margin: 0 }}>
+                        {likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}
+                        {liked && likesCount > 1 && <span style={{ color: SOCIAL.muted, fontWeight: 400 }}> · Liked by you and {likesCount - 1} {likesCount - 1 === 1 ? 'other' : 'others'}</span>}
+                        {liked && likesCount === 1 && <span style={{ color: SOCIAL.muted, fontWeight: 400 }}> · Liked by you</span>}
+                        {!liked && likesCount > 0 && <span style={{ color: SOCIAL.muted, fontWeight: 400 }}> · {likesCount} {likesCount === 1 ? 'person likes this' : 'people like this'}</span>}
+                    </p>
+                ) : (
+                    <p style={{ color: SOCIAL.muted, fontSize: '0.84rem', fontWeight: 600, margin: 0 }}>Be the first to like this</p>
+                )}
             </div>
 
             {/* Caption */}
