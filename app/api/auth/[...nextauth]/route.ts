@@ -1,13 +1,30 @@
 import NextAuth from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 
+// NextAuth configuration — Google OAuth is OPTIONAL. If the env vars aren't
+// set, we still export a working handler so /api/auth/session returns null
+// instead of crashing the SessionProvider on every page load.
+const hasGoogle = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET
+
+// Fall back to JWT_SECRET if NEXTAUTH_SECRET isn't explicitly set — they
+// serve the same purpose (signing session JWTs) and requiring both is a
+// common deployment footgun.
+const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET
+
+const providers = hasGoogle
+  ? [
+      GoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      }),
+    ]
+  : []
+
 const handler = NextAuth({
-    providers: [
-        GoogleProvider({
-            clientId: process.env.GOOGLE_CLIENT_ID!,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        }),
-    ],
+    // If no providers are configured, NextAuth still works — it just returns
+    // null sessions, which is fine because the app also supports phone+password
+    // auth via /api/auth/login (separate from NextAuth).
+    providers,
     session: {
         strategy: 'jwt',
         maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -58,7 +75,7 @@ const handler = NextAuth({
         signIn: '/auth/login',
         error: '/auth/login',
     },
-    secret: process.env.NEXTAUTH_SECRET,
+    secret,
 })
 
 export { handler as GET, handler as POST }
