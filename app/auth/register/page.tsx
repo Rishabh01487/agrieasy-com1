@@ -125,9 +125,16 @@ export default function Register() {
       })
       const json = await res.json()
       if (!res.ok) {
-        // API returns { success: false, error: { code, message } } — extract message
+        // API returns { success: false, error: { code, message, details } }
+        // details is an array of {field, message} for validation errors
         const apiMsg = json?.error?.message || json?.error || json?.message
-        setError(typeof apiMsg === 'string' ? apiMsg : 'Registration failed. Please try again.')
+        const details = json?.error?.details
+        let errMsg = typeof apiMsg === 'string' ? apiMsg : 'Registration failed. Please try again.'
+        // If there are field-level validation details, show them
+        if (Array.isArray(details) && details.length > 0) {
+          errMsg = details.map((d: any) => `${d.field}: ${d.message}`).join(' • ')
+        }
+        setError(errMsg)
         setIsLoading(false)
         return
       }

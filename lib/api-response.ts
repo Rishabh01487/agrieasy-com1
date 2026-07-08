@@ -136,7 +136,19 @@ export function notFound(resource = 'Resource', requestId?: string) {
 }
 
 export function validationError(message: string, details?: unknown, requestId?: string) {
-  return apiError(ErrorCodes.VALIDATION_ERROR, message, details, undefined, requestId)
+  // Validation error details (field names + messages) are safe to expose in
+  // all environments — they don't leak secrets, and the client needs them to
+  // show field-level errors to the user. Override the default isProd gating.
+  const body: ApiErrorResponse = {
+    success: false,
+    error: {
+      code: ErrorCodes.VALIDATION_ERROR,
+      message,
+      ...(details ? { details } : {}),
+      ...(requestId ? { requestId } : {}),
+    },
+  }
+  return NextResponse.json(body, { status: 400 })
 }
 
 export function badRequest(message: string, requestId?: string) {

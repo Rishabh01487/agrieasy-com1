@@ -114,7 +114,7 @@ export const registerSchema = z.object({
       fullAddress: sanitizedString(z.string().min(5, 'Address is too short').max(300)),
     }),
   ]).optional(),
-})
+}).passthrough()  // Allow extra fields from the form (aadhar, companyName, etc.) — Zod v4 defaults to strict reject
 
 // ── Listing schemas ────────────────────────────────────────────────
 
