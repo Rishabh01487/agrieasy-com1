@@ -25,13 +25,23 @@ export async function GET(request: NextRequest) {
 
     const timestamp = Math.round(Date.now() / 1000)
     const folder = 'agrieasy'
-    const params = {
+
+    // CRITICAL: The signature must be computed over EXACTLY the parameters
+    // that the browser will send in the upload form — no more, no less.
+    // Cloudinary validates that every signed parameter is present in the
+    // upload AND that every upload parameter (except file, api_key, signature,
+    // resource_type, and a few others) is included in the signature. If they
+    // don't match exactly, Cloudinary returns "Invalid Signature" with the
+    // string that was signed.
+    //
+    // The create page sends: api_key, timestamp, signature, folder
+    // (api_key, signature, and resource_type are excluded from signing by
+    //  Cloudinary's spec — only timestamp and folder need to be signed here)
+    const paramsToSign = {
       timestamp,
       folder,
-      allowed_formats: 'jpg,jpeg,png,webp,gif,mp4',
-      max_file_size: 10485760, // 10MB
     }
-    const signature = cloudinary.utils.api_sign_request(params, process.env.CLOUDINARY_API_SECRET)
+    const signature = cloudinary.utils.api_sign_request(paramsToSign, process.env.CLOUDINARY_API_SECRET)
 
     return NextResponse.json({
       available: true,
