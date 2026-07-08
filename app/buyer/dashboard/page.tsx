@@ -143,7 +143,8 @@ export default function BuyerDashboard() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <QuickAction icon="📝" label="Post Demand" href="/buyer/create-listing" color="#3b82f6" />
             <QuickAction icon="🧾" label="Billing" href="/buyer/billing" color="#10b981" />
-            <QuickAction icon="💳" label="Payment" href="/buyer/payment" color="#f59e0b" />
+            <QuickAction icon="📒" label="Ledger" href="/ledger" color="#f59e0b" />
+            <QuickAction icon="💳" label="Payment" href="/buyer/payment" color="#06b6d4" />
             <QuickAction icon="📱" label="AgriSocial" href="/agrisocial" color="#8b5cf6" />
             <QuickAction icon="🌾" label="Browse Sellers" href="/farmer/search-buyers" color="#16a34a" />
           </div>

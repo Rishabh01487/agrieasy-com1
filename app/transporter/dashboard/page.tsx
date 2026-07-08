@@ -89,6 +89,7 @@ export default function TransporterDashboard() {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <Link href="/transporter/my-vehicles" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>🚛 My Fleet</Link>
             <Link href="/transporter/add-vehicle" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primary, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
+            <Link href="/ledger" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📒 Ledger</Link>
             <Link href="/agrisocial" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
             <button onClick={logout} style={{ color: TRANSPORTER.red, padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: SHARED.errorLight, border: '1px solid #fca5a5', cursor: 'pointer', transition: 'all 0.2s ease' }}>Logout</button>
           </div>

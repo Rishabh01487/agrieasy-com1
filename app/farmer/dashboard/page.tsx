@@ -139,6 +139,7 @@ export default function FarmerDashboard() {
             <QuickAction icon="🔍" label="Search Buyers" href="/farmer/search-buyers" color="#3b82f6" />
             <QuickAction icon="🚚" label="Book Vehicle" href="/farmer/book-vehicle" color="#10b981" />
             <QuickAction icon="📦" label="My Bookings" href="/farmer/my-bookings" color="#f59e0b" />
+            <QuickAction icon="📒" label="Ledger" href="/ledger" color="#dc2626" />
             <QuickAction icon="📱" label="AgriSocial" href="/agrisocial" color="#8b5cf6" />
             <QuickAction icon="💳" label="Wallet" href="/agripay" color="#06b6d4" />
           </div>
