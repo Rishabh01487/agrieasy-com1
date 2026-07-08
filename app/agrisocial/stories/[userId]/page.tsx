@@ -173,10 +173,18 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
     const handle = makeHandle(current.user)
     const roleLabel = current.user?.role === 'farmer' ? 'Farmer' : current.user?.role === 'buyer' ? 'Buyer' : current.user?.role === 'transporter' ? 'Transporter' : 'Member'
 
-    const handleLike = () => {
+    const handleLike = async () => {
         if (liked) return
         setLiked(true)
-        setTimeout(() => setLiked(false), 1500)
+        // Persist the like to the server
+        if (story?._id) {
+            try {
+                await authFetch(`/api/social/stories/${story._id}/like`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+                })
+            } catch {}
+        }
+        // Visual feedback: heart stays "liked" (no auto-reset — Instagram keeps it liked)
     }
 
     // ── END CARD — Instagram-style "story ended" screen ───────────────
