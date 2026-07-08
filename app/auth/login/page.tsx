@@ -55,20 +55,31 @@ export default function Login() {
         setIsLoading(false)
         return
       }
+      // API returns { success: true, data: { token, user: { id, email, phone, role } } }
+      // (apiSuccess wraps the payload in .data). Some legacy responses may not
+      // have the .data wrapper, so handle both shapes.
+      const payload = json.data || json
+      const user = payload.user
+      const token = payload.token
+      if (!user || !token) {
+        setError('Login succeeded but response was malformed. Please try again.')
+        setIsLoading(false)
+        return
+      }
       // Save user info to localStorage for API calls
-      localStorage.setItem('userId', json.user.id)
-      localStorage.setItem('userEmail', json.user.email)
-      localStorage.setItem('userRole', json.user.role)
-      localStorage.setItem('token', json.token)
+      localStorage.setItem('userId', user.id)
+      localStorage.setItem('userEmail', user.email)
+      localStorage.setItem('userRole', user.role)
+      localStorage.setItem('token', token)
       // Role-aware redirect — only farmer/buyer/transporter have a /dashboard
       // route. Admin goes to /admin. Driver goes to the transporter dashboard
       // (drivers are managed by their transporter). Anything else falls back
       // to home to avoid a 404.
       const dashboardPath =
-        json.user.role === 'admin' ? '/admin' :
-        json.user.role === 'farmer' ? '/farmer/dashboard' :
-        json.user.role === 'buyer' ? '/buyer/dashboard' :
-        json.user.role === 'transporter' || json.user.role === 'driver' ? '/transporter/dashboard' :
+        user.role === 'admin' ? '/admin' :
+        user.role === 'farmer' ? '/farmer/dashboard' :
+        user.role === 'buyer' ? '/buyer/dashboard' :
+        user.role === 'transporter' || user.role === 'driver' ? '/transporter/dashboard' :
         '/'
       router.push(dashboardPath)
     } catch {
