@@ -30,6 +30,8 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [listModal, setListModal] = useState<'followers' | 'following' | null>(null)
     const [listUsers, setListUsers] = useState<any[]>([])
     const [listLoading, setListLoading] = useState(false)
+    // Highlights state
+    const [highlights, setHighlights] = useState<any[]>([])
 
     useEffect(() => {
         const load = async () => {
@@ -41,6 +43,14 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 setFollowing(d.isFollowing)
             }
             setLoading(false)
+            // Fetch highlights
+            try {
+                const hRes = await authFetch(`/api/social/highlights?userId=${profileId}`)
+                if (hRes.ok) {
+                    const hd = await hRes.json()
+                    setHighlights(hd?.data?.highlights || [])
+                }
+            } catch {}
         }
         void load()
     }, [profileId, viewerId])
@@ -129,14 +139,28 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     </div>
                 </div>
 
-                {/* Highlights (story highlights — empty placeholder row showing structure) */}
+                {/* Highlights (real story highlights from the API) */}
                 <div style={{ display: 'flex', gap: 16, padding: '12px 0 20px', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 4, overflowX: 'auto' }} className="no-scrollbar">
-                    {['🌾 Farm', '🚜 Equipment', '🌱 Harvest', '💰 Prices'].map((h, i) => (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 80 }}>
-                            <div style={{ width: 70, height: 70, borderRadius: '50%', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>{h.split(' ')[0]}</div>
-                            <span style={{ color: SOCIAL.textSecondary, fontSize: '0.74rem', fontWeight: 600 }}>{h.split(' ')[1]}</span>
+                    {highlights.length === 0 && isOwn && (
+                        <Link href="/agrisocial/stories/${viewerId}" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 80, textDecoration: 'none' }}>
+                            <div style={{ width: 70, height: 70, borderRadius: '50%', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: SOCIAL.primary }}>+</div>
+                            <span style={{ color: SOCIAL.muted, fontSize: '0.74rem', fontWeight: 600 }}>New</span>
+                        </Link>
+                    )}
+                    {highlights.map((h) => (
+                        <div key={h._id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 80, cursor: 'pointer' }} onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
+                            {h.coverImage ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={h.coverImage} alt={h.name} style={{ width: 70, height: 70, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${SOCIAL.border}` }} />
+                            ) : (
+                                <div style={{ width: 70, height: 70, borderRadius: '50%', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem' }}>📂</div>
+                            )}
+                            <span style={{ color: SOCIAL.textSecondary, fontSize: '0.74rem', fontWeight: 600, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.name}</span>
                         </div>
                     ))}
+                    {highlights.length === 0 && !isOwn && (
+                        <p style={{ color: SOCIAL.muted, fontSize: '0.8rem', padding: '20px 0', width: '100%', textAlign: 'center' }}>No highlights yet</p>
+                    )}
                 </div>
 
                 {/* Tabs */}
