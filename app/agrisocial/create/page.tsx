@@ -47,6 +47,8 @@ function CreateContent() {
     const [recordingTime, setRecordingTime] = useState(0)
     const [brightness, setBrightness] = useState(100)
     const [contrast, setContrast] = useState(100)
+    const [saturation, setSaturation] = useState(100)
+    const [rotation, setRotation] = useState(0)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -186,11 +188,11 @@ function CreateContent() {
 
     const buildFilterString = () => {
         const base = FILTERS[selectedFilter].style !== 'none' ? FILTERS[selectedFilter].style : ''
-        const adj = `brightness(${brightness}%) contrast(${contrast}%)`
+        const adj = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
         return base ? `${base} ${adj}` : adj
     }
 
-    const getFilterStyle = () => ({ filter: buildFilterString() })
+    const getFilterStyle = () => ({ filter: buildFilterString(), transform: `rotate(${rotation}deg)` })
 
     const handlePost = async () => {
         if (!caption.trim() && !mediaFile) { setError('Add a caption or media'); return }
@@ -484,7 +486,15 @@ function CreateContent() {
 
                     {/* Adjustments */}
                     <div style={{ background: '#1a1a1a', padding: '12px 20px' }}>
-                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 10px' }}>Adjust</p>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Adjust</p>
+                            {/* Rotate buttons */}
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button onClick={() => setRotation(r => r - 90)} title="Rotate left" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↺</button>
+                                <button onClick={() => setRotation(r => r + 90)} title="Rotate right" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↻</button>
+                                {rotation !== 0 && <button onClick={() => setRotation(0)} title="Reset" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem' }}>Reset</button>}
+                            </div>
+                        </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>☀️ Bright</span>
@@ -495,6 +505,11 @@ function CreateContent() {
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>◉ Contrast</span>
                                 <input type="range" min={50} max={150} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{contrast}%</span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🎨 Saturation</span>
+                                <input type="range" min={0} max={200} value={saturation} onChange={e => setSaturation(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{saturation}%</span>
                             </div>
                         </div>
                     </div>
