@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { FARMER, SHARED, cardStyle, navStyle } from '@/lib/styles'
@@ -44,11 +45,17 @@ function QuickAction({ icon, label, href, color }: { icon: string; label: string
 }
 
 export default function FarmerDashboard() {
+  const router = useRouter()
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const { userId } = getUserInfo()
+    if (!userId) {
+      router.replace('/auth/login')
+      return
+    }
     const fetchListings = async () => {
       try {
         const response = await authFetch('/api/listings')
@@ -66,7 +73,7 @@ export default function FarmerDashboard() {
       }
     }
     void fetchListings()
-  }, [])
+  }, [router])
 
   const totalDemand = listings.reduce((s, l) => s + (l.quantity || 0), 0)
   const topPrice = listings.length > 0 ? Math.max(...listings.map(l => l.pricePerUnit)) : 0

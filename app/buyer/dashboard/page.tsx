@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { BUYER, SHARED, cardStyle, navStyle } from '@/lib/styles'
@@ -55,18 +56,22 @@ function QuickAction({ icon, label, href, color }: { icon: string; label: string
 }
 
 export default function BuyerDashboard() {
+  const router = useRouter()
   const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [userEmail, setUserEmail] = useState('')
 
   useEffect(() => {
-    const { userEmail } = getUserInfo()
+    const { userId, userEmail } = getUserInfo()
+    if (!userId) {
+      // Not logged in — redirect to login instead of showing a broken page
+      router.replace('/auth/login')
+      return
+    }
     setUserEmail(userEmail || '')
     const fetchListings = async () => {
       try {
-        const { userId } = getUserInfo()
-        if (!userId) { setError('Please log in'); setLoading(false); return }
         const url = '/api/listings?buyerId=' + userId
         const response = await authFetch(url)
         if (!response.ok) {
@@ -83,7 +88,7 @@ export default function BuyerDashboard() {
       }
     }
     void fetchListings()
-  }, [])
+  }, [router])
 
   const activeCount = listings.length
   const totalDemandQty = listings.reduce((s, l) => s + (l.quantity || 0), 0)

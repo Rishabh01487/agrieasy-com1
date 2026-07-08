@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { TRANSPORTER, SHARED, cardStyle, navStyle, getStatusStyle } from '@/lib/styles'
@@ -17,21 +18,21 @@ interface Vehicle {
 }
 
 export default function TransporterDashboard() {
+  const router = useRouter()
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    const { userId } = getUserInfo()
+    if (!userId) {
+      router.replace('/auth/login')
+      return
+    }
     const fetchVehicles = async () => {
       setLoading(true)
       setError('')
       try {
-        const { userId } = getUserInfo()
-        if (!userId) {
-          setError('You must be logged in as a transporter to view the dashboard.')
-          setLoading(false)
-          return
-        }
         const response = await authFetch(`/api/vehicles?transporterId=${userId}`)
         if (!response.ok) {
           const data = await response.json().catch(() => null)
@@ -48,7 +49,7 @@ export default function TransporterDashboard() {
       }
     }
     void fetchVehicles()
-  }, [])
+  }, [router])
 
   const handleToggleAvailability = async (vehicleId: string, current: boolean) => {
     try {

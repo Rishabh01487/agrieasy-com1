@@ -45,11 +45,13 @@ export default function Login() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: data.identifier, password: data.password }),
+        body: JSON.stringify({ phone: data.identifier, password: data.password }),
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error || 'Login failed. Please check your credentials.')
+        // API returns { success: false, error: { code, message } } — extract message
+        const apiMsg = json?.error?.message || json?.error || json?.message
+        setError(typeof apiMsg === 'string' ? apiMsg : 'Login failed. Please check your credentials.')
         setIsLoading(false)
         return
       }

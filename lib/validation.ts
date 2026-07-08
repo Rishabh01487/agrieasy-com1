@@ -84,7 +84,9 @@ export const verifyOtpSchema = z.object({
 })
 
 export const loginSchema = z.object({
-  phone: phoneSchema,
+  // Accept either a 10-digit Indian phone OR an email address — the API
+  // looks the user up by both fields.
+  phone: z.string().min(1, 'Phone or email is required').transform(sanitize),
   password: z.string().min(1, 'Password is required'),
 })
 
