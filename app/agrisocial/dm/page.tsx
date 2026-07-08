@@ -63,6 +63,8 @@ function AgriSocialDMInner() {
     const searchParams = useSearchParams()
     const targetConversationId = searchParams.get('conversationId')
     const targetUserId = searchParams.get('userId')
+    const sharePostId = searchParams.get('sharePost')
+    const shareStoryId = searchParams.get('shareStory')
 
     const [conversations, setConversations] = useState<Conversation[]>([])
     const [activeId, setActiveId] = useState<string | null>(targetConversationId)
@@ -71,6 +73,7 @@ function AgriSocialDMInner() {
     const [sending, setSending] = useState(false)
     const [loading, setLoading] = useState(true)
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
+    const [shareMode, setShareMode] = useState<string | null>(sharePostId || shareStoryId)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const fetchConversations = useCallback(async () => {
@@ -172,6 +175,15 @@ function AgriSocialDMInner() {
                 <span style={{ fontWeight: 700, color: SOCIAL.text, marginLeft: 'auto', marginRight: 'auto' }}>✈️ Direct Messages</span>
             </nav>
 
+            {/* Share overlay — appears when sharing a post/story via DM */}
+            {shareMode && (
+                <div style={{ background: SOCIAL.primaryLight, borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: '1.1rem' }}>📤</span>
+                    <span style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.84rem', flex: 1 }}>Sharing a {sharePostId ? 'post' : 'story'} — pick a conversation below to send it</span>
+                    <button onClick={() => { setShareMode(null); window.history.replaceState({}, '', '/agrisocial/dm') }} style={{ background: 'none', border: 'none', color: SOCIAL.muted, cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+                </div>
+            )}
+
             <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '320px 1fr', maxWidth: '1100px', margin: '0 auto', width: '100%', minHeight: 'calc(100vh - 56px)' }}>
                 {/* Conversation list */}
                 <div style={{ borderRight: `1px solid ${SOCIAL.border}`, background: SOCIAL.white, overflowY: 'auto' }}>
@@ -192,7 +204,24 @@ function AgriSocialDMInner() {
                         conversations.map(c => {
                             const name = c.other?.farmerName || c.other?.firmName || 'User'
                             return (
-                                <button key={c._id} onClick={() => setActiveId(c._id)}
+                                <button key={c._id} onClick={async () => {
+                                    setActiveId(c._id)
+                                    // If in share mode, send the shared post/story link as a message
+                                    if (shareMode) {
+                                        const shareUrl = sharePostId
+                                            ? `${window.location.origin}/agrisocial/post/${sharePostId}`
+                                            : `${window.location.origin}/agrisocial/stories/${shareStoryId}`
+                                        const shareText = `Check out this ${sharePostId ? 'post' : 'story'}: ${shareUrl}`
+                                        try {
+                                            await authFetch('/api/social/dm/messages', {
+                                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ conversationId: c._id, text: shareText }),
+                                            })
+                                        } catch {}
+                                        setShareMode(null)
+                                        window.history.replaceState({}, '', '/agrisocial/dm')
+                                    }
+                                }}
                                     style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, background: activeId === c._id ? SOCIAL.primaryLight : 'transparent', border: 'none', borderBottom: `1px solid ${SOCIAL.borderLight}`, cursor: 'pointer', textAlign: 'left' }}>
                                     <Avatar name={name} size={44} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
