@@ -537,7 +537,7 @@ export default function AgriSocialFeed() {
                 </Link>
 
                 <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                    <Link href="/agrisocial" title="Home" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                    <Link href="/" title="AgriEasy Home" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         <Icon name="home" size={24} color={SOCIAL.text} />
                     </Link>
                     <Link href="/agrisocial/clips" title="Reels" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
@@ -562,7 +562,7 @@ export default function AgriSocialFeed() {
                 </div>
             </nav>
 
-            <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 14px 80px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '24px' }}>
+            <div className="agrisocial-layout" style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 14px 80px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '24px' }}>
                 {/* Main column */}
                 <div style={{ minWidth: 0, maxWidth: '600px', margin: '0 auto', width: '100%' }}>
                     {/* Stories tray */}

@@ -79,7 +79,7 @@ export default function BuyerDashboard() {
           return
         }
         const data = await response.json()
-        setListings(data.listings || [])
+        setListings(data?.data?.listings || data?.listings || [])
       } catch (err) {
         console.error('Error fetching listings:', err)
         setError('Network error. Please try again.')

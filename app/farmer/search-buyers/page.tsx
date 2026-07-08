@@ -46,7 +46,7 @@ export default function SearchBuyers() {
         return
       }
       const data = await res.json()
-      setListings(data.listings || [])
+      setListings(data?.data?.listings || data?.listings || [])
     } catch {
       setError('Network error. Please try again.')
     } finally {

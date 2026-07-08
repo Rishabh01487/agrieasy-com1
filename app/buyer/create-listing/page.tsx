@@ -105,7 +105,7 @@ export default function CreateListing() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...data,
-          firmLocation,
+          location: firmLocation,  // Schema expects 'location', not 'firmLocation'
           quantity: parseFloat(data.quantity.toString()),
           pricePerUnit: parseFloat(data.pricePerUnit.toString()),
         }),
@@ -114,7 +114,12 @@ export default function CreateListing() {
         let msg = 'Failed to create listing'
         try {
           const json = await res.json()
-          msg = json.error || msg
+          const apiMsg = json?.error?.message || json?.error
+          if (Array.isArray(json?.error?.details) && json.error.details.length > 0) {
+            msg = json.error.details.map((d: any) => `${d.field}: ${d.message}`).join(' • ')
+          } else if (typeof apiMsg === 'string') {
+            msg = apiMsg
+          }
         } catch { /* response not JSON */ }
         setError(msg)
         setLoading(false)
