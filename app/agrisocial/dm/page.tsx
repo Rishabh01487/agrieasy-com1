@@ -325,7 +325,50 @@ function AgriSocialDMInner() {
                             </div>
 
                             {/* Composer */}
-                            <div style={{ padding: '12px 16px', background: SOCIAL.white, borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', gap: 8 }}>
+                            <div style={{ padding: '12px 16px', background: SOCIAL.white, borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', gap: 8, alignItems: 'center' }}>
+                                {/* Photo attach button */}
+                                <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '50%', background: SOCIAL.primaryLight, flexShrink: 0, transition: 'background 0.2s' }} title="Send photo">
+                                    <span style={{ fontSize: '1.1rem' }}>📷</span>
+                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file || !activeId) return
+                                        // Compress + upload to Cloudinary
+                                        try {
+                                            const img = new Image()
+                                            const url = URL.createObjectURL(file)
+                                            await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
+                                            URL.revokeObjectURL(url)
+                                            let w = img.width, h = img.height
+                                            if (w > 800) { h = Math.round(h * 800 / w); w = 800 }
+                                            const canvas = document.createElement('canvas')
+                                            canvas.width = w; canvas.height = h
+                                            const ctx = canvas.getContext('2d')!
+                                            ctx.drawImage(img, 0, 0, w, h)
+                                            const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
+                                            const sigRes = await authFetch('/api/social/upload-signature')
+                                            const sig = await sigRes.json()
+                                            if (!sig.available) return
+                                            const fd = new FormData()
+                                            fd.append('file', blob)
+                                            fd.append('api_key', sig.apiKey)
+                                            fd.append('timestamp', sig.timestamp.toString())
+                                            fd.append('signature', sig.signature)
+                                            fd.append('folder', sig.folder)
+                                            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
+                                            const cld = await cldRes.json()
+                                            if (cldRes.ok && cld.secure_url) {
+                                                // Send as a message with media
+                                                await authFetch('/api/social/dm/messages', {
+                                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ conversationId: activeId, text: '', mediaUrl: cld.secure_url, mediaType: 'image' }),
+                                                })
+                                                fetchActive(activeId)
+                                                fetchConversations()
+                                            }
+                                        } catch {}
+                                        e.target.value = '' // reset input
+                                    }} />
+                                </label>
                                 <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
                                     placeholder="Message…"
                                     style={{ flex: 1, padding: '10px 14px', background: SOCIAL.bg, border: `1px solid ${SOCIAL.border}`, borderRadius: '100px', fontSize: '0.88rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }} />
