@@ -684,8 +684,14 @@ export default function AgriSocialFeed() {
                                 </div>
                             )}
                             {!hasMore && posts.length > 0 && (
-                                <div style={{ textAlign: 'center', padding: '24px 0', color: SOCIAL.muted, fontSize: '0.82rem' }}>
-                                    You're all caught up ✨
+                                <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                                    <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 16px' }}>You're all caught up ✨</p>
+                                    <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '0 0 12px' }}>Discover more posts:</p>
+                                    <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                        <Link href="/agrisocial/explore" style={{ padding: '8px 18px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>🔍 Explore</Link>
+                                        <Link href="/agrisocial/clips" style={{ padding: '8px 18px', background: SOCIAL.white, color: SOCIAL.primary, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>🎬 KrishiClips</Link>
+                                        <Link href="/agrisocial/search" style={{ padding: '8px 18px', background: SOCIAL.white, color: SOCIAL.primary, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>🔍 Search</Link>
+                                    </div>
                                 </div>
                             )}
                         </>

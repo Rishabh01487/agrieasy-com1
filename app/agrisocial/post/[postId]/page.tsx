@@ -141,7 +141,15 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
         .filter(u => u && (u.startsWith('http') || u.startsWith('/')))
 
     // Build a threaded comment view (top-level + their replies)
-    const topLevel = comments.filter(c => !c.parentId)
+    // Sort top-level comments by relevance (Instagram-style):
+    // 1. Comments with more likes first
+    // 2. Then by recency (newer first)
+    const topLevel = comments.filter(c => !c.parentId).sort((a, b) => {
+        const aLikes = a.likesCount || 0
+        const bLikes = b.likesCount || 0
+        if (bLikes !== aLikes) return bLikes - aLikes
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    })
     const repliesOf = (id: string) => comments.filter(c => c.parentId === id)
 
     return (
