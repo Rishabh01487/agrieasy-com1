@@ -169,7 +169,10 @@ export default function KrishiClips() {
             const url = category === 'all' ? '/api/social/clips?page=1' : `/api/social/clips?page=1&category=${category}`
             const res = await authFetch(url)
             const d = await res.json()
-            setClips(d.clips || [])
+            // API returns { success: true, data: { clips: [...] } } — handle
+            // both the wrapped and unwrapped shapes.
+            const clipsData = d?.data?.clips || d?.clips || []
+            setClips(clipsData)
             setLoading(false)
         }
         void load()

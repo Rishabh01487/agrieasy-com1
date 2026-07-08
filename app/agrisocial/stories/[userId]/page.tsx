@@ -30,6 +30,9 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [liked, setLiked] = useState(false)
     const [ended, setEnded] = useState(false) // show end card after last story
+    const [muted, setMuted] = useState(false) // audio toggle for video stories
+    const [videoDuration, setVideoDuration] = useState<number | null>(null) // actual video length (seconds)
+    const videoRef = useRef<HTMLVideoElement | null>(null)
     const timerRef = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
@@ -54,7 +57,10 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
 
     const current = groups[gIdx]
     const story = current?.stories?.[sIdx]
-    const duration = (story?.duration || 5) * 1000
+    // Use the actual video duration for video stories; fall back to the
+    // story.duration field (default 5s) for images.
+    const durationSecs = (story?.mediaType === 'video' && videoDuration) ? videoDuration : (story?.duration || 5)
+    const duration = durationSecs * 1000
 
     // Mark story viewed
     useEffect(() => {
@@ -62,11 +68,47 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
         authFetch(`/api/social/stories/${story._id}/view`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null)
     }, [story?._id])
 
-    // Auto-advance progress
+    // Reset video duration when story changes
+    useEffect(() => {
+        setVideoDuration(null)
+        setProgress(0)
+    }, [story?._id])
+
+    // Auto-advance progress — syncs to video.currentTime for video stories
     useEffect(() => {
         if (!story || paused || ended) return
         setProgress(0)
         const start = Date.now()
+
+        // For videos, prefer syncing to the video's currentTime so the
+        // progress bar matches the actual playback exactly (handles
+        // buffering, seeks, variable duration).
+        const videoEl = videoRef.current
+        if (story.mediaType === 'video' && videoEl) {
+            const onTimeUpdate = () => {
+                if (!videoEl.duration) return
+                const pct = (videoEl.currentTime / videoEl.duration) * 100
+                setProgress(Math.min(100, pct))
+                if (videoEl.ended) {
+                    advance()
+                }
+            }
+            const onLoadedMetadata = () => {
+                if (videoEl.duration && isFinite(videoEl.duration)) {
+                    setVideoDuration(videoEl.duration)
+                }
+            }
+            videoEl.addEventListener('timeupdate', onTimeUpdate)
+            videoEl.addEventListener('loadedmetadata', onLoadedMetadata)
+            videoEl.addEventListener('ended', advance)
+            return () => {
+                videoEl.removeEventListener('timeupdate', onTimeUpdate)
+                videoEl.removeEventListener('loadedmetadata', onLoadedMetadata)
+                videoEl.removeEventListener('ended', advance)
+            }
+        }
+
+        // For images, use a timer
         const tick = () => {
             const elapsed = Date.now() - start
             const pct = Math.min(100, (elapsed / duration) * 100)
@@ -80,7 +122,7 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
         timerRef.current = setTimeout(tick, 50)
         return () => { if (timerRef.current) clearTimeout(timerRef.current) }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [story?._id, paused, ended])
+    }, [story?._id, paused, ended, videoDuration])
 
     const advance = () => {
         if (!current) return
@@ -243,7 +285,14 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
         <div style={{ height: '100vh', background: '#000', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {/* Media */}
             {story.mediaType === 'video' ? (
-                <video src={story.mediaUrl} autoPlay muted playsInline style={{ maxWidth: '100%', maxHeight: '100vh' }} />
+                <video
+                    ref={videoRef}
+                    src={story.mediaUrl}
+                    autoPlay
+                    playsInline
+                    muted={muted}
+                    style={{ maxWidth: '100%', maxHeight: '100vh' }}
+                />
             ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={story.mediaUrl} alt="story" style={{ maxWidth: '100%', maxHeight: '100vh' }} />
@@ -274,8 +323,36 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
                         {roleLabel} · {new Date(story.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                     </p>
                 </div>
+                {/* Mute/unmute toggle (only for video stories) */}
+                {story.mediaType === 'video' && (
+                    <button
+                        onClick={() => setMuted(m => !m)}
+                        title={muted ? 'Unmute' : 'Mute'}
+                        style={{
+                            marginLeft: 'auto', background: 'rgba(255,255,255,0.1)', border: 'none',
+                            color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            backdropFilter: 'blur(8px)',
+                        }}
+                    >
+                        {muted ? (
+                            // Muted icon — speaker with X
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                <line x1="23" y1="9" x2="17" y2="15" />
+                                <line x1="17" y1="9" x2="23" y2="15" />
+                            </svg>
+                        ) : (
+                            // Unmuted icon — speaker with sound waves
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                            </svg>
+                        )}
+                    </button>
+                )}
                 <button onClick={() => router.push('/agrisocial')} title="Close"
-                    style={{ marginLeft: 'auto', background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+                    style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
                     <Icon name="close" size={18} color="#fff" />
                 </button>
             </div>
