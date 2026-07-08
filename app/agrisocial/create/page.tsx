@@ -33,6 +33,9 @@ function CreateContent() {
     const [postType, setPostType] = useState<'post' | 'krishiclip' | 'story'>(defaultPostType)
     const [mode, setMode] = useState<Mode>('choose')
     const [mediaFile, setMediaFile] = useState<MediaFile | null>(null)
+    // Carousel: multiple images for 'post' type (up to 10)
+    const [carouselFiles, setCarouselFiles] = useState<MediaFile[]>([])
+    const [carouselIdx, setCarouselIdx] = useState(0)
     const [selectedFilter, setSelectedFilter] = useState(0)
     const [caption, setCaption] = useState('')
     const [category, setCategory] = useState('farming')
@@ -147,8 +150,30 @@ function CreateContent() {
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+        const files = e.target.files
+        if (!files || files.length === 0) return
+
+        // For 'post' type with multiple images → carousel mode
+        if (postType === 'post' && files.length > 1) {
+            const newFiles: MediaFile[] = []
+            for (let i = 0; i < Math.min(files.length, 10); i++) {
+                const file = files[i]
+                let blob: Blob = file
+                if (file.type.startsWith('image')) {
+                    try { blob = await compressImage(file) } catch { blob = file }
+                }
+                const url = URL.createObjectURL(blob)
+                newFiles.push({ url, type: file.type.startsWith('video') ? 'video' : 'image', blob })
+            }
+            setCarouselFiles(newFiles)
+            setCarouselIdx(0)
+            setMediaFile(newFiles[0])
+            setMode('preview')
+            return
+        }
+
+        // Single file (existing behavior)
+        const file = files[0]
         let blob: Blob = file
         if (file.type.startsWith('image')) {
             try { blob = await compressImage(file) } catch { blob = file }
@@ -175,8 +200,12 @@ function CreateContent() {
 
         let mediaUrl = ''
         let mediaType = 'text'
+        let allMediaUrls: string[] = []
 
-        if (mediaFile?.blob) {
+        // Determine which files to upload — carousel (multiple) or single
+        const filesToUpload = carouselFiles.length > 0 ? carouselFiles : (mediaFile ? [mediaFile] : [])
+
+        if (filesToUpload.length > 0 && filesToUpload.some(f => f.blob)) {
             try {
                 const sigRes = await authFetch('/api/social/upload-signature')
                 const sig = await sigRes.json()
@@ -190,23 +219,32 @@ function CreateContent() {
                     setSubmitting(false)
                     return
                 }
-                const resourceType = mediaFile.type === 'video' ? 'video' : 'image'
-                const fd = new FormData()
-                fd.append('file', mediaFile.blob)
-                fd.append('api_key', sig.apiKey)
-                fd.append('timestamp', sig.timestamp.toString())
-                fd.append('signature', sig.signature)
-                fd.append('folder', sig.folder)
-                const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
-                const cld = await cldRes.json()
-                if (cldRes.ok && cld.secure_url) {
-                    mediaUrl = cld.secure_url
-                    mediaType = mediaFile.type
-                } else {
-                    const cldMsg = cld?.error?.message || `Cloudinary HTTP ${cldRes.status}`
-                    setError('Upload failed: ' + cldMsg)
-                    setSubmitting(false)
-                    return
+
+                // Upload each file to Cloudinary
+                for (const file of filesToUpload) {
+                    if (!file.blob) continue
+                    const resourceType = file.type === 'video' ? 'video' : 'image'
+                    const fd = new FormData()
+                    fd.append('file', file.blob)
+                    fd.append('api_key', sig.apiKey)
+                    fd.append('timestamp', sig.timestamp.toString())
+                    fd.append('signature', sig.signature)
+                    fd.append('folder', sig.folder)
+                    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
+                    const cld = await cldRes.json()
+                    if (cldRes.ok && cld.secure_url) {
+                        allMediaUrls.push(cld.secure_url)
+                    } else {
+                        const cldMsg = cld?.error?.message || `Cloudinary HTTP ${cldRes.status}`
+                        setError('Upload failed: ' + cldMsg)
+                        setSubmitting(false)
+                        return
+                    }
+                }
+                // Set primary mediaUrl + mediaType from the first uploaded file
+                if (allMediaUrls.length > 0) {
+                    mediaUrl = allMediaUrls[0]
+                    mediaType = filesToUpload[0].type
                 }
             } catch (e) {
                 const msg = e instanceof Error ? e.message : 'Unknown error'
@@ -261,7 +299,7 @@ function CreateContent() {
                 userId,
                 type: postType,
                 content: caption,
-                mediaUrls: mediaUrl ? [mediaUrl] : [],
+                mediaUrls: allMediaUrls.length > 0 ? allMediaUrls : (mediaUrl ? [mediaUrl] : []),
                 mediaType,
                 category,
                 location,
@@ -329,10 +367,10 @@ function CreateContent() {
                             <span style={{ fontSize: '2.8rem' }}>🖼️</span>
                             <div style={{ textAlign: 'left' }}>
                                 <div style={{ fontWeight: 800, fontSize: '1.05rem', color: SOCIAL.textSecondary }}>Upload from Gallery</div>
-                                <div style={{ fontSize: '0.8rem', color: SOCIAL.muted, marginTop: '2px' }}>Choose a photo or video from your device</div>
+                                <div style={{ fontSize: '0.8rem', color: SOCIAL.muted, marginTop: '2px' }}>{postType === 'post' ? 'Choose one or more photos (up to 10 for a carousel)' : 'Choose a photo or video from your device'}</div>
                             </div>
                         </button>
-                        <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+                        <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
 
                         {/* Text post */}
                         <button onClick={() => setMode('details')}
@@ -392,7 +430,7 @@ function CreateContent() {
                         )}
                         <div style={{ width: '44px', height: '44px' }} />
                     </div>
-                    <input ref={fileInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleFileUpload} />
+                    <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
                     <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
                 </div>
             )}
@@ -401,12 +439,29 @@ function CreateContent() {
             {mode === 'preview' && mediaFile && (
                 <div style={{ background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
                     {/* Media preview */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', overflow: 'hidden' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', overflow: 'hidden', position: 'relative' }}>
                         {mediaFile.type === 'image' ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={mediaFile.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
                         ) : (
                             <video src={mediaFile.url} controls style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
+                        )}
+                        {/* Carousel dots + navigation */}
+                        {carouselFiles.length > 1 && (
+                            <>
+                                <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
+                                    {carouselFiles.map((_, i) => (
+                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#3b82f6' : 'rgba(255,255,255,0.5)' }} />
+                                    ))}
+                                </div>
+                                {carouselIdx > 0 && (
+                                    <button onClick={() => { const i = Math.max(0, carouselIdx - 1); setCarouselIdx(i); setMediaFile(carouselFiles[i]) }} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: '1.4rem' }}>‹</button>
+                                )}
+                                {carouselIdx < carouselFiles.length - 1 && (
+                                    <button onClick={() => { const i = Math.min(carouselFiles.length - 1, carouselIdx + 1); setCarouselIdx(i); setMediaFile(carouselFiles[i]) }} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: '1.4rem' }}>›</button>
+                                )}
+                                <div style={{ position: 'absolute', bottom: 8, right: 16, background: 'rgba(0,0,0,0.55)', color: '#fff', padding: '3px 10px', borderRadius: 100, fontSize: '0.74rem', fontWeight: 700 }}>{carouselIdx + 1}/{carouselFiles.length}</div>
+                            </>
                         )}
                     </div>
 
