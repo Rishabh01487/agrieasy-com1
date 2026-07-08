@@ -241,6 +241,10 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
 export default function KrishiClips() {
     const [clips, setClips] = useState<Clip[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const pageRef = useRef(1)
+    const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [activeIdx, setActiveIdx] = useState(0)
     const [userId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [category, setCategory] = useState('all')
@@ -248,20 +252,41 @@ export default function KrishiClips() {
     const router = useRouter()
 
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true)
-            const url = category === 'all' ? '/api/social/clips?page=1' : `/api/social/clips?page=1&category=${category}`
+    const loadClips = async (pageNum: number, append: boolean) => {
+        try {
+            if (append) setLoadingMore(true)
+            else setLoading(true)
+            const url = category === 'all' ? `/api/social/clips?page=${pageNum}` : `/api/social/clips?page=${pageNum}&category=${category}`
             const res = await authFetch(url)
             const d = await res.json()
-            // API returns { success: true, data: { clips: [...] } } — handle
-            // both the wrapped and unwrapped shapes.
             const clipsData = d?.data?.clips || d?.clips || []
-            setClips(clipsData)
-            setLoading(false)
-        }
-        void load()
+            const total = d?.meta?.total || d?.data?.meta?.total || 0
+            setClips(prev => append ? [...prev, ...clipsData] : clipsData)
+            setHasMore(clipsData.length > 0 && (append ? (clips.length + clipsData.length < total) : (clipsData.length < total)))
+            pageRef.current = pageNum
+        } catch {}
+        setLoading(false)
+        setLoadingMore(false)
+    }
+
+    useEffect(() => {
+        pageRef.current = 1
+        setHasMore(true)
+        void loadClips(1, false)
     }, [category])
+
+    // Infinite scroll for clips
+    useEffect(() => {
+        const sentinel = sentinelRef.current
+        const container = containerRef.current
+        if (!sentinel || !container) return
+        const observer = new IntersectionObserver(
+            (entries) => { if (entries[0].isIntersecting && hasMore && !loadingMore) loadClips(pageRef.current + 1, true) },
+            { root: container, rootMargin: '200px' }
+        )
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [hasMore, loadingMore, clips.length])
 
     useEffect(() => {
         const container = containerRef.current
@@ -311,6 +336,13 @@ export default function KrishiClips() {
                         <ClipCard clip={clip} viewerId={userId} isActive={idx === activeIdx} onDelete={(id) => setClips(cs => cs.filter(x => x._id !== id))} />
                     </div>
                 ))}
+                {/* Infinite scroll sentinel */}
+                <div ref={sentinelRef} style={{ height: 1, scrollSnapAlign: 'none' }} />
+                {loadingMore && (
+                    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.clips.text }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Loading more clips…</span>
+                    </div>
+                )}
             </div>
         </div>
     )
