@@ -136,20 +136,29 @@ function AgriSocialExploreInner() {
                 ) : (
                     <>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-                        {posts.map(p => {
+                        {posts.map((p, idx) => {
                             const authorName = typeof p.userId === 'object' ? (p.userId.farmerName || p.userId.firmName || 'User') : 'User'
+                            // Every 7th post is a large 2×2 tile (Instagram-style mixed grid)
+                            const isLarge = idx % 7 === 6
                             return (
                                 <Link key={p._id} href={`/agrisocial/post/${p._id}`}
-                                    style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 4, overflow: 'hidden', textDecoration: 'none' }}>
+                                    style={{
+                                        position: 'relative',
+                                        aspectRatio: isLarge ? '2 / 2' : '1',
+                                        gridColumn: isLarge ? 'span 2' : 'span 1',
+                                        gridRow: isLarge ? 'span 2' : 'span 1',
+                                        background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`,
+                                        display: 'block', borderRadius: 4, overflow: 'hidden', textDecoration: 'none',
+                                    }}>
                                     {p.mediaUrl && p.mediaType === 'image' ? null : (
                                         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 8, textAlign: 'center' }}>
-                                            <span style={{ fontSize: '1.5rem', marginBottom: 4 }}>{p.type === 'krishiclip' ? '🎬' : '📢'}</span>
-                                            <p style={{ color: '#fff', fontSize: '0.7rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
+                                            <span style={{ fontSize: isLarge ? '2.5rem' : '1.5rem', marginBottom: 4 }}>{p.type === 'krishiclip' ? '🎬' : '📢'}</span>
+                                            <p style={{ color: '#fff', fontSize: isLarge ? '0.9rem' : '0.7rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: isLarge ? 3 : 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
                                         </div>
                                     )}
                                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)', padding: '8px 6px 5px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>❤️ {p.likesCount || 0}</span>
-                                        <span style={{ color: '#fff', fontSize: '0.7rem', fontWeight: 700 }}>💬 {p.commentsCount || 0}</span>
+                                        <span style={{ color: '#fff', fontSize: isLarge ? '0.85rem' : '0.7rem', fontWeight: 700 }}>❤️ {p.likesCount || 0}</span>
+                                        <span style={{ color: '#fff', fontSize: isLarge ? '0.85rem' : '0.7rem', fontWeight: 700 }}>💬 {p.commentsCount || 0}</span>
                                         {p.type === 'krishiclip' && <span style={{ color: '#fff', fontSize: '0.6rem', fontWeight: 800, marginLeft: 'auto' }}>🎬</span>}
                                     </div>
                                 </Link>
