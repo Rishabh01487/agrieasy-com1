@@ -76,17 +76,45 @@ export default function AgriSocialNotifications() {
         return true
     })
 
+    // Group like notifications by postId (Instagram-style: "X and N others liked your post")
+    const groupedLikes: Record<string, { actors: Notification[]; latest: Notification }> = {}
+    const standalone: Notification[] = []
+    for (const n of filtered) {
+        if ((n.type === 'like' || n.type === 'comment_like') && n.postId) {
+            const pid = typeof n.postId === 'object' ? (n.postId as any)._id : n.postId
+            if (!groupedLikes[pid]) {
+                groupedLikes[pid] = { actors: [n], latest: n }
+            } else {
+                groupedLikes[pid].actors.push(n)
+                if (new Date(n.createdAt) > new Date(groupedLikes[pid].latest.createdAt)) {
+                    groupedLikes[pid].latest = n
+                }
+            }
+        } else {
+            standalone.push(n)
+        }
+    }
+    // Merge grouped likes back as "virtual" notifications with a count
+    const mergedNotifications = [
+        ...Object.values(groupedLikes).map(g => ({
+            ...g.latest,
+            _actorCount: g.actors.length,
+            _allActors: g.actors,
+        })),
+        ...standalone,
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
     // Group by day
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const yesterday = new Date(today.getTime() - 86400000)
     const week = new Date(today.getTime() - 7 * 86400000)
-    const grouped: { label: string; items: Notification[] }[] = [
+    const grouped: { label: string; items: any[] }[] = [
         { label: 'Today', items: [] },
         { label: 'Yesterday', items: [] },
         { label: 'This Week', items: [] },
         { label: 'Earlier', items: [] },
     ]
-    for (const n of filtered) {
+    for (const n of mergedNotifications) {
         const d = new Date(n.createdAt)
         if (d >= today) grouped[0].items.push(n)
         else if (d >= yesterday) grouped[1].items.push(n)
@@ -150,7 +178,10 @@ export default function AgriSocialNotifications() {
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <p style={{ color: SOCIAL.text, fontSize: '0.84rem', margin: 0, lineHeight: 1.4 }}>
-                                                <strong>{name}</strong> {meta.verb(n)}{' '}
+                                                <strong>{name}</strong>{' '}
+                                                {(n as any)._actorCount > 1
+                                                    ? `and ${(n as any)._actorCount - 1} other${(n as any)._actorCount - 1 === 1 ? '' : 's'} ${meta.verb(n).replace('ed ', 'ed ')}`
+                                                    : meta.verb(n)}{' '}
                                                 {n.text && n.type === 'comment' && <span style={{ color: SOCIAL.muted, fontStyle: 'italic' }}>"{n.text.length > 60 ? n.text.slice(0, 60) + '…' : n.text}"</span>}
                                                 {n.text && n.type === 'message' && <span style={{ color: SOCIAL.muted, fontStyle: 'italic' }}>"{n.text.length > 60 ? n.text.slice(0, 60) + '…' : n.text}"</span>}
                                             </p>
