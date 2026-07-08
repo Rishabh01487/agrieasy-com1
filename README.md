@@ -8,7 +8,7 @@ Built on **Next.js 16 + React 19 + TypeScript + MongoDB + Tailwind CSS 4**, with
 
 ## ✨ Features
 
-### 📱 AgriSocial — Instagram-style community for farmers, buyers & transporters
+### 📱 AgriSocial —  community for farmers, buyers & transporters
 - **Stories** — 24h auto-expiring stories with full-screen viewer (progress bars, tap zones, pause-on-hold, like & share-to-DM)
 - **Ranked feed** — 3 modes: Following (60% ranked + 40% latest, interleaved), 🔥 Top (pure ranked), ⏱ Latest (chronological). Rank score auto-computed from likes × 5 + comments × 8 + saves × 6 + shares × 10 + recency decay
 - **Double-tap to like** with heart-burst animation
