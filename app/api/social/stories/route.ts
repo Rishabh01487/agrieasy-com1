@@ -55,6 +55,7 @@ export async function GET(req: NextRequest) {
                 duration: s.duration,
                 viewed,
                 likesCount: s.likes?.length || 0,
+                viewedByCount: s.viewedBy?.length || 0,
                 createdAt: s.createdAt,
             })
         }

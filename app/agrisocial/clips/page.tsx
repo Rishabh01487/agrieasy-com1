@@ -14,13 +14,14 @@ const CATEGORIES = [
 ]
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
-interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number }
+interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number }
 
 function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId: string; isActive: boolean; onDelete?: (id: string) => void }) {
     const [liked, setLiked] = useState(viewerId ? clip.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(clip.likesCount || 0)
     const [saved, setSaved] = useState(viewerId ? clip.savedBy?.includes(viewerId) : false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [shareCopied, setShareCopied] = useState(false)
     const videoRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
@@ -66,6 +67,24 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         } catch { setSaved(prevSaved) }
     }
 
+    const handleShare = async () => {
+        try {
+            // Track the share on the server (bumps sharedCount + rankScore)
+            await authFetch(`/api/social/posts/${clip._id}/share`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+            }).catch(() => null)
+        } catch {}
+        // Copy the clip URL to clipboard
+        const url = typeof window !== 'undefined' ? `${window.location.origin}/agrisocial/post/${clip._id}` : ''
+        try {
+            if (navigator.clipboard && url) {
+                await navigator.clipboard.writeText(url)
+                setShareCopied(true)
+                setTimeout(() => setShareCopied(false), 1800)
+            }
+        } catch {}
+    }
+
     const handleDelete = async () => {
         if (!viewerId) return
         const res = await authFetch(`/api/social/posts/${clip._id}`, {
@@ -101,13 +120,23 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', pointerEvents: 'none' }} />
 
             {/* Right action bar */}
-            <div style={{ position: 'absolute', right: '16px', bottom: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px' }}>
+            <div style={{ position: 'absolute', right: '16px', bottom: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
                 <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1.1rem', border: '2px solid #fff' }}>
                     {authorName[0]?.toUpperCase()}
                 </div>
                 <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="heart" size={32} color={liked ? '#ef4444' : '#fff'} filled={liked} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>
+                </button>
+                {/* Comment — links to the post detail page where comments live */}
+                <Link href={`/agrisocial/post/${clip._id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease', textDecoration: 'none' }}>
+                    <Icon name="comment" size={32} color="#fff" />
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.commentsCount || 0}</span>
+                </Link>
+                {/* Share — copies link + tracks share count */}
+                <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
+                    <Icon name="send" size={30} color="#fff" />
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.sharedCount || 0}</span>
                 </button>
                 <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="bookmark" size={32} color={saved ? '#3b82f6' : '#fff'} filled={saved} />
@@ -124,6 +153,13 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.views || 0}</span>
                 </div>
             </div>
+
+            {/* Share copied toast */}
+            {shareCopied && (
+                <div style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: '#fff', padding: '8px 16px', borderRadius: 100, fontSize: '0.78rem', fontWeight: 700, zIndex: 50, display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)' }}>
+                    <Icon name="check" size={14} color="#22c55e" /> Link copied
+                </div>
+            )}
 
             {/* Delete confirm overlay */}
             {showDeleteConfirm && (

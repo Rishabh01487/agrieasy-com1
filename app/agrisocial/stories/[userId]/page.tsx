@@ -8,7 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
-interface StoryItem { _id: string; mediaUrl: string; mediaType: string; caption?: string; duration?: number; viewed: boolean; likesCount?: number; createdAt: string }
+interface StoryItem { _id: string; mediaUrl: string; mediaType: string; caption?: string; duration?: number; viewed: boolean; likesCount?: number; viewedByCount?: number; createdAt: string }
 interface StoryGroup { userId: string; user: User; stories: StoryItem[]; hasUnviewed: boolean }
 
 // Build an Instagram-style @handle from a user's name.
@@ -368,31 +368,48 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
                     <button onClick={handleLike}
                         style={{
                             background: 'rgba(255,255,255,0.15)', border: 'none',
-                            color: liked ? SOCIAL.red : '#fff', padding: '8px',
+                            color: liked ? SOCIAL.red : '#fff', padding: '8px 14px',
                             borderRadius: 100, cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            display: 'flex', alignItems: 'center', gap: 6,
                             backdropFilter: 'blur(8px)', transition: 'transform 0.15s',
-                            transform: liked ? 'scale(1.1)' : 'scale(1)',
+                            transform: liked ? 'scale(1.05)' : 'scale(1)',
+                            fontWeight: 700, fontSize: '0.82rem',
                         }}>
-                        <Icon name="heart" size={20} color={liked ? '#ef4444' : '#fff'} filled={liked} />
+                        <Icon name="heart" size={18} color={liked ? '#ef4444' : '#fff'} filled={liked} />
+                        {liked ? 'Liked' : 'Like'}
                     </button>
+                    {/* Reply via DM (Instagram stories use DM replies instead of comments) */}
+                    <Link href={`/agrisocial/dm?userId=${current.userId}`}
+                        style={{
+                            background: 'rgba(255,255,255,0.15)', color: '#fff',
+                            padding: '8px 14px', borderRadius: 100, textDecoration: 'none',
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            backdropFilter: 'blur(8px)', fontWeight: 700, fontSize: '0.82rem',
+                        }}>
+                        <Icon name="send" size={17} color="#fff" /> Reply
+                    </Link>
                     <Link href={`/agrisocial/dm?shareStory=${story._id}`}
+                        title="Share via DM"
                         style={{
                             background: 'rgba(255,255,255,0.15)', color: '#fff',
                             padding: '8px', borderRadius: 100, textDecoration: 'none',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                             backdropFilter: 'blur(8px)',
                         }}>
-                        <Icon name="send" size={19} color="#fff" />
+                        <Icon name="share" size={18} color="#fff" />
                     </Link>
-                    {viewerId === current.userId && (
-                        <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: '0.74rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                                <Icon name="heart" size={13} color="rgba(255,255,255,0.7)" /> {story.likesCount || 0}
-                            </span>
-                            <span>· {current.stories.length - sIdx - 1} left</span>
+                    {/* Stats: likes + views (visible to everyone) */}
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.85)', fontSize: '0.78rem', fontWeight: 700 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Icon name="heart" size={14} color="rgba(255,255,255,0.7)" /> {story.likesCount || 0}
                         </span>
-                    )}
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Icon name="eye" size={14} color="rgba(255,255,255,0.7)" /> {story.viewedByCount || 0}
+                        </span>
+                        {viewerId === current.userId && (
+                            <span style={{ color: 'rgba(255,255,255,0.5)' }}>· {current.stories.length - sIdx - 1} left</span>
+                        )}
+                    </div>
                 </div>
             </div>
 
