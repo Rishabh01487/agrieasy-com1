@@ -441,10 +441,6 @@ function CreateContent() {
 
                         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
 
-                        <div style={{ background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, borderRadius: '10px', padding: '10px 14px', fontSize: '0.78rem', color: SOCIAL.muted }}>
-                            💡 Media uploaded from camera or gallery will be stored locally for demo purposes. Connect cloud storage (Cloudinary etc.) for production.
-                        </div>
-
                         <button onClick={handlePost} disabled={submitting}
                             style={{ width: '100%', padding: '14px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
                             {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : '📢 Share Post'}

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Icon, IconButton } from '@/lib/icons'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -224,32 +225,22 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             ) : null}
 
             {/* Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '10px 14px' }}>
-                <button onClick={handleLike} title="Like"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: liked ? SOCIAL.red : SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, padding: '6px', transition: 'transform 0.15s' }}>
-                    <span style={{ fontSize: '1.4rem' }}>{liked ? '❤️' : '🤍'}</span>
-                </button>
-                <button onClick={() => setShowComments(s => !s)} title="Comment"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, padding: '6px' }}>
-                    <span style={{ fontSize: '1.4rem' }}>💬</span>
-                </button>
-                <Link href={`/agrisocial/dm?sharePost=${post._id}`} title="Share via DM"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, padding: '6px', textDecoration: 'none' }}>
-                    <span style={{ fontSize: '1.4rem' }}>✈️</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '8px 10px' }}>
+                <IconButton name="heart" size={24} title="Like" onClick={handleLike}
+                    active={liked} activeColor="#ef4444" color={SOCIAL.text}
+                    style={{ transform: liked ? 'scale(1.05)' : 'scale(1)' }}
+                />
+                <IconButton name="comment" size={24} title="Comment" onClick={() => setShowComments(s => !s)} color={SOCIAL.text} />
+                <Link href={`/agrisocial/dm?sharePost=${post._id}`} title="Share via DM" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+                    <IconButton name="send" size={22} color={SOCIAL.text} />
                 </Link>
-                <button onClick={handleShare} title="Copy link"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, padding: '6px' }}>
-                    <span style={{ fontSize: '1.4rem' }}>🔗</span>
-                </button>
-                <button onClick={handleSave} title="Save"
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: saved ? SOCIAL.primary : SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, padding: '6px', marginLeft: 'auto' }}>
-                    <span style={{ fontSize: '1.4rem' }}>{saved ? '🔖' : '🏷️'}</span>
-                </button>
+                <IconButton name="link" size={22} title="Copy link" onClick={handleShare} color={SOCIAL.text} />
+                <IconButton name="bookmark" size={24} title="Save" onClick={handleSave}
+                    active={saved} activeColor={SOCIAL.primary} color={SOCIAL.text}
+                    style={{ marginLeft: 'auto' }}
+                />
                 {isOwner && (
-                    <button onClick={() => setShowDeleteConfirm(true)} title="Delete"
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 700, padding: '6px' }}>
-                        <span style={{ fontSize: '1.3rem' }}>🗑️</span>
-                    </button>
+                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#94a3b8" />
                 )}
             </div>
 
@@ -511,25 +502,32 @@ export default function AgriSocialFeed() {
 
                 {/* Desktop search */}
                 <Link href="/agrisocial/search" style={{ flex: 1, maxWidth: 240, margin: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: SOCIAL.bg, borderRadius: '8px', textDecoration: 'none' }}>
-                    <span style={{ fontSize: '0.9rem' }}>🔍</span>
+                    <Icon name="search" size={16} color={SOCIAL.muted} />
                     <span style={{ color: SOCIAL.muted, fontSize: '0.84rem' }}>Search AgriSocial</span>
                 </Link>
 
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    <Link href="/agrisocial" title="Home" style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', textDecoration: 'none', color: SOCIAL.text }}>🏠</Link>
-                    <Link href="/agrisocial/clips" title="Reels" style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', textDecoration: 'none', color: SOCIAL.text }}>🎬</Link>
-                    <Link href="/agrisocial/explore" title="Explore" style={{ width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', textDecoration: 'none', color: SOCIAL.text }}>🧭</Link>
-                    <Link href="/agrisocial/notifications" title="Activity" style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', textDecoration: 'none', color: SOCIAL.text }}>
-                        ❤️
+                <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                    <Link href="/agrisocial" title="Home" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                        <Icon name="home" size={24} color={SOCIAL.text} />
+                    </Link>
+                    <Link href="/agrisocial/clips" title="Reels" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                        <Icon name="reels" size={24} color={SOCIAL.text} />
+                    </Link>
+                    <Link href="/agrisocial/explore" title="Explore" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                        <Icon name="explore" size={24} color={SOCIAL.text} />
+                    </Link>
+                    <Link href="/agrisocial/notifications" title="Activity" style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                        <Icon name="heart-nav" size={24} color={SOCIAL.text} />
                         {unreadNotifs > 0 && <span style={{ position: 'absolute', top: -2, right: -2, background: SOCIAL.red, color: '#fff', fontSize: '0.62rem', fontWeight: 800, borderRadius: '100px', padding: '1px 5px', minWidth: 14, textAlign: 'center' }}>{unreadNotifs > 9 ? '9+' : unreadNotifs}</span>}
                     </Link>
-                    <Link href="/agrisocial/dm" title="Messages" style={{ position: 'relative', width: '36px', height: '36px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', textDecoration: 'none', color: SOCIAL.text }}>
-                        ✈️
+                    <Link href="/agrisocial/dm" title="Messages" style={{ position: 'relative', width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                        <Icon name="dm" size={24} color={SOCIAL.text} />
                         {unreadDMs > 0 && <span style={{ position: 'absolute', top: -2, right: -2, background: SOCIAL.red, color: '#fff', fontSize: '0.62rem', fontWeight: 800, borderRadius: '100px', padding: '1px 5px', minWidth: 14, textAlign: 'center' }}>{unreadDMs > 9 ? '9+' : unreadDMs}</span>}
                     </Link>
                     <button onClick={() => router.push('/agrisocial/create')}
-                        style={{ marginLeft: '4px', background: SOCIAL.gradient, border: 'none', borderRadius: '10px', padding: '0 14px', height: '36px', color: '#fff', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>
-                        + Create
+                        style={{ marginLeft: '6px', background: SOCIAL.gradient, border: 'none', borderRadius: '10px', padding: '0', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'transform 0.15s' }}
+                        title="Create">
+                        <Icon name="plus" size={22} color="#fff" strokeWidth={2.5} />
                     </button>
                 </div>
             </nav>
@@ -635,10 +633,17 @@ export default function AgriSocialFeed() {
 
             {/* Bottom nav (mobile) */}
             <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.95)', borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', justifyContent: 'space-around', padding: '8px 0', zIndex: 50, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                {[['🏠', 'Feed', '/agrisocial'], ['🎬', 'Reels', '/agrisocial/clips'], ['➕', 'Create', '/agrisocial/create'], ['🔍', 'Search', '/agrisocial/search'], ['❤️', 'Activity', '/agrisocial/notifications'], ['👤', 'Profile', userId ? `/agrisocial/profile/${userId}` : '/auth/login']].map(([icon, label, href]) => (
+                {([
+                    ['home', 'Feed', '/agrisocial'],
+                    ['reels', 'Reels', '/agrisocial/clips'],
+                    ['plus', 'Create', '/agrisocial/create'],
+                    ['search', 'Search', '/agrisocial/search'],
+                    ['heart-nav', 'Activity', '/agrisocial/notifications'],
+                    ['explore', 'Profile', userId ? `/agrisocial/profile/${userId}` : '/auth/login'],
+                ] as const).map(([iconName, label, href]) => (
                     <Link key={label} href={href}
                         style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: SOCIAL.muted, fontSize: '0.6rem', fontWeight: 700, gap: '2px', flex: 1 }}>
-                        <span style={{ fontSize: '1.3rem' }}>{icon}</span>{label}
+                        <Icon name={iconName as any} size={24} color={SOCIAL.muted} />{label}
                     </Link>
                 ))}
             </div>

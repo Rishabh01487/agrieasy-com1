@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Icon, IconButton } from '@/lib/icons'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -271,32 +272,40 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                     </div>
 
                     {/* Action bar */}
-                    <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-                            <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: liked ? SOCIAL.red : SOCIAL.text, fontWeight: 700, fontSize: '0.86rem' }}>
-                                <span style={{ fontSize: '1.4rem' }}>{liked ? '❤️' : '🤍'}</span>
-                            </button>
-                            <button onClick={() => {}} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem' }}>
-                                <span style={{ fontSize: '1.4rem' }}>💬</span>
-                            </button>
-                            <Link href={`/agrisocial/dm?sharePost=${post._id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none' }}>
-                                <span style={{ fontSize: '1.4rem' }}>✈️</span>
+                    <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginBottom: 8 }}>
+                            <IconButton name="heart" size={24} title="Like" onClick={handleLike}
+                                active={liked} activeColor="#ef4444" color={SOCIAL.text}
+                                style={{ transform: liked ? 'scale(1.05)' : 'scale(1)' }}
+                            />
+                            <IconButton name="comment" size={24} title="Comment" color={SOCIAL.text} />
+                            <Link href={`/agrisocial/dm?sharePost=${post._id}`} title="Share via DM" style={{ textDecoration: 'none', display: 'inline-flex' }}>
+                                <IconButton name="send" size={22} color={SOCIAL.text} />
                             </Link>
-                            <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', marginLeft: 'auto' }}>
-                                <span style={{ fontSize: '1.4rem' }}>🔗</span>
-                            </button>
-                            <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: saved ? SOCIAL.primary : SOCIAL.text, fontWeight: 700, fontSize: '0.86rem' }}>
-                                <span style={{ fontSize: '1.4rem' }}>{saved ? '🔖' : '🏷️'}</span>
-                            </button>
+                            <IconButton name="link" size={22} title="Copy link" onClick={handleShare} color={SOCIAL.text} />
+                            <IconButton name="bookmark" size={24} title="Save" onClick={handleSave}
+                                active={saved} activeColor={SOCIAL.primary} color={SOCIAL.text}
+                                style={{ marginLeft: 'auto' }}
+                            />
                             {viewerId && viewerId === authorId && (
-                                <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, color: SOCIAL.muted, fontWeight: 700, fontSize: '0.86rem' }}>
-                                    <span style={{ fontSize: '1.2rem' }}>🗑️</span>
-                                </button>
+                                <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#94a3b8" />
                             )}
                         </div>
                         <p style={{ color: SOCIAL.text, fontSize: '0.84rem', fontWeight: 700, margin: '0 0 4px' }}>{likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}</p>
-                        <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '0 0 6px' }}>{new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}{post.type === 'krishiclip' && ` · 👁️ ${post.views || 0} views`}{(post.sharedCount || 0) > 0 && ` · 🔗 ${post.sharedCount} shares`}</p>
-                        {shareCopied && <p style={{ color: SOCIAL.green, fontSize: '0.74rem', margin: '0 0 6px' }}>✓ Link copied</p>}
+                        <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <span>{new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            {post.type === 'krishiclip' && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Icon name="eye" size={13} color={SOCIAL.muted} /> {post.views || 0}
+                                </span>
+                            )}
+                            {(post.sharedCount || 0) > 0 && (
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Icon name="share" size={13} color={SOCIAL.muted} /> {post.sharedCount}
+                                </span>
+                            )}
+                        </p>
+                        {shareCopied && <p style={{ color: SOCIAL.green, fontSize: '0.74rem', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 4 }}><Icon name="check" size={13} color={SOCIAL.green} /> Link copied</p>}
 
                         {replyTo && (
                             <div style={{ background: SOCIAL.primaryLight, padding: '4px 10px', borderRadius: 6, marginBottom: 6, fontSize: '0.74rem', color: SOCIAL.primary, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

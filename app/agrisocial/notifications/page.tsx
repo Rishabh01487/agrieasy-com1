@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Icon, type IconName } from '@/lib/icons'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
 interface Post { _id: string; mediaUrl?: string; mediaType?: string; caption?: string }
@@ -29,14 +30,14 @@ function timeAgo(iso: string) {
     return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-const typeMeta: Record<string, { icon: string; verb: (n: Notification) => string }> = {
-    like:        { icon: '❤️', verb: () => 'liked your post.' },
-    comment:     { icon: '💬', verb: () => 'commented on your post.' },
-    comment_like:{ icon: '❤️', verb: () => 'liked your comment.' },
-    follow:      { icon: '👥', verb: () => 'started following you.' },
-    mention:     { icon: '📣', verb: () => 'mentioned you.' },
-    message:     { icon: '✈️', verb: () => 'sent you a message.' },
-    story:       { icon: '✨', verb: () => 'shared a new post.' },
+const typeMeta: Record<string, { icon: IconName; color: string; verb: (n: Notification) => string }> = {
+    like:        { icon: 'heart', color: '#ef4444', verb: () => 'liked your post.' },
+    comment:     { icon: 'comment', color: '#2563eb', verb: () => 'commented on your post.' },
+    comment_like:{ icon: 'heart', color: '#ef4444', verb: () => 'liked your comment.' },
+    follow:      { icon: 'explore', color: '#10b981', verb: () => 'started following you.' },
+    mention:     { icon: 'send', color: '#8b5cf6', verb: () => 'mentioned you.' },
+    message:     { icon: 'dm', color: '#f59e0b', verb: () => 'sent you a message.' },
+    story:       { icon: 'reels', color: '#3b82f6', verb: () => 'shared a new post.' },
 }
 
 export default function AgriSocialNotifications() {
@@ -131,8 +132,8 @@ export default function AgriSocialNotifications() {
                                             <div style={{ width: 44, height: 44, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>
                                                 {name[0]?.toUpperCase()}
                                             </div>
-                                            <div style={{ position: 'absolute', bottom: -2, right: -2, background: '#fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', border: `1.5px solid ${SOCIAL.border}` }}>
-                                                {meta.icon}
+                                            <div style={{ position: 'absolute', bottom: -2, right: -2, background: '#fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1.5px solid ${SOCIAL.border}` }}>
+                                                <Icon name={meta.icon} size={13} color={meta.color} filled />
                                             </div>
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>

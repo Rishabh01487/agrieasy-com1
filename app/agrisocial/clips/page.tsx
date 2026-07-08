@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Icon } from '@/lib/icons'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -104,22 +105,22 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1.1rem', border: '2px solid #fff' }}>
                     {authorName[0]?.toUpperCase()}
                 </div>
-                <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
-                    <span style={{ fontSize: '1.8rem' }}>{liked ? '❤️' : '🤍'}</span>
+                <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
+                    <Icon name="heart" size={32} color={liked ? '#ef4444' : '#fff'} filled={liked} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>
                 </button>
-                <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
-                    <span style={{ fontSize: '1.8rem' }}>{saved ? '🔖' : '🏷️'}</span>
+                <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
+                    <Icon name="bookmark" size={32} color={saved ? '#3b82f6' : '#fff'} filled={saved} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{saved ? 'Saved' : 'Save'}</span>
                 </button>
                 {isOwner && (
-                    <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
-                        <span style={{ fontSize: '1.8rem' }}>🗑️</span>
+                    <button onClick={() => setShowDeleteConfirm(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
+                        <Icon name="trash" size={30} color="#fff" />
                         <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>Delete</span>
                     </button>
                 )}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: SOCIAL.clips.text }}>
-                    <span style={{ fontSize: '1.8rem' }}>👁️</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text }}>
+                    <Icon name="eye" size={32} color="#fff" />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.views || 0}</span>
                 </div>
             </div>
