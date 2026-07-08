@@ -1,109 +1,249 @@
 import Link from 'next/link'
 
-const C = {
-  bg: '#f8fafc', white: '#ffffff', blue: '#2563eb', blueLight: '#dbeafe',
-  blueMid: '#60a5fa', blueDark: '#1e3a8a', text: '#0f172a', muted: '#64748b', border: '#bfdbfe',
-}
-
 export default function Home() {
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, fontFamily: '"Inter","Segoe UI",sans-serif', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 24px', position: 'relative', overflow: 'hidden' }}>
-      {/* Decorative blobs */}
-      <div style={{ position: 'fixed', top: '-80px', right: '-80px', width: '400px', height: '400px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(37,99,235,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '-80px', left: '-80px', width: '350px', height: '350px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(96,165,250,0.2) 0%, transparent 70%)', pointerEvents: 'none' }} />
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #2563eb 60%, #3b82f6 100%)',
+      fontFamily: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      padding: '32px 24px', position: 'relative', overflow: 'hidden',
+    }}>
+      {/* Animated gradient blobs */}
+      <div style={{
+        position: 'fixed', top: '-10%', right: '-5%', width: '500px', height: '500px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(59,130,246,0.4) 0%, transparent 70%)',
+        filter: 'blur(60px)', pointerEvents: 'none', animation: 'float1 8s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'fixed', bottom: '-10%', left: '-5%', width: '450px', height: '450px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(96,165,250,0.35) 0%, transparent 70%)',
+        filter: 'blur(60px)', pointerEvents: 'none', animation: 'float2 10s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'fixed', top: '40%', left: '50%', width: '300px', height: '300px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(147,197,253,0.2) 0%, transparent 70%)',
+        filter: 'blur(40px)', pointerEvents: 'none', animation: 'float3 12s ease-in-out infinite',
+      }} />
 
-      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '680px', width: '100%' }}>
-        {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '28px' }}>
-          <img src="/icons/icon-192.png" alt="AgriEasy Logo" style={{ width: '64px', height: '64px', borderRadius: '16px', boxShadow: '0 4px 16px rgba(37,99,235,0.2)' }} />
+      <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', maxWidth: '720px', width: '100%' }}>
+        {/* Logo — glassmorphism circle */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '14px', marginBottom: '24px',
+        }}>
+          <div style={{
+            width: '72px', height: '72px', borderRadius: '20px',
+            background: 'rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.2)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+          }}>
+            <img src="/icons/icon-192.png" alt="AgriEasy" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+          </div>
         </div>
 
-        {/* Badge */}
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: C.blueLight, border: `1px solid ${C.blueMid}`, borderRadius: '100px', padding: '6px 18px', marginBottom: '20px' }}>
-          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: C.blue, display: 'inline-block' }} />
-          <span style={{ color: C.blue, fontSize: '0.82rem', fontWeight: 700, letterSpacing: '0.04em' }}>India&apos;s Agricultural Marketplace</span>
+        {/* Badge — glass pill */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '8px',
+          background: 'rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '100px', padding: '7px 20px', marginBottom: '20px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+        }}>
+          <span style={{
+            width: '8px', height: '8px', borderRadius: '50%',
+            background: '#60a5fa', display: 'inline-block',
+            boxShadow: '0 0 8px #60a5fa',
+          }} />
+          <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: '0.78rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            India&apos;s Agricultural Marketplace
+          </span>
         </div>
 
-        {/* Title */}
-        <h1 style={{ fontSize: 'clamp(2.4rem, 7vw, 3.8rem)', fontWeight: 900, lineHeight: 1.1, margin: '0 0 16px', color: C.blueDark }}>
-          Agri<span style={{ color: C.blue }}>Easy</span><span style={{ color: C.blueMid }}>.com</span>
+        {/* Title — gradient text on glass */}
+        <h1 style={{
+          fontSize: 'clamp(2.6rem, 8vw, 4.2rem)', fontWeight: 900, lineHeight: 1.05,
+          margin: '0 0 16px',
+          background: 'linear-gradient(135deg, #ffffff 0%, #bfdbfe 50%, #93c5fd 100%)',
+          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+          textShadow: '0 0 40px rgba(147,197,253,0.3)',
+        }}>
+          Agri<span style={{ background: 'linear-gradient(135deg, #60a5fa, #2563eb)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Easy</span>
         </h1>
 
         {/* Taglines */}
-        <p style={{ color: C.text, fontSize: '1.05rem', marginBottom: '6px', fontWeight: 500 }}>
-          Connecting Farmers Directly with Buyers for seamless agricultural trade
+        <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '1.1rem', marginBottom: '4px', fontWeight: 400 }}>
+          Connecting Farmers Directly with Buyers
         </p>
-        <p style={{ color: C.blue, fontSize: '0.95rem', marginBottom: '40px', fontWeight: 600 }}>
-          End-to-end connectivity for seamless agricultural trade
+        <p style={{ color: 'rgba(147,197,253,0.9)', fontSize: '0.92rem', marginBottom: '36px', fontWeight: 500 }}>
+          End-to-end agricultural trade · Social network · Wallet · Logistics
         </p>
 
-        {/* Role Cards */}
-        <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '28px' }}>
-          {[
-            { href: '/auth/login?role=farmer', icon: '🌾', label: 'Farmer Login', sub: 'Sell your produce', border: C.blue, bg: C.blueLight },
-            { href: '/auth/login?role=buyer', icon: '🛒', label: 'Buyer Login', sub: 'Source fresh crops', border: C.blueMid, bg: '#eff6ff' },
-            { href: '/auth/login?role=transporter', icon: '🚛', label: 'Transporter', sub: 'Deliver goods', border: '#93c5fd', bg: '#eff6ff' },
-          ].map(c => (
-            <Link key={c.label} href={c.href} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-              background: c.bg, border: `1.5px solid ${c.border}`,
-              borderRadius: '16px', padding: '20px 28px', color: C.text, textDecoration: 'none',
-              minWidth: '155px', boxShadow: '0 2px 8px rgba(37,99,235,0.08)',
-              transition: 'transform 0.2s, box-shadow 0.2s',
-            }}>
-              <span style={{ fontSize: '2rem' }}>{c.icon}</span>
-              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: C.blueDark }}>{c.label}</span>
-              <span style={{ fontSize: '0.78rem', color: C.muted }}>{c.sub}</span>
-            </Link>
-          ))}
-          {/* AgriPay Card */}
+        {/* Glass cards grid */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '12px', marginBottom: '28px', maxWidth: '680px', margin: '0 auto 28px',
+        }}>
+          {/* Farmer */}
+          <Link href="/auth/login?role=farmer" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+            padding: '22px 16px', textDecoration: 'none',
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '18px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            transition: 'transform 0.25s, background 0.25s, box-shadow 0.25s',
+          }}>
+            <span style={{ fontSize: '2rem' }}>🌾</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Farmer</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Sell your produce</span>
+          </Link>
+
+          {/* Buyer */}
+          <Link href="/auth/login?role=buyer" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+            padding: '22px 16px', textDecoration: 'none',
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '18px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            transition: 'transform 0.25s, background 0.25s, box-shadow 0.25s',
+          }}>
+            <span style={{ fontSize: '2rem' }}>🛒</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Buyer</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Source fresh crops</span>
+          </Link>
+
+          {/* Transporter */}
+          <Link href="/auth/login?role=transporter" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+            padding: '22px 16px', textDecoration: 'none',
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '18px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            transition: 'transform 0.25s, background 0.25s, box-shadow 0.25s',
+          }}>
+            <span style={{ fontSize: '2rem' }}>🚛</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Transporter</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Deliver goods</span>
+          </Link>
+
+          {/* AgriPay */}
           <Link href="/agripay" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-            background: 'linear-gradient(135deg, #1e3a8a, #2563eb)',
-            border: '1.5px solid #2563eb',
-            borderRadius: '16px', padding: '20px 28px', color: '#fff', textDecoration: 'none',
-            minWidth: '155px', boxShadow: '0 4px 20px rgba(37,99,235,0.35)',
-            transition: 'transform 0.2s, box-shadow 0.2s',
+            padding: '22px 16px', textDecoration: 'none',
+            background: 'rgba(37,99,235,0.25)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(96,165,250,0.3)',
+            borderRadius: '18px',
+            boxShadow: '0 8px 24px rgba(37,99,235,0.2)',
+            transition: 'transform 0.25s, background 0.25s, box-shadow 0.25s',
           }}>
-            <span style={{ fontSize: '2.2rem', fontWeight: 900, lineHeight: 1, background: 'linear-gradient(135deg, #fde68a, #f59e0b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>₹</span>
-            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#fff' }}>AgriPay</span>
-            <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.65)' }}>Pay & Transfer</span>
+            <span style={{ fontSize: '2.2rem', fontWeight: 900 }}>₹</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>AgriPay</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Pay & Transfer</span>
           </Link>
-          {/* AgriSocial Card */}
+
+          {/* AgriSocial */}
           <Link href="/agrisocial" style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
-            background: '#fff', border: '1.5px solid #bfdbfe',
-            borderRadius: '16px', padding: '20px 28px', color: '#0f172a', textDecoration: 'none',
-            minWidth: '155px', boxShadow: '0 4px 20px rgba(37,99,235,0.14)',
-            transition: 'transform 0.2s, box-shadow 0.2s',
+            padding: '22px 16px', textDecoration: 'none',
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '18px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            transition: 'transform 0.25s, background 0.25s, box-shadow 0.25s',
           }}>
             <span style={{ fontSize: '2rem' }}>📱</span>
-            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: '#1e3a8a' }}>AgriSocial</span>
-            <span style={{ fontSize: '0.78rem', color: '#64748b' }}>Feed & KrishiClips</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>AgriSocial</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Feed & Reels</span>
+          </Link>
+
+          {/* Ledger */}
+          <Link href="/ledger" style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px',
+            padding: '22px 16px', textDecoration: 'none',
+            background: 'rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            borderRadius: '18px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            transition: 'transform 0.25s, background 0.25s, box-shadow 0.25s',
+          }}>
+            <span style={{ fontSize: '2rem' }}>📒</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '0.9rem' }}>Ledger</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem' }}>Bills & Earnings</span>
           </Link>
         </div>
 
-        {/* JAI JAWAN JAI KISAN */}
-        <div style={{ margin: '24px 0 20px', padding: '18px 24px', background: C.white, border: `1.5px solid ${C.border}`, borderRadius: '14px', textAlign: 'center', boxShadow: '0 1px 6px rgba(37,99,235,0.06)' }}>
+        {/* Jai Kisan — glass box */}
+        <div style={{
+          margin: '0 auto 20px', padding: '18px 28px', maxWidth: '480px',
+          background: 'rgba(255,255,255,0.06)',
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+          textAlign: 'center',
+        }}>
           <p style={{
-            fontSize: 'clamp(1.1rem, 3vw, 1.55rem)', fontWeight: 900, letterSpacing: '0.12em',
-            background: 'linear-gradient(90deg, #f59e0b, #d97706)',
+            fontSize: 'clamp(1rem, 3vw, 1.4rem)', fontWeight: 900, letterSpacing: '0.14em',
+            background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #d97706)',
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
             margin: 0, textTransform: 'uppercase',
           }}>
             &quot;JAI JAWAN, JAI KISAN&quot;
           </p>
-          <p style={{ color: C.muted, fontSize: '0.8rem', marginTop: '6px', letterSpacing: '0.03em' }}>
-            — <span style={{ color: C.text, fontWeight: 700 }}>Lal Bahadur Shastri</span>, 2nd Prime Minister of India
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.76rem', marginTop: '6px', letterSpacing: '0.03em' }}>
+            — Lal Bahadur Shastri, 2nd Prime Minister of India
           </p>
         </div>
 
         {/* Register link */}
-        <Link href="/auth/register" style={{ color: C.muted, fontSize: '0.9rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-          New here?{' '}
-          <span style={{ color: C.blue, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: '3px' }}>Create an account →</span>
+        <Link href="/auth/register" style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          padding: '10px 24px',
+          background: 'rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '100px', textDecoration: 'none',
+          color: 'rgba(255,255,255,0.8)', fontSize: '0.88rem', fontWeight: 600,
+          transition: 'background 0.25s, transform 0.25s',
+        }}>
+          New here? <span style={{ color: '#93c5fd', fontWeight: 700 }}>Create an account →</span>
         </Link>
       </div>
-    </div >
+
+      {/* CSS animations for floating blobs */}
+      <style>{`
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-20px, 20px) scale(1.1); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(30px, -15px) scale(1.15); }
+        }
+        @keyframes float3 {
+          0%, 100% { transform: translate(-50%, 0) scale(1); }
+          50% { transform: translate(-50%, -30px) scale(0.9); }
+        }
+        a:hover {
+          transform: translateY(-4px) !important;
+          background: rgba(255,255,255,0.15) !important;
+          box-shadow: 0 12px 36px rgba(0,0,0,0.2) !important;
+        }
+      `}</style>
+    </div>
   )
 }
