@@ -37,6 +37,12 @@ function AgriSocialSearchInner() {
     const runSearch = useCallback(async (q: string) => {
         if (!q.trim()) { setUsers([]); setHashtags([]); return }
         setLoading(true)
+        // Save to recent searches in localStorage
+        try {
+            const recents = JSON.parse(localStorage.getItem('agrisocial_recents') || '[]')
+            const updated = [q, ...recents.filter((r: string) => r !== q)].slice(0, 8)
+            localStorage.setItem('agrisocial_recents', JSON.stringify(updated))
+        } catch {}
         try {
             const res = await authFetch(`/api/social/search?q=${encodeURIComponent(q)}&kind=${tab}`)
             if (res.ok) {
@@ -110,10 +116,37 @@ function AgriSocialSearchInner() {
                 </div>
 
                 {!query && !initialTag && (
-                    <div style={{ textAlign: 'center', padding: 60, color: SOCIAL.muted }}>
-                        <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔍</div>
-                        <h3 style={{ color: SOCIAL.text, margin: '0 0 6px' }}>Find people & hashtags</h3>
-                        <p style={{ fontSize: '0.86rem', margin: 0 }}>Search farmers, buyers, transporters, or topics like #organic, #wheat, #tractor…</p>
+                    <div>
+                        {/* Recent searches */}
+                        {typeof window !== 'undefined' && (() => {
+                            const recents = JSON.parse(localStorage.getItem('agrisocial_recents') || '[]')
+                            if (recents.length === 0) return null
+                            return (
+                                <div style={{ marginBottom: 24 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                        <h3 style={{ color: SOCIAL.muted, fontSize: '0.78rem', fontWeight: 700, margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent</h3>
+                                        <button onClick={() => { localStorage.setItem('agrisocial_recents', '[]'); window.location.reload() }} style={{ background: 'none', border: 'none', color: SOCIAL.primary, fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Clear all</button>
+                                    </div>
+                                    {recents.map((r: string, i: number) => (
+                                        <button key={i} onClick={() => setQuery(r)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', padding: '10px 12px', background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: 10, marginBottom: 4, cursor: 'pointer', textAlign: 'left' }}>
+                                            <span style={{ fontSize: '1rem' }}>🕐</span>
+                                            <span style={{ color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 600 }}>{r}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )
+                        })()}
+
+                        {/* Suggested accounts */}
+                        <div>
+                            <h3 style={{ color: SOCIAL.muted, fontSize: '0.78rem', fontWeight: 700, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggested for you</h3>
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 12px' }}>Try searching for:</p>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                {['#farming', '#wheat', '#organic', '#tractor', '#harvest', '#market', '#rice', '#livestock'].map(tag => (
+                                    <button key={tag} onClick={() => setQuery(tag)} style={{ padding: '6px 14px', background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, color: SOCIAL.primary, borderRadius: 100, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>{tag}</button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 )}
 
