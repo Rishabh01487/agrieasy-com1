@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 
-interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string }
+interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[] }
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
@@ -19,6 +19,13 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [tab, setTab] = useState<'posts' | 'clips' | 'saved'>('posts')
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [following, setFollowing] = useState(false)
+    // Edit profile modal state
+    const [showEditModal, setShowEditModal] = useState(false)
+    const [editBio, setEditBio] = useState('')
+    const [editPic, setEditPic] = useState('')
+    const [uploading, setUploading] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [editError, setEditError] = useState('')
 
     useEffect(() => {
         const load = async () => {
@@ -74,15 +81,21 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 {/* Header */}
                 <div style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
                     <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ width: 144, height: 144, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '3.5rem', border: '4px solid #fff' }}>
-                            {name[0]?.toUpperCase()}
-                        </div>
+                        {user.profilePic ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={user.profilePic} alt={name} style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
+                        ) : (
+                            <div style={{ width: 144, height: 144, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '3.5rem', border: '4px solid #fff' }}>
+                                {name[0]?.toUpperCase()}
+                            </div>
+                        )}
                     </div>
                     <div style={{ flex: 1, minWidth: 280 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
                             <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>{name}</h1>
                             {isOwn ? (
                                 <>
+                                    <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditError(''); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
                                     <Link href="/agrisocial/create" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>+ New Post</Link>
                                     <Link href="/agrisocial/saved" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>🔖 Saved</Link>
                                 </>
@@ -104,6 +117,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         {/* Bio */}
                         <div>
                             <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
+                            {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.86rem', margin: '4px 0 0', lineHeight: 1.5 }}>{user.bio}</p>}
                             {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.84rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
                             {user.createdAt && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>}
                             <p style={{ color: SOCIAL.primary, fontSize: '0.84rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} total likes · 🎬 {s.clipsCount || 0} KrishiClips</p>
@@ -159,6 +173,123 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     </div>
                 )}
             </div>
+
+            {/* Edit Profile Modal */}
+            {showEditModal && (
+                <div onClick={() => setShowEditModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: SOCIAL.white, borderRadius: 16, padding: 28, maxWidth: 420, width: '100%', boxShadow: SHARED.shadowXl }}>
+                        <h3 style={{ margin: '0 0 20px', color: SOCIAL.text, fontWeight: 800, fontSize: '1.2rem', textAlign: 'center' }}>Edit Profile</h3>
+
+                        {/* Profile pic preview + upload */}
+                        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                                {editPic || user.profilePic ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={editPic || user.profilePic} alt="profile" style={{ width: 96, height: 96, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${SOCIAL.border}` }} />
+                                ) : (
+                                    <div style={{ width: 96, height: 96, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '2.2rem', border: '3px solid #fff' }}>
+                                        {name[0]?.toUpperCase()}
+                                    </div>
+                                )}
+                                <label style={{ position: 'absolute', bottom: 0, right: 0, background: SOCIAL.primary, color: '#fff', width: 30, height: 30, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '2px solid #fff', fontSize: '0.9rem' }}>
+                                    📷
+                                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        setUploading(true)
+                                        setEditError('')
+                                        try {
+                                            // Compress image
+                                            const img = new Image()
+                                            const url = URL.createObjectURL(file)
+                                            await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
+                                            URL.revokeObjectURL(url)
+                                            let w = img.width, h = img.height
+                                            if (w > 400) { h = Math.round(h * 400 / w); w = 400 }
+                                            const canvas = document.createElement('canvas')
+                                            canvas.width = w; canvas.height = h
+                                            const ctx = canvas.getContext('2d')!
+                                            ctx.drawImage(img, 0, 0, w, h)
+                                            const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
+                                            // Upload to Cloudinary
+                                            const sigRes = await authFetch('/api/social/upload-signature')
+                                            const sig = await sigRes.json()
+                                            if (!sig.available) { setEditError('Cloudinary not configured'); return }
+                                            const fd = new FormData()
+                                            fd.append('file', blob)
+                                            fd.append('api_key', sig.apiKey)
+                                            fd.append('timestamp', sig.timestamp.toString())
+                                            fd.append('signature', sig.signature)
+                                            fd.append('folder', sig.folder)
+                                            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
+                                            const cld = await cldRes.json()
+                                            if (cldRes.ok && cld.secure_url) {
+                                                setEditPic(cld.secure_url)
+                                            } else {
+                                                setEditError('Upload failed: ' + (cld?.error?.message || 'Unknown error'))
+                                            }
+                                        } catch (err) {
+                                            setEditError('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
+                                        } finally {
+                                            setUploading(false)
+                                        }
+                                    }} />
+                                </label>
+                            </div>
+                            {uploading && <p style={{ color: SOCIAL.primary, fontSize: '0.78rem', margin: '8px 0 0' }}>Uploading…</p>}
+                        </div>
+
+                        {/* Bio textarea */}
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: 'block', color: SOCIAL.muted, fontSize: '0.78rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Bio</label>
+                            <textarea
+                                value={editBio}
+                                onChange={e => setEditBio(e.target.value)}
+                                placeholder="Tell people about yourself, your farm, your business…"
+                                rows={3}
+                                maxLength={500}
+                                style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontSize: '0.9rem', color: SOCIAL.text, outline: 'none', fontFamily: SHARED.font, resize: 'vertical', boxSizing: 'border-box' }}
+                            />
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '4px 0 0', textAlign: 'right' }}>{editBio.length}/500</p>
+                        </div>
+
+                        {editError && <p style={{ color: SOCIAL.red, fontSize: '0.82rem', margin: '0 0 12px', textAlign: 'center' }}>{editError}</p>}
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button onClick={() => { setShowEditModal(false); setEditError(''); setEditPic('') }} style={{ flex: 1, padding: '11px', background: SOCIAL.bg, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: SOCIAL.textSecondary, cursor: 'pointer' }}>Cancel</button>
+                            <button onClick={async () => {
+                                setSaving(true)
+                                setEditError('')
+                                try {
+                                    const body: Record<string, string> = {}
+                                    if (editBio !== (user.bio || '')) body.bio = editBio
+                                    if (editPic) body.profilePic = editPic
+                                    if (Object.keys(body).length === 0) { setShowEditModal(false); return }
+                                    const res = await authFetch('/api/social/profile', {
+                                        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify(body),
+                                    })
+                                    const d = await res.json()
+                                    if (res.ok && d.user) {
+                                        setData(prev => prev ? { ...prev, user: { ...prev.user, bio: d.user.bio, profilePic: d.user.profilePic } } : prev)
+                                        setShowEditModal(false)
+                                        setEditPic('')
+                                    } else {
+                                        setEditError(d?.error?.message || d?.error || 'Failed to save')
+                                    }
+                                } catch (err) {
+                                    setEditError('Network error')
+                                } finally {
+                                    setSaving(false)
+                                }
+                            }} disabled={saving || uploading} style={{ flex: 1, padding: '11px', background: SOCIAL.primary, border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: '#fff', cursor: 'pointer', opacity: (saving || uploading) ? 0.6 : 1 }}>
+                                {saving ? 'Saving…' : 'Save'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

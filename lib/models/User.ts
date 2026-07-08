@@ -24,6 +24,10 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ['farmer', 'buyer', 'transporter', 'driver'], required: true },
   address: { type: String, required: true },
 
+  // Profile (Instagram-style)
+  profilePic: { type: String, default: '' },   // Cloudinary URL
+  bio: { type: String, maxlength: 500, default: '' },
+
   // Farmer specific
   aadharNumber: encryptedString,
   farmerName: { type: String },

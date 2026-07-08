@@ -3,7 +3,10 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import User from '@/lib/models/User'
 import Follow from '@/lib/models/Follow'
-import { authenticateRequest } from '@/lib/auth'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
+import { sanitize } from '@/lib/validation'
 
 export async function GET(req: NextRequest) {
     try {
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
         // Public profile fields only — PII (phone, email, full address) is
         // restricted to the user viewing their own profile.
         const user = await User.findById(userId)
-            .select('farmerName firmName role createdAt')
+            .select('farmerName firmName role profilePic bio createdAt')
             .lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -63,5 +66,55 @@ export async function GET(req: NextRequest) {
     } catch (e) {
         console.error(e)
         return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 })
+    }
+}
+
+// PATCH /api/social/profile — update the authenticated user's profile pic + bio
+// Body: { profilePic?: string, bio?: string }
+export async function PATCH(req: NextRequest) {
+    try {
+        const auth = authenticateRequest(req)
+        if (!auth) return unauthorized()
+
+        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many profile updates.' })
+        if (rl) return rl
+
+        await dbConnect()
+        const body = await req.json()
+        const updates: Record<string, unknown> = {}
+
+        if (typeof body.profilePic === 'string') {
+            // profilePic should be a Cloudinary URL (uploaded client-side via
+            // /api/social/upload-signature). Basic URL validation.
+            if (body.profilePic && !body.profilePic.startsWith('http')) {
+                return NextResponse.json({ error: 'profilePic must be a valid URL' }, { status: 400 })
+            }
+            updates.profilePic = sanitize(body.profilePic)
+        }
+        if (typeof body.bio === 'string') {
+            updates.bio = sanitize(body.bio).slice(0, 500)
+        }
+
+        if (Object.keys(updates).length === 0) {
+            return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 })
+        }
+
+        const user = await User.findByIdAndUpdate(
+            auth.user.userId,
+            { $set: updates },
+            { new: true },
+        ).select('farmerName firmName role profilePic bio createdAt')
+
+        if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
+
+        await logAudit({
+            userId: auth.user.userId, action: 'UPDATE', resource: 'Profile',
+            resourceId: auth.user.userId, details: { fields: Object.keys(updates) }, request: req,
+        })
+
+        return NextResponse.json({ success: true, user })
+    } catch (e) {
+        console.error(e)
+        return NextResponse.json({ error: 'Failed to update profile' }, { status: 500 })
     }
 }
