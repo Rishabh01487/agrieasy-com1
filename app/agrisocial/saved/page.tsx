@@ -7,24 +7,52 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
 interface Post { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; type: string }
+interface Collection { _id: string; name: string; postCount: number; coverPost?: { mediaUrl?: string; mediaType?: string } }
 
 export default function AgriSocialSaved() {
     const [posts, setPosts] = useState<Post[]>([])
+    const [collections, setCollections] = useState<Collection[]>([])
     const [loading, setLoading] = useState(true)
+    const [tab, setTab] = useState<'all' | 'collections'>('all')
+    const [showNewCollection, setShowNewCollection] = useState(false)
+    const [newCollectionName, setNewCollectionName] = useState('')
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
 
     useEffect(() => {
         (async () => {
             try {
-                const res = await authFetch('/api/social/saved?page=1&limit=60')
-                if (res.ok) {
-                    const d = await res.json()
-                    setPosts(d.data?.posts || [])
+                const [savedRes, collRes] = await Promise.all([
+                    authFetch('/api/social/saved?page=1&limit=60'),
+                    authFetch('/api/social/collections'),
+                ])
+                if (savedRes.ok) {
+                    const d = await savedRes.json()
+                    setPosts(d?.data?.posts || d?.posts || [])
+                }
+                if (collRes.ok) {
+                    const d = await collRes.json()
+                    setCollections(d?.data?.collections || [])
                 }
             } catch {}
             setLoading(false)
         })()
     }, [])
+
+    const createCollection = async () => {
+        if (!newCollectionName.trim()) return
+        try {
+            const res = await authFetch('/api/social/collections', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newCollectionName }),
+            })
+            if (res.ok) {
+                const d = await res.json()
+                setCollections(prev => [{ ...d.collection, postCount: 0, coverPost: null }, ...prev])
+                setNewCollectionName('')
+                setShowNewCollection(false)
+            }
+        } catch {}
+    }
 
     return (
         <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
@@ -36,14 +64,55 @@ export default function AgriSocialSaved() {
 
             <div style={{ maxWidth: '720px', margin: '0 auto', padding: '16px 14px 80px' }}>
                 <div style={{ textAlign: 'center', marginBottom: 20 }}>
-                    <h1 style={{ color: SOCIAL.text, fontWeight: 900, fontSize: '1.4rem', margin: '0 0 4px' }}>🔖 Saved Posts</h1>
+                    <h1 style={{ color: SOCIAL.text, fontWeight: 900, fontSize: '1.4rem', margin: '0 0 4px' }}>🔖 Saved</h1>
                     <p style={{ color: SOCIAL.muted, fontSize: '0.86rem', margin: 0 }}>Only you can see what you&apos;ve saved</p>
                 </div>
+
+                {/* Tabs: All Posts / Collections */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 20, borderBottom: `1px solid ${SOCIAL.border}` }}>
+                    <button onClick={() => setTab('all')} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: tab === 'all' ? `2px solid ${SOCIAL.primary}` : '2px solid transparent', color: tab === 'all' ? SOCIAL.primary : SOCIAL.muted, fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer' }}>All Posts</button>
+                    <button onClick={() => setTab('collections')} style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: tab === 'collections' ? `2px solid ${SOCIAL.primary}` : '2px solid transparent', color: tab === 'collections' ? SOCIAL.primary : SOCIAL.muted, fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer' }}>Collections ({collections.length})</button>
+                    {tab === 'collections' && (
+                        <button onClick={() => setShowNewCollection(true)} style={{ marginLeft: 'auto', padding: '6px 14px', background: SOCIAL.primaryLight, color: SOCIAL.primary, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>+ New</button>
+                    )}
+                </div>
+
+                {/* New collection input */}
+                {showNewCollection && (
+                    <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: 12, padding: 14, marginBottom: 16, display: 'flex', gap: 8 }}>
+                        <input value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} onKeyDown={e => e.key === 'Enter' && createCollection()} placeholder="Collection name (e.g., Tractor Tips)" style={{ flex: 1, padding: '8px 12px', border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontSize: '0.86rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }} autoFocus />
+                        <button onClick={createCollection} style={{ background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>Create</button>
+                        <button onClick={() => setShowNewCollection(false)} style={{ background: SOCIAL.bg, color: SOCIAL.muted, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, padding: '8px 12px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>✕</button>
+                    </div>
+                )}
 
                 {loading ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {[...Array(9)].map((_, i) => <div key={i} style={{ aspectRatio: '1', background: SOCIAL.bgSub, borderRadius: 6 }} />)}
                     </div>
+                ) : tab === 'collections' ? (
+                    collections.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: 60, color: SOCIAL.muted }}>
+                            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📁</div>
+                            <h3 style={{ color: SOCIAL.text, margin: '0 0 6px' }}>No collections yet</h3>
+                            <p style={{ fontSize: '0.86rem', margin: '0 0 16px' }}>Create collections to organize your saved posts by topic.</p>
+                            <button onClick={() => setShowNewCollection(true)} style={{ padding: '10px 22px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer' }}>+ New Collection</button>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                            {collections.map(c => (
+                                <div key={c._id} style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: 12, overflow: 'hidden', cursor: 'pointer', transition: 'box-shadow 0.2s', boxShadow: SHARED.shadow }}>
+                                    <div style={{ height: 120, background: c.coverPost?.mediaUrl && c.coverPost.mediaType === 'image' ? `url(${c.coverPost.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        {!c.coverPost?.mediaUrl && <span style={{ fontSize: '2rem' }}>📁</span>}
+                                    </div>
+                                    <div style={{ padding: '10px 12px' }}>
+                                        <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', margin: 0 }}>{c.name}</p>
+                                        <p style={{ color: SOCIAL.muted, fontSize: '0.74rem', margin: '2px 0 0' }}>{c.postCount} {c.postCount === 1 ? 'post' : 'posts'}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )
                 ) : posts.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 60, color: SOCIAL.muted }}>
                         <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔖</div>
