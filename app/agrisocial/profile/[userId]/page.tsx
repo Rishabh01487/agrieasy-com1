@@ -142,7 +142,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 {/* Highlights (real story highlights from the API) */}
                 <div style={{ display: 'flex', gap: 16, padding: '12px 0 20px', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 4, overflowX: 'auto' }} className="no-scrollbar">
                     {highlights.length === 0 && isOwn && (
-                        <Link href="/agrisocial/stories/${viewerId}" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 80, textDecoration: 'none' }}>
+                        <Link href={`/agrisocial/stories/${viewerId}`} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, minWidth: 80, textDecoration: 'none' }}>
                             <div style={{ width: 70, height: 70, borderRadius: '50%', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', color: SOCIAL.primary }}>+</div>
                             <span style={{ color: SOCIAL.muted, fontSize: '0.74rem', fontWeight: 600 }}>New</span>
                         </Link>

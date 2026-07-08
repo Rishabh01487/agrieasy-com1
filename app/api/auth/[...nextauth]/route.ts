@@ -58,9 +58,14 @@ const handler = NextAuth({
                 if (!existingUser) {
                     const crypto = await import('crypto')
                     const randomPassword = crypto.randomBytes(32).toString('hex')
+                    // Generate a unique placeholder phone (Google doesn't always provide one)
+                    // Uses email prefix + random suffix to avoid duplicate-key errors
+                    const emailPrefix = profile.email?.split('@')[0]?.slice(0, 6) || 'user'
+                    const randomSuffix = Math.floor(100000 + Math.random() * 900000)
+                    const phone = (profile as Record<string, unknown>).phone_number as string || `9${randomSuffix}${emailPrefix.length}`
                     await User.create({
                         email: profile.email,
-                        phone: (profile as Record<string, unknown>).phone_number as string || '',
+                        phone,
                         password: await bcrypt.hash(randomPassword, 10),
                         role: 'buyer',
                         address: '',

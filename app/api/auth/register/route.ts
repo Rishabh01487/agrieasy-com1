@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       aadharNumber: data.role === 'farmer' ? data.aadhaarNumber : undefined,
       farmerName: data.role === 'farmer' ? data.name : undefined,
       transporterCompanyName: data.role === 'transporter' ? data.name : undefined,
-      transporterGstin: data.role === 'transporter' ? data.gstin : undefined,
+      transporterGstin: data.role === 'transporter' ? (data.transporterGstin || data.gstin) : undefined,
       drivingLicense: data.role === 'transporter' ? data.drivingLicense : undefined,
     })
 

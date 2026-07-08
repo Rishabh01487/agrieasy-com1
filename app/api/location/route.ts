@@ -87,6 +87,8 @@ export async function GET(req: NextRequest) {
                     status: booking.status,
                     commodity: booking.commodity,
                     quantity: booking.quantity,
+                    pickupLocation: booking.pickupLocation || '',
+                    deliveryLocation: booking.deliveryLocation || '',
                     driverLocation: booking.driverLocation || null,
                     farmer: booking.farmerId,
                     buyer: booking.buyerId,

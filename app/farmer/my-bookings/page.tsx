@@ -34,7 +34,7 @@ export default function MyBookings() {
           return
         }
         const data = await res.json()
-        setBookings(data.bookings || [])
+        setBookings(data?.data?.bookings || data?.bookings || [])
       } catch {
         setError('Network error. Please try again.')
       } finally {

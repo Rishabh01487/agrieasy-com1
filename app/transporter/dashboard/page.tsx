@@ -41,7 +41,7 @@ export default function TransporterDashboard() {
           return
         }
         const data = await response.json()
-        setVehicles(data.vehicles || [])
+        setVehicles(data?.data?.vehicles || data?.vehicles || [])
       } catch (err) {
         setError('Network error. Please check your connection and try again.')
       } finally {

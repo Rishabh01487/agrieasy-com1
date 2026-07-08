@@ -65,7 +65,7 @@ export default function FarmerDashboard() {
           return
         }
         const data = await response.json()
-        setListings(data.listings || [])
+        setListings(data?.data?.listings || data?.listings || [])
       } catch (err) {
         setError('Network error. Please try again.')
       } finally {

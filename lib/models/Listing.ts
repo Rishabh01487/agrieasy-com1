@@ -11,9 +11,10 @@ const ListingSchema = new mongoose.Schema({
   paymentConditions: { type: String },
   description: { type: String, maxlength: 2000 },
   firmLocation: { type: String },
-  shopPhoto: { type: String, default: '' },  // Cloudinary URL of the buyer's shop
-  images: [{ type: String }],                // additional listing images
-  location: {
+  shopPhoto: { type: String, default: '' },
+  images: [{ type: String }],
+  location: { type: String, default: '' },  // location string (e.g. "APMC Market, Pune, MH")
+  geoLocation: {                              // optional geo coordinates for maps
     latitude: Number,
     longitude: Number,
   },

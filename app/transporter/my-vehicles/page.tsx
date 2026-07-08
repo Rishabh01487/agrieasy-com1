@@ -44,7 +44,7 @@ export default function ManageVehicles() {
                 return
             }
             const json = await res.json()
-            setVehicles(json.vehicles || [])
+            setVehicles(json?.data?.vehicles || json?.vehicles || [])
         } catch { setError('Network error') } finally { setLoading(false) }
     }
 

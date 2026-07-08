@@ -144,7 +144,7 @@ export const createBookingSchema = z.object({
 // ── Vehicle schemas ────────────────────────────────────────────────
 
 export const createVehicleSchema = z.object({
-  vehicleType: z.enum(['truck', 'tempo', 'tractor', 'pickup', 'container', 'tanker']),
+  vehicleType: z.enum(['mini-truck', 'pickup-van', 'truck', 'tractor-trolley', 'tempo']),
   registrationNumber: z.string().regex(/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, 'Invalid registration number (e.g. MH12AB1234)'),
   capacity: z.number().positive().max(50_000, 'Capacity too large'),
   capacityUnit: z.enum(['kg', 'ton']),
@@ -214,7 +214,7 @@ export const transferSchema = z.object({
   toIdentifier: sanitizedString(z.string().min(1, 'Recipient identifier required')),
   amount: positiveAmountSchema,
   note: optSanitizedString(z.string().max(200)),
-  paymentMethod: z.enum(['wallet']).default('wallet'),
+  paymentMethod: z.enum(['wallet', 'paylater']).default('wallet'),
 })
 
 export const topupSchema = z.object({

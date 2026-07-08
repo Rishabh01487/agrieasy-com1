@@ -49,7 +49,7 @@ export default function TransactionHistory() {
             try {
                 const res = await authFetch(url)
                 const d = await res.json()
-                const list: Transaction[] = d.transactions || []
+                const list: Transaction[] = d?.data?.transactions || d?.transactions || []
                 setTxns(list)
                 // Calculate totals
                 let credits = 0, debits = 0

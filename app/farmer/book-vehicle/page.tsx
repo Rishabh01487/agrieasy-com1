@@ -45,7 +45,7 @@ function BookVehicleContent() {
       const res = await fetch('/api/vehicles')
       if (!res.ok) return
       const data = await res.json()
-      const available = (data.vehicles || []).filter((v: Vehicle) => v.availability)
+      const available = (data?.data?.vehicles || data?.vehicles || []).filter((v: Vehicle) => v.availability)
       setAllVehicles(available)
       setFilteredVehicles(available)
     } catch {
