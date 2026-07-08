@@ -52,16 +52,23 @@ export default function AgriSocialNotifications() {
             if (res.ok) {
                 const d = await res.json()
                 setNotifications(d.data?.notifications || [])
-                // Mark all as read after a short delay
-                setTimeout(() => {
-                    authFetch('/api/social/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null)
-                }, 1500)
+                // Don't auto-mark-read — let the user do it manually with the button
             }
         } catch {}
         setLoading(false)
     }, [])
 
     useEffect(() => { fetchNotifications() }, [fetchNotifications])
+
+    const markAllRead = async () => {
+        // Optimistic: mark all as read locally
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+        try {
+            await authFetch('/api/social/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        } catch {}
+    }
+
+    const unreadCount = notifications.filter(n => !n.isRead).length
 
     const filtered = notifications.filter(n => {
         if (filter === 'follows') return n.type === 'follow'
@@ -96,14 +103,19 @@ export default function AgriSocialNotifications() {
             </nav>
 
             <div style={{ maxWidth: '640px', margin: '0 auto', padding: '16px 14px 80px' }}>
-                {/* Filter tabs */}
-                <div style={{ display: 'flex', gap: 6, marginBottom: 16, borderBottom: `1px solid ${SOCIAL.border}` }}>
+                {/* Filter tabs + Mark all as read */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 16, borderBottom: `1px solid ${SOCIAL.border}`, alignItems: 'center' }}>
                     {([['all', 'All'], ['follows', 'Follows'], ['mentions', 'Mentions & Comments']] as const).map(([k, label]) => (
                         <button key={k} onClick={() => setFilter(k)}
                             style={{ padding: '10px 16px', background: 'none', border: 'none', borderBottom: filter === k ? `2px solid ${SOCIAL.primary}` : '2px solid transparent', color: filter === k ? SOCIAL.primary : SOCIAL.muted, fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer' }}>
                             {label}
                         </button>
                     ))}
+                    {unreadCount > 0 && (
+                        <button onClick={markAllRead} style={{ marginLeft: 'auto', padding: '6px 14px', background: SOCIAL.primaryLight, color: SOCIAL.primary, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+                            Mark all as read ({unreadCount})
+                        </button>
+                    )}
                 </div>
 
                 {loading ? (
