@@ -55,9 +55,9 @@ export async function GET(req: NextRequest) {
 
             const [ranked, latest] = await Promise.all([
                 Post.find(query).sort({ rankScore: -1, createdAt: -1 }).skip(skip).limit(rankedCount)
-                    .populate('userId', 'farmerName firmName role').lean(),
+                    .populate('userId', 'farmerName firmName role profilePic').lean(),
                 Post.find(query).sort({ createdAt: -1 }).skip(skip + rankedCount).limit(latestCount)
-                    .populate('userId', 'farmerName firmName role').lean(),
+                    .populate('userId', 'farmerName firmName role profilePic').lean(),
             ])
             // Interleave so the feed alternates ranked / fresh
             const merged: any[] = []
@@ -70,12 +70,12 @@ export async function GET(req: NextRequest) {
             posts = await Post.find(query)
                 .sort({ rankScore: -1, createdAt: -1 })
                 .skip(skip).limit(limit)
-                .populate('userId', 'farmerName firmName role').lean()
+                .populate('userId', 'farmerName firmName role profilePic').lean()
         } else {
             posts = await Post.find(query)
                 .sort({ createdAt: -1 })
                 .skip(skip).limit(limit)
-                .populate('userId', 'farmerName firmName role').lean()
+                .populate('userId', 'farmerName firmName role profilePic').lean()
         }
 
         const total = await Post.countDocuments(query)

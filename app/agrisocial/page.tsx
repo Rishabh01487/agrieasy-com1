@@ -20,7 +20,7 @@ const CATEGORIES = [
     { key: 'organic', label: 'Organic', icon: '🌱' },
 ]
 
-interface User { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string }
+interface User { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string; parentId?: string | null; likes?: string[]; likesCount?: number }
 interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
@@ -175,7 +175,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
                 <Link href={`/agrisocial/profile/${authorId}`} style={{ textDecoration: 'none' }}>
-                    <Avatar name={authorName} size={38} />
+                    <Avatar name={authorName} size={38} src={!isDeletedUser ? (post.userId as User).profilePic : undefined} />
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
                     <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -305,9 +305,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     {comments.length === 0 && <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 8px', textAlign: 'center' }}>No comments yet — be first! 🌾</p>}
                     {comments.slice(-3).map((c: Comment, i: number) => {
                         const cn = typeof c.userId === 'object' ? ((c.userId as User).farmerName || (c.userId as User).firmName || 'User') : 'User'
+                        const cPic = typeof c.userId === 'object' ? (c.userId as User).profilePic : undefined
                         return (
                             <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-                                <Avatar name={cn} size={28} />
+                                <Avatar name={cn} size={28} src={cPic} />
                                 <p style={{ color: SOCIAL.text, fontSize: '0.84rem', margin: 0, paddingTop: '4px', flex: 1 }}>
                                     <Link href={`/agrisocial/profile/${typeof c.userId === 'object' ? (c.userId as User)._id : ''}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{cn}</Link>{' '}{c.text}
                                 </p>

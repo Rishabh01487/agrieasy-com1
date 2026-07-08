@@ -10,7 +10,7 @@ import { Icon, IconButton } from '@/lib/icons'
 const roleLabel: Record<string, string> = { farmer: 'Farmer', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
 
-interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
+interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string; parentId?: string | null; likes?: string[]; likesCount?: number }
 interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
@@ -186,8 +186,15 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                 <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '85vh', borderLeft: `1px solid ${SOCIAL.border}` }}>
                     {/* Author */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${SOCIAL.border}` }}>
-                        <Link href={`/agrisocial/profile/${authorId}`} style={{ width: 40, height: 40, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.1rem', textDecoration: 'none', flexShrink: 0 }}>
-                            {authorName[0]?.toUpperCase()}
+                        <Link href={`/agrisocial/profile/${authorId}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
+                            {post.userId && typeof post.userId === 'object' && (post.userId as User).profilePic ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={(post.userId as User).profilePic} alt={authorName} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                            ) : (
+                                <div style={{ width: 40, height: 40, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.1rem' }}>
+                                    {authorName[0]?.toUpperCase()}
+                                </div>
+                            )}
                         </Link>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none', display: 'block' }}>{authorName}</Link>

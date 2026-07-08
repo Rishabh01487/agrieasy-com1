@@ -13,7 +13,7 @@ const CATEGORIES = [
     { key: 'agritrading', label: '💰 Trading' }, { key: 'equipment', label: '🚜 Equipment' }, { key: 'organic', label: '🌱 Organic' },
 ]
 
-interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
+interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number }
 
 function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId: string; isActive: boolean; onDelete?: (id: string) => void }) {
@@ -121,9 +121,16 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
 
             {/* Right action bar */}
             <div style={{ position: 'absolute', right: '16px', bottom: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1.1rem', border: '2px solid #fff' }}>
-                    {authorName[0]?.toUpperCase()}
-                </div>
+                <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ textDecoration: 'none' }}>
+                    {clip.userId && typeof clip.userId === 'object' && (clip.userId as any).profilePic ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={(clip.userId as any).profilePic} alt={authorName} style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff' }} />
+                    ) : (
+                        <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '1.1rem', border: '2px solid #fff' }}>
+                            {authorName[0]?.toUpperCase()}
+                        </div>
+                    )}
+                </Link>
                 <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="heart" size={32} color={liked ? '#ef4444' : '#fff'} filled={liked} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
             Post.find(query)
                 .sort({ createdAt: -1 })
                 .skip(skip).limit(limit)
-                .populate('userId', 'farmerName firmName role')
+                .populate('userId', 'farmerName firmName role profilePic')
                 .lean(),
         ])
 

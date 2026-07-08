@@ -14,8 +14,8 @@ export async function GET(
   try {
     await dbConnect()
     const post = await Post.findById(postId)
-      .populate('userId', 'farmerName firmName role')
-      .populate('comments.userId', 'farmerName firmName')
+      .populate('userId', 'farmerName firmName role profilePic')
+      .populate('comments.userId', 'farmerName firmName profilePic')
       .lean()
 
     if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })

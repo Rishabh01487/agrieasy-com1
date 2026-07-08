@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
                 .sort({ likesCount: -1, createdAt: -1 })   // trending first
                 .skip(skip)
                 .limit(limit)
-                .populate('userId', 'farmerName firmName role')
+                .populate('userId', 'farmerName firmName role profilePic')
                 .lean()
 
             return { success: true, data: { posts }, meta: paginationMeta(page, limit, total) }

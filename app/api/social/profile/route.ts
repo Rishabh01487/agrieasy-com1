@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
             Post.find({ userId, type: 'krishiclip', isActive: true }).sort({ createdAt: -1 }).limit(60).lean(),
             isOwnProfile
                 ? Post.find({ savedBy: viewerId, isActive: true }).sort({ createdAt: -1 }).limit(60)
-                    .populate('userId', 'farmerName firmName role').lean()
+                    .populate('userId', 'farmerName firmName role profilePic').lean()
                 : Promise.resolve([]),
             Follow.countDocuments({ followingId: userId }),
             Follow.countDocuments({ followerId: userId }),
