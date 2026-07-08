@@ -85,6 +85,12 @@ input[type="file"] { display: none; }
 }
 .fade-in-up { animation: fadeInUp 0.35s ease-out; }
 
+/* DM typing indicator dots */
+@keyframes typing {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
 /* ── Responsive layouts ─────────────────────────────────────────── */
 
 /* AgriSocial feed: collapse 2-column grid to 1 column on mobile */

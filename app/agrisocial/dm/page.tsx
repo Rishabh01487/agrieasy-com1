@@ -74,6 +74,9 @@ function AgriSocialDMInner() {
     const [loading, setLoading] = useState(true)
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [shareMode, setShareMode] = useState<string | null>(sharePostId || shareStoryId)
+    const [otherTyping, setOtherTyping] = useState(false)
+    const [messageReactions, setMessageReactions] = useState<Record<string, string>>({}) // messageId → emoji
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     const fetchConversations = useCallback(async () => {
@@ -285,16 +288,39 @@ function AgriSocialDMInner() {
                                     return (
                                         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, flexDirection: isMine ? 'row-reverse' : 'row' }}>
                                             {!isMine && !prevSame ? <Avatar name={senderName} size={28} /> : <div style={{ width: 28 }} />}
-                                            <div style={{ maxWidth: '70%', background: isMine ? SOCIAL.gradient : SOCIAL.white, color: isMine ? '#fff' : SOCIAL.text, padding: '8px 14px', borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px', border: isMine ? 'none' : `1px solid ${SOCIAL.border}`, fontSize: '0.86rem', boxShadow: SHARED.shadow }}>
+                                            <div onDoubleClick={() => {
+                                                // Double-click to react with ❤️ (Instagram-style)
+                                                setMessageReactions(prev => ({ ...prev, [m._id]: prev[m._id] === '❤️' ? '' : '❤️' }))
+                                            }} style={{ position: 'relative', maxWidth: '70%', background: isMine ? SOCIAL.gradient : SOCIAL.white, color: isMine ? '#fff' : SOCIAL.text, padding: '8px 14px', borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px', border: isMine ? 'none' : `1px solid ${SOCIAL.border}`, fontSize: '0.86rem', boxShadow: SHARED.shadow, cursor: 'pointer' }}>
                                                 {m.mediaUrl && m.mediaType === 'image' && (
                                                     // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={m.mediaUrl} alt="msg" style={{ width: '100%', borderRadius: 8, marginBottom: m.text ? 6 : 0 }} />
                                                 )}
                                                 {m.text && <p style={{ margin: 0, lineHeight: 1.4 }}>{m.text}</p>}
+                                                {/* Read receipt for my messages */}
+                                                {isMine && m.readBy && m.readBy.length > 1 && (
+                                                    <span style={{ fontSize: '0.62rem', opacity: 0.7, marginTop: 2, display: 'block', textAlign: 'right' }}>Seen</span>
+                                                )}
+                                                {/* Reaction badge */}
+                                                {messageReactions[m._id] && (
+                                                    <span style={{ position: 'absolute', bottom: -8, right: isMine ? 8 : 'auto', left: isMine ? 'auto' : 8, background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: 100, padding: '1px 6px', fontSize: '0.75rem', boxShadow: SHARED.shadow }}>
+                                                        {messageReactions[m._id]}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     )
                                 })}
+                                {/* Typing indicator */}
+                                {otherTyping && (
+                                    <div style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
+                                        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '18px 18px 18px 4px', padding: '8px 14px', fontSize: '0.86rem', color: SOCIAL.muted, display: 'flex', gap: 3 }}>
+                                            <span style={{ animation: 'typing 1.4s infinite', display: 'inline-block' }}>●</span>
+                                            <span style={{ animation: 'typing 1.4s infinite 0.2s', display: 'inline-block' }}>●</span>
+                                            <span style={{ animation: 'typing 1.4s infinite 0.4s', display: 'inline-block' }}>●</span>
+                                        </div>
+                                    </div>
+                                )}
                                 <div ref={messagesEndRef} />
                             </div>
 
