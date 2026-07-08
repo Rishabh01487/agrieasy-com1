@@ -20,8 +20,12 @@ export async function GET(req: NextRequest) {
             if (category && category !== 'all') query.category = category
 
             const total = await Post.countDocuments(query)
+            // Instagram Reels uses an algorithmic feed (engagement-weighted),
+            // not just chronological. Sort by rankScore (likes*5 + comments*8
+            // + saves*6 + shares*10 + recency) descending, then createdAt as
+            // a tiebreaker. This surfaces popular clips first.
             const clips = await Post.find(query)
-                .sort({ createdAt: -1 })
+                .sort({ rankScore: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
                 .populate('userId', 'farmerName firmName role profilePic')

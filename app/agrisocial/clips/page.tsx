@@ -22,14 +22,37 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [saved, setSaved] = useState(viewerId ? clip.savedBy?.includes(viewerId) : false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [shareCopied, setShareCopied] = useState(false)
+    const [muted, setMuted] = useState(false)
+    const [paused, setPaused] = useState(false)
+    const [heartBurst, setHeartBurst] = useState(false)
+    const lastTapRef = useRef<number>(0)
     const videoRef = useRef<HTMLVideoElement>(null)
 
     useEffect(() => {
         if (videoRef.current) {
-            if (isActive) { videoRef.current.play().catch(() => null) }
+            if (isActive && !paused) { videoRef.current.play().catch(() => null) }
             else { videoRef.current.pause() }
         }
-    }, [isActive])
+    }, [isActive, paused])
+
+    // Tap to pause/play, double-tap to like (Instagram Reels behavior)
+    const handleVideoTap = () => {
+        const now = Date.now()
+        if (now - lastTapRef.current < 300) {
+            // Double tap → like
+            if (!liked) {
+                setLiked(true)
+                setLikesCount(c => c + 1)
+                authFetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: clip._id }) }).catch(() => null)
+            }
+            setHeartBurst(true)
+            setTimeout(() => setHeartBurst(false), 1000)
+        } else {
+            // Single tap → toggle pause
+            setPaused(p => !p)
+        }
+        lastTapRef.current = now
+    }
 
     const isDeletedUser = !clip.userId || typeof clip.userId !== 'object'
     const authorName = isDeletedUser ? 'Unknown User' : (clip.userId.farmerName || clip.userId.firmName || 'User')
@@ -105,8 +128,9 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&loop=1&playlist=${ytId}`}
                     style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} allowFullScreen title="KrishiClip" allow="autoplay" />
             ) : clip.mediaUrl && clip.mediaType === 'video' ? (
-                <video ref={videoRef} src={clip.mediaUrl} loop muted={false} playsInline controls={false}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
+                <video ref={videoRef} src={clip.mediaUrl} loop muted={muted} playsInline controls={false}
+                    onClick={handleVideoTap}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, cursor: 'pointer' }} />
             ) : clip.mediaUrl && clip.mediaType === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={clip.mediaUrl} alt="clip" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
@@ -118,6 +142,24 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
 
             {/* Overlay gradient */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', pointerEvents: 'none' }} />
+
+            {/* Heart burst on double-tap */}
+            {heartBurst && (
+                <div className="heart-burst" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', fontSize: '5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))', zIndex: 10 }}>❤️</div>
+            )}
+
+            {/* Pause indicator */}
+            {paused && (
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff', fontSize: '3rem', opacity: 0.8, pointerEvents: 'none', zIndex: 10 }}>⏸</div>
+            )}
+
+            {/* Sound toggle (top-right) */}
+            {clip.mediaType === 'video' && (
+                <button onClick={() => setMuted(m => !m)} title={muted ? 'Unmute' : 'Mute'}
+                    style={{ position: 'absolute', top: 60, right: 16, background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', zIndex: 10 }}>
+                    {muted ? '🔇' : '🔊'}
+                </button>
+            )}
 
             {/* Right action bar */}
             <div style={{ position: 'absolute', right: '16px', bottom: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
