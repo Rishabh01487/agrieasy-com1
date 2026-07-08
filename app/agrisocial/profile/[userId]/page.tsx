@@ -26,6 +26,10 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [uploading, setUploading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [editError, setEditError] = useState('')
+    // Followers/following list modal state
+    const [listModal, setListModal] = useState<'followers' | 'following' | null>(null)
+    const [listUsers, setListUsers] = useState<any[]>([])
+    const [listLoading, setListLoading] = useState(false)
 
     useEffect(() => {
         const load = async () => {
@@ -111,8 +115,8 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         {/* Stats — clickable (Instagram-style) */}
                         <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                             <div style={{ cursor: 'pointer' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
-                            <Link href={`/agrisocial/search?q=${name}`} style={{ textDecoration: 'none' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></Link>
-                            <Link href={`/agrisocial/search?q=${name}`} style={{ textDecoration: 'none' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></Link>
+                            <button onClick={() => { setListUsers([]); setListModal('followers') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></button>
+                            <button onClick={() => { setListUsers([]); setListModal('following') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></button>
                         </div>
                         {/* Bio */}
                         <div>
@@ -173,6 +177,56 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     </div>
                 )}
             </div>
+
+            {/* Followers/Following List Modal */}
+            {listModal && (
+                <div onClick={() => setListModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
+                    <div onClick={async (e) => {
+                        e.stopPropagation()
+                        if (listUsers.length === 0) {
+                            setListLoading(true)
+                            try {
+                                const res = await authFetch(`/api/social/follow?userId=${profileId}&list=${listModal}`)
+                                if (res.ok) {
+                                    const d = await res.json()
+                                    setListUsers(d?.data?.users || [])
+                                }
+                            } catch {}
+                            setListLoading(false)
+                        }
+                    }} style={{ background: SOCIAL.white, borderRadius: 16, padding: 0, maxWidth: 400, width: '100%', maxHeight: '70vh', overflowY: 'auto', boxShadow: SHARED.shadowXl }}>
+                        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: SOCIAL.white, zIndex: 1 }}>
+                            <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem', textTransform: 'capitalize' }}>{listModal}</h3>
+                            <button onClick={() => setListModal(null)} style={{ background: 'none', border: 'none', color: SOCIAL.muted, cursor: 'pointer', fontSize: '1.3rem' }}>✕</button>
+                        </div>
+                        {listLoading ? (
+                            <div style={{ padding: 40, textAlign: 'center', color: SOCIAL.muted, fontSize: '0.86rem' }}>Loading…</div>
+                        ) : listUsers.length === 0 ? (
+                            <div style={{ padding: 40, textAlign: 'center', color: SOCIAL.muted, fontSize: '0.86rem' }}>No {listModal} yet</div>
+                        ) : (
+                            <div style={{ padding: '8px 0' }}>
+                                {listUsers.map((u: any) => {
+                                    const uname = u.farmerName || u.firmName || 'User'
+                                    return (
+                                        <Link key={u._id} href={`/agrisocial/profile/${u._id}`} onClick={() => setListModal(null)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px', textDecoration: 'none' }}>
+                                            {u.profilePic ? (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img src={u.profilePic} alt={uname} style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
+                                            ) : (
+                                                <div style={{ width: 36, height: 36, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>{uname[0]?.toUpperCase()}</div>
+                                            )}
+                                            <div>
+                                                <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', margin: 0 }}>{uname}</p>
+                                                <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: 0, textTransform: 'capitalize' }}>{u.role}</p>
+                                            </div>
+                                        </Link>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Edit Profile Modal */}
             {showEditModal && (

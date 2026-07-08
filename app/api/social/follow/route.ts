@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Follow from '@/lib/models/Follow'
+import User from '@/lib/models/User'
 import Notification from '@/lib/models/Notification'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
@@ -55,6 +56,24 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url)
         const userId = searchParams.get('userId')
         const targetId = searchParams.get('targetId')
+        const list = searchParams.get('list') // 'followers' | 'following'
+
+        // List mode: return the actual users (for profile stats click)
+        if (list && userId) {
+            if (list === 'followers') {
+                const follows = await Follow.find({ followingId: userId }).select('followerId').lean()
+                const userIds = follows.map(f => f.followerId)
+                const users = await User.find({ _id: { $in: userIds } }).select('farmerName firmName role profilePic').lean()
+                return NextResponse.json({ success: true, data: { users, count: users.length } })
+            } else if (list === 'following') {
+                const follows = await Follow.find({ followerId: userId }).select('followingId').lean()
+                const userIds = follows.map(f => f.followingId)
+                const users = await User.find({ _id: { $in: userIds } }).select('farmerName firmName role profilePic').lean()
+                return NextResponse.json({ success: true, data: { users, count: users.length } })
+            }
+        }
+
+        // Check mode: is userId following targetId?
         if (!userId || !targetId) return NextResponse.json({ following: false })
         const exists = await Follow.findOne({ followerId: userId, followingId: targetId })
         const followers = await Follow.countDocuments({ followingId: targetId })
