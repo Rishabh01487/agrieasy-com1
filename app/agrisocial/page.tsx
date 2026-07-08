@@ -436,7 +436,11 @@ export default function AgriSocialFeed() {
     const [stories, setStories] = useState<StoryGroup[]>([])
     const [suggested, setSuggested] = useState<SuggestedUser[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
     const [error, setError] = useState('')
+    const pageRef = useRef(1)
+    const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [category, setCategory] = useState('all')
     const [feed, setFeed] = useState<'following' | 'ranked' | 'latest'>('following')
     const [unreadNotifs, setUnreadNotifs] = useState(0)
@@ -444,24 +448,29 @@ export default function AgriSocialFeed() {
     const [userId] = useState(() => { try { return typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '' } catch { return '' } })
     const router = useRouter()
 
-    const fetchPosts = useCallback(async (uid: string, cat: string, feedMode: typeof feed) => {
+    const fetchPosts = useCallback(async (uid: string, cat: string, feedMode: typeof feed, pageNum: number, append: boolean) => {
         try {
-            setLoading(true)
+            if (append) setLoadingMore(true)
+            else setLoading(true)
             setError('')
-            const params = new URLSearchParams({ page: '1', feed: feedMode })
+            const params = new URLSearchParams({ page: String(pageNum), feed: feedMode })
             if (uid) params.set('userId', uid)
             if (cat && cat !== 'all') params.set('category', cat)
             const res = await authFetch(`/api/social/posts?${params}`)
             if (!res.ok) throw new Error('Server error')
             const d = await res.json()
-            setPosts(d.posts || d.data?.posts || [])
+            const newPosts = d.posts || d.data?.posts || []
+            const total = d.meta?.total || d.data?.meta?.total || 0
+            setPosts(prev => append ? [...prev, ...newPosts] : newPosts)
+            setHasMore(newPosts.length > 0 && (append ? (posts.length + newPosts.length < total) : (newPosts.length < total)))
+            pageRef.current = pageNum
         } catch {
-            setError('Could not load posts. Please check your connection.')
-            setPosts([])
+            if (!append) { setError('Could not load posts. Please check your connection.'); setPosts([]) }
         } finally {
             setLoading(false)
+            setLoadingMore(false)
         }
-    }, [])
+    }, [posts.length])
 
     const fetchStories = useCallback(async () => {
         if (!userId) return
@@ -505,11 +514,30 @@ export default function AgriSocialFeed() {
     }, [userId])
 
     useEffect(() => {
-        fetchPosts(userId, category, feed).catch(() => {})
+        pageRef.current = 1
+        setHasMore(true)
+        fetchPosts(userId, category, feed, 1, false).catch(() => {})
         fetchStories()
         fetchSuggested()
         fetchUnreadCounts()
     }, [fetchPosts, fetchStories, fetchSuggested, fetchUnreadCounts, userId, category, feed])
+
+    // Infinite scroll: load more posts when sentinel is visible
+    const loadMore = useCallback(() => {
+        if (loadingMore || !hasMore) return
+        fetchPosts(userId, category, feed, pageRef.current + 1, true)
+    }, [loadingMore, hasMore, fetchPosts, userId, category, feed])
+
+    useEffect(() => {
+        const sentinel = sentinelRef.current
+        if (!sentinel) return
+        const observer = new IntersectionObserver(
+            (entries) => { if (entries[0].isIntersecting && hasMore && !loadingMore) loadMore() },
+            { rootMargin: '300px' }
+        )
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [hasMore, loadingMore, loadMore])
 
     // Refresh stories every 60s (they expire)
     useEffect(() => {
@@ -619,7 +647,7 @@ export default function AgriSocialFeed() {
                             <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Could not connect to server</h3>
                             <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>MongoDB Atlas might be paused. Check your connection.</p>
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                                <button onClick={() => fetchPosts(userId, category, feed)} style={{ padding: '10px 20px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Try Again</button>
+                                <button onClick={() => { pageRef.current = 1; setHasMore(true); fetchPosts(userId, category, feed, 1, false) }} style={{ padding: '10px 20px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Try Again</button>
                                 <Link href="/agrisocial/create" style={{ padding: '10px 20px', background: SOCIAL.primaryLight, color: SOCIAL.textSecondary, border: `1px solid ${SOCIAL.border}`, borderRadius: '10px', fontWeight: 700, textDecoration: 'none' }}>+ Create Post</Link>
                             </div>
                         </div>
@@ -639,6 +667,18 @@ export default function AgriSocialFeed() {
                     ) : (
                         <>
                             {posts.map(p => <PostCard key={p._id} post={p} viewerId={userId} onLike={handleLike} onDelete={(id) => setPosts(ps => ps.filter(x => x._id !== id))} />)}
+                            {/* Infinite scroll sentinel + loading spinner */}
+                            <div ref={sentinelRef} style={{ height: 1 }} />
+                            {loadingMore && (
+                                <div style={{ textAlign: 'center', padding: '20px 0', color: SOCIAL.muted, fontSize: '0.84rem' }}>
+                                    Loading more posts…
+                                </div>
+                            )}
+                            {!hasMore && posts.length > 0 && (
+                                <div style={{ textAlign: 'center', padding: '24px 0', color: SOCIAL.muted, fontSize: '0.82rem' }}>
+                                    You're all caught up ✨
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
