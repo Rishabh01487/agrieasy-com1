@@ -9,7 +9,8 @@ export default function AgriSocialError({ error, reset }: { error: Error & { dig
   return (
     <div style={{ minHeight: '100vh', background: '#fafbfc', fontFamily: "'Inter','Segoe UI',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ textAlign: 'center', maxWidth: 420 }}>
-        <div style={{ fontSize: '4rem', marginBottom: 12 }}>🌾</div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/agrisocial-logo.png" alt="AgriSocial" style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover', margin: '0 auto 12px', display: 'block' }} />
         <h2 style={{ color: '#0f172a', fontWeight: 800, margin: '0 0 8px' }}>Something went wrong</h2>
         <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '0 0 8px' }}>AgriSocial experienced an error loading the feed.</p>
         {error.message && (

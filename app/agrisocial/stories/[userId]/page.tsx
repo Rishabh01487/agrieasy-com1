@@ -162,7 +162,8 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
 
     if (!current || !story) return (
         <div style={{ minHeight: '100vh', background: '#000', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', gap: '16px', fontFamily: SHARED.font }}>
-            <span style={{ fontSize: '3rem' }}>🌾</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/agrisocial-logo.png" alt="AgriSocial" style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover' }} />
             <p>No active stories</p>
             <Link href="/agrisocial" style={{ color: SOCIAL.primary, fontWeight: 700 }}>← Back to feed</Link>
         </div>
@@ -199,14 +200,12 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
                 )}
                 <div style={{ position: 'relative', zIndex: 1, textAlign: 'center', padding: 24 }}>
                     {/* AgriSocial logo */}
-                    <div style={{
-                        width: 80, height: 80, borderRadius: 22, background: SOCIAL.gradient,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '2.4rem', margin: '0 auto 24px',
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/agrisocial-logo.png" alt="AgriSocial" style={{
+                        width: 80, height: 80, borderRadius: 22, objectFit: 'cover',
+                        margin: '0 auto 24px', display: 'block',
                         boxShadow: '0 8px 32px rgba(59,130,246,0.4)',
-                    }}>
-                        🌾
-                    </div>
+                    }} />
 
                     {/* Brand name */}
                     <h1 style={{

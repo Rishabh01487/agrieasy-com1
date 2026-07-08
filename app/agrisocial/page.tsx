@@ -525,7 +525,8 @@ export default function AgriSocialFeed() {
             {/* Sticky Top Nav (Instagram-style) */}
             <nav style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '0 20px', boxShadow: SHARED.shadow, position: 'sticky', top: 0, zIndex: 50, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <Link href="/agrisocial" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🌾</div>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/agrisocial-logo.png" alt="AgriSocial" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover' }} />
                     <span style={{ fontWeight: 900, fontSize: '1.15rem', color: SOCIAL.text }}>Agri<span style={{ color: SOCIAL.primary }}>Social</span></span>
                 </Link>
 
