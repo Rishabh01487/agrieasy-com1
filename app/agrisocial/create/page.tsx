@@ -25,9 +25,12 @@ type MediaFile = { url: string; type: 'image' | 'video'; blob?: Blob }
 function CreateContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const defaultPostType = searchParams.get('type') === 'krishiclip' ? 'krishiclip' : 'post'
+    const typeParam = searchParams.get('type')
+    const defaultPostType: 'post' | 'krishiclip' | 'story' =
+        typeParam === 'krishiclip' ? 'krishiclip' :
+        typeParam === 'story' ? 'story' : 'post'
 
-    const [postType, setPostType] = useState<'post' | 'krishiclip'>(defaultPostType as 'post' | 'krishiclip')
+    const [postType, setPostType] = useState<'post' | 'krishiclip' | 'story'>(defaultPostType)
     const [mode, setMode] = useState<Mode>('choose')
     const [mediaFile, setMediaFile] = useState<MediaFile | null>(null)
     const [selectedFilter, setSelectedFilter] = useState(0)
@@ -213,6 +216,42 @@ function CreateContent() {
             }
         }
 
+        // ── Story creation ───────────────────────────────────────────
+        // Stories require media (image or video) and go to a separate API.
+        if (postType === 'story') {
+            if (!mediaUrl) {
+                setError('Stories require a photo or video. Upload one to continue.')
+                setSubmitting(false)
+                return
+            }
+            try {
+                const res = await authFetch('/api/social/stories', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mediaUrl,
+                        mediaType: mediaType === 'video' ? 'video' : 'image',
+                        caption: caption || '',
+                        duration: 5,
+                    }),
+                })
+                const d = await res.json()
+                if (!res.ok) {
+                    const apiMsg = d?.error?.message || d?.error || 'Failed to create story'
+                    setError(typeof apiMsg === 'string' ? apiMsg : 'Failed to create story')
+                    setSubmitting(false)
+                    return
+                }
+                router.push('/agrisocial')
+                return
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : 'Unknown error'
+                setError('Failed to create story: ' + msg)
+                setSubmitting(false)
+                return
+            }
+        }
+
+        // ── Post / KrishiClip creation ────────────────────────────────
         // Extract hashtags from caption (Instagram-style: #word)
         const hashtags = (caption.match(/#(\w+)/g) || []).map(t => t.slice(1).toLowerCase())
 
@@ -230,7 +269,12 @@ function CreateContent() {
             }),
         })
         const d = await res.json()
-        if (!res.ok) { setError(d.error || 'Failed'); setSubmitting(false); return }
+        if (!res.ok) {
+            const apiMsg = d?.error?.message || d?.error || 'Failed'
+            setError(typeof apiMsg === 'string' ? apiMsg : 'Failed')
+            setSubmitting(false)
+            return
+        }
         router.push(postType === 'krishiclip' ? '/agrisocial/clips' : '/agrisocial')
     }
 
@@ -243,7 +287,7 @@ function CreateContent() {
                 <button onClick={() => { if (mode === 'choose') router.push('/agrisocial'); else if (mode === 'preview' || mode === 'camera') { stopCamera(); setMode('choose'); setMediaFile(null) } else if (mode === 'details') setMode('preview') }}
                     style={{ background: 'none', border: 'none', color: SOCIAL.primary, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease' }}>← Back</button>
                 <span style={{ flex: 1, fontWeight: 800, color: SOCIAL.textSecondary, fontSize: '1rem' }}>
-                    {mode === 'choose' ? 'New Post' : mode === 'camera' ? (isRecording ? '🔴 Recording' : '📷 Camera') : mode === 'preview' ? '✨ Filters' : '📝 Details'}
+                    {mode === 'choose' ? (postType === 'story' ? 'New Story' : postType === 'krishiclip' ? 'New KrishiClip' : 'New Post') : mode === 'camera' ? (isRecording ? '🔴 Recording' : '📷 Camera') : mode === 'preview' ? '✨ Filters' : '📝 Details'}
                 </span>
                 {mode === 'preview' && <button onClick={() => setMode('details')} style={{ background: SOCIAL.primary, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>Next →</button>}
                 {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? 'Posting…' : '✓ Share'}</button>}
@@ -254,21 +298,27 @@ function CreateContent() {
                 <div style={{ maxWidth: '500px', margin: '0 auto', padding: '24px 16px' }}>
                     {/* Post/KrishiClip toggle */}
                     <div style={{ display: 'flex', background: SOCIAL.primaryLight, borderRadius: '14px', padding: '5px', gap: '4px', marginBottom: '24px', border: `1px solid ${SOCIAL.border}` }}>
-                        {(['post', 'krishiclip'] as const).map(t => (
+                        {(['post', 'krishiclip', 'story'] as const).map(t => (
                             <button key={t} onClick={() => setPostType(t)}
-                                style={{ flex: 1, padding: '12px', borderRadius: '11px', border: 'none', cursor: 'pointer', background: postType === t ? SOCIAL.white : 'transparent', color: postType === t ? SOCIAL.textSecondary : SOCIAL.muted, fontWeight: 800, fontSize: '0.9rem', boxShadow: postType === t ? SHARED.shadowMd : 'none', transition: 'all 0.2s ease' }}>
-                                {t === 'post' ? '📷 Post' : '🎬 KrishiClip'}
+                                style={{ flex: 1, padding: '12px 8px', borderRadius: '11px', border: 'none', cursor: 'pointer', background: postType === t ? SOCIAL.white : 'transparent', color: postType === t ? SOCIAL.textSecondary : SOCIAL.muted, fontWeight: 800, fontSize: '0.86rem', boxShadow: postType === t ? SHARED.shadowMd : 'none', transition: 'all 0.2s ease' }}>
+                                {t === 'post' ? '📷 Post' : t === 'krishiclip' ? '🎬 Clip' : '✨ Story'}
                             </button>
                         ))}
                     </div>
+
+                    {postType === 'story' && (
+                        <div style={{ background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '12px 14px', marginBottom: '16px', fontSize: '0.82rem', color: SOCIAL.primary, fontWeight: 600 }}>
+                            ✨ Stories last 24 hours and appear at the top of the feed. Upload a photo or short video.
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {/* Camera */}
                         <button onClick={startCamera}
                             style={{ background: SOCIAL.gradient, border: 'none', borderRadius: '16px', padding: '28px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: SHARED.shadowLg, transition: 'all 0.2s ease' }}>
-                            <span style={{ fontSize: '2.8rem' }}>{postType === 'krishiclip' ? '🎥' : '📸'}</span>
+                            <span style={{ fontSize: '2.8rem' }}>{postType === 'krishiclip' ? '🎥' : postType === 'story' ? '✨' : '📸'}</span>
                             <div style={{ textAlign: 'left' }}>
-                                <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{postType === 'krishiclip' ? 'Record a KrishiClip' : 'Open Camera'}</div>
+                                <div style={{ fontWeight: 800, fontSize: '1.05rem' }}>{postType === 'krishiclip' ? 'Record a KrishiClip' : postType === 'story' ? 'Capture Story' : 'Open Camera'}</div>
                                 <div style={{ fontSize: '0.8rem', opacity: 0.85, marginTop: '2px' }}>Take a {postType === 'krishiclip' ? 'video' : 'photo'} using your camera</div>
                             </div>
                         </button>
@@ -443,7 +493,7 @@ function CreateContent() {
 
                         <button onClick={handlePost} disabled={submitting}
                             style={{ width: '100%', padding: '14px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                            {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : '📢 Share Post'}
+                            {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
                         </button>
                     </div>
 

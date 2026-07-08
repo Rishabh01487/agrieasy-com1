@@ -24,8 +24,18 @@ export async function GET(req: NextRequest) {
         const category = searchParams.get('category')
         const feedParam = searchParams.get('feed') || 'latest'
         const userIdParam = searchParams.get('userId')
+        // includeClips=true (default) mixes krishiclips into the feed so users
+        // see their own clips + others' clips alongside regular posts. The
+        // dedicated /agrisocial/clips page still exists for the vertical
+        // video experience. Pass ?includeClips=false to get posts only.
+        const includeClips = searchParams.get('includeClips') !== 'false'
 
-        const query: Record<string, unknown> = { isActive: true, type: 'post' }
+        const query: Record<string, unknown> = { isActive: true }
+        if (includeClips) {
+            query.type = { $in: ['post', 'krishiclip'] }
+        } else {
+            query.type = 'post'
+        }
         if (category && category !== 'all') query.category = category
 
         let posts: any[] = []

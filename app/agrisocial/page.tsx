@@ -327,13 +327,36 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
 
 function StoryTray({ stories, viewerId }: { stories: StoryGroup[]; viewerId: string }) {
     const router = useRouter()
-    if (stories.length === 0) return null
+
+    // Find the viewer's own story group (if any)
+    const ownStory = stories.find(s => s.userId === viewerId)
+    const otherStories = stories.filter(s => s.userId !== viewerId)
 
     return (
         <div className="no-scrollbar" style={{ display: 'flex', gap: '14px', overflowX: 'auto', padding: '12px 4px 16px', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: '16px' }}>
-            {stories.map(g => {
+            {/* "Your Story" + create new story */}
+            <button onClick={() => router.push(ownStory ? `/agrisocial/stories/${viewerId}` : '/agrisocial/create?type=story')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: 0, minWidth: '72px' }}>
+                <div style={{ position: 'relative', width: 62, height: 62 }}>
+                    <div className={ownStory ? 'story-ring' : ''} style={{ width: 62, height: 62, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem', border: '2px solid #fff' }}>
+                            {'Y'}
+                        </div>
+                    </div>
+                    {!ownStory && (
+                        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: '50%', background: SOCIAL.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 800, border: '2px solid #fff', lineHeight: 1 }}>
+                            +
+                        </div>
+                    )}
+                </div>
+                <span style={{ color: SOCIAL.textSecondary, fontSize: '0.72rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {ownStory ? 'Your story' : 'Add story'}
+                </span>
+            </button>
+
+            {/* Other users' stories */}
+            {otherStories.map(g => {
                 const name = g.user?.farmerName || g.user?.firmName || 'User'
-                const isOwn = g.userId === viewerId
                 return (
                     <button key={g.userId} onClick={() => router.push(`/agrisocial/stories/${g.userId}`)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: 0, minWidth: '72px' }}>
@@ -343,7 +366,7 @@ function StoryTray({ stories, viewerId }: { stories: StoryGroup[]; viewerId: str
                             </div>
                         </div>
                         <span style={{ color: SOCIAL.textSecondary, fontSize: '0.72rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {isOwn ? 'Your story' : name.split(' ')[0]}
+                            {name.split(' ')[0]}
                         </span>
                     </button>
                 )
