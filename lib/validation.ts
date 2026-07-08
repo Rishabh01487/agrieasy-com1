@@ -102,13 +102,18 @@ export const registerSchema = z.object({
   // Farmer/Transporter-specific
   aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar must be 12 digits').optional().or(z.literal('')),
   drivingLicense: z.string().min(1).optional(),
-  // Address
-  address: z.object({
-    state: sanitizedString(z.string().min(1, 'State is required')),
-    district: sanitizedString(z.string().min(1, 'District is required')),
-    pinCode: z.string().regex(/^\d{6}$/, 'Invalid PIN code'),
-    fullAddress: sanitizedString(z.string().min(5, 'Address is too short').max(300)),
-  }).optional(),
+  // Address — accept either a plain string (from the autocomplete form) OR a
+  // structured object {state, district, pinCode, fullAddress}. The register
+  // API normalizes both to a single string before saving to the DB.
+  address: z.union([
+    sanitizedString(z.string().min(5, 'Address is too short').max(500)),
+    z.object({
+      state: sanitizedString(z.string().min(1, 'State is required')),
+      district: sanitizedString(z.string().min(1, 'District is required')),
+      pinCode: z.string().regex(/^\d{6}$/, 'Invalid PIN code'),
+      fullAddress: sanitizedString(z.string().min(5, 'Address is too short').max(300)),
+    }),
+  ]).optional(),
 })
 
 // ── Listing schemas ────────────────────────────────────────────────

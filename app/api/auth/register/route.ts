@@ -37,13 +37,22 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
+    // Normalize address: the schema accepts either a string (from the
+    // autocomplete form) or an object {state, district, pinCode, fullAddress}.
+    // The User model expects a single string, so flatten objects accordingly.
+    const addressStr = (() => {
+      if (!data.address) return ''
+      if (typeof data.address === 'string') return data.address
+      return `${data.address.fullAddress}, ${data.address.district}, ${data.address.state} - ${data.address.pinCode}`
+    })()
+
     const user = await User.create({
       name: data.name,
       email: data.email,
       phone: data.phone,
       password: hashedPassword,
       role: data.role,
-      address: data.address,
+      address: addressStr,
       firmName: data.role === 'buyer' ? data.firmName : undefined,
       gstin: data.role === 'buyer' ? data.gstin : undefined,
       aadharNumber: data.role === 'farmer' ? data.aadhaarNumber : undefined,

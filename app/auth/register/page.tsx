@@ -125,7 +125,9 @@ export default function Register() {
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json.error || 'Registration failed. Please try again.')
+        // API returns { success: false, error: { code, message } } — extract message
+        const apiMsg = json?.error?.message || json?.error || json?.message
+        setError(typeof apiMsg === 'string' ? apiMsg : 'Registration failed. Please try again.')
         setIsLoading(false)
         return
       }
