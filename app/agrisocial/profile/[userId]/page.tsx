@@ -108,16 +108,16 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                 </>
                             )}
                         </div>
-                        {/* Stats */}
+                        {/* Stats — clickable (Instagram-style) */}
                         <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                            <div><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
-                            <div><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></div>
-                            <div><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></div>
+                            <div style={{ cursor: 'pointer' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
+                            <Link href={`/agrisocial/search?q=${name}`} style={{ textDecoration: 'none' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></Link>
+                            <Link href={`/agrisocial/search?q=${name}`} style={{ textDecoration: 'none' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></Link>
                         </div>
                         {/* Bio */}
                         <div>
                             <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
-                            {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.86rem', margin: '4px 0 0', lineHeight: 1.5 }}>{user.bio}</p>}
+                            {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.86rem', margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{user.bio}</p>}
                             {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.84rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
                             {user.createdAt && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>}
                             <p style={{ color: SOCIAL.primary, fontSize: '0.84rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} total likes · 🎬 {s.clipsCount || 0} KrishiClips</p>
