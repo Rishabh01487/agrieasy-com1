@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
@@ -32,24 +32,51 @@ function AgriSocialExploreInner() {
 
     const [posts, setPosts] = useState<Post[]>([])
     const [loading, setLoading] = useState(true)
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [hasMore, setHasMore] = useState(true)
+    const pageRef = useRef(1)
+    const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [category, setCategory] = useState('all')
     const [typeFilter, setTypeFilter] = useState('all')
     const [tag, setTag] = useState(initialTag || '')
 
-    useEffect(() => {
-        const load = async () => {
-            setLoading(true)
-            const params = new URLSearchParams({ category, type: typeFilter, page: '1' })
+    const loadPage = async (pageNum: number, append: boolean) => {
+        try {
+            if (append) setLoadingMore(true)
+            else setLoading(true)
+            const params = new URLSearchParams({ category, type: typeFilter, page: String(pageNum) })
             if (tag) params.set('tag', tag)
             const res = await authFetch(`/api/social/explore?${params}`)
             if (res.ok) {
                 const d = await res.json()
-                setPosts(d.data?.posts || d.posts || [])
+                const newPosts = d.data?.posts || d.posts || []
+                const total = d.meta?.total || d.data?.meta?.total || 0
+                setPosts(prev => append ? [...prev, ...newPosts] : newPosts)
+                setHasMore(newPosts.length > 0 && (append ? (posts.length + newPosts.length < total) : (newPosts.length < total)))
+                pageRef.current = pageNum
             }
-            setLoading(false)
-        }
-        void load()
+        } catch {}
+        setLoading(false)
+        setLoadingMore(false)
+    }
+
+    useEffect(() => {
+        pageRef.current = 1
+        setHasMore(true)
+        void loadPage(1, false)
     }, [category, typeFilter, tag])
+
+    // Infinite scroll
+    useEffect(() => {
+        const sentinel = sentinelRef.current
+        if (!sentinel) return
+        const observer = new IntersectionObserver(
+            (entries) => { if (entries[0].isIntersecting && hasMore && !loadingMore) loadPage(pageRef.current + 1, true) },
+            { rootMargin: '300px' }
+        )
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [hasMore, loadingMore])
 
     return (
         <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
@@ -107,6 +134,7 @@ function AgriSocialExploreInner() {
                         <Link href="/agrisocial/create" style={{ display: 'inline-block', padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 12, fontSize: '0.86rem' }}>+ Create Post</Link>
                     </div>
                 ) : (
+                    <>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {posts.map(p => {
                             const authorName = typeof p.userId === 'object' ? (p.userId.farmerName || p.userId.firmName || 'User') : 'User'
@@ -128,6 +156,11 @@ function AgriSocialExploreInner() {
                             )
                         })}
                     </div>
+                    {/* Infinite scroll sentinel */}
+                    <div ref={sentinelRef} style={{ height: 1 }} />
+                    {loadingMore && <div style={{ textAlign: 'center', padding: 20, color: SOCIAL.muted, fontSize: '0.82rem' }}>Loading more…</div>}
+                    {!hasMore && posts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: SOCIAL.muted, fontSize: '0.82rem' }}>You're all caught up ✨</div>}
+                    </>
                 )}
             </div>
         </div>
