@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       available: true,
       cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,  // Required by the browser upload form
       signature,
       timestamp,
       folder,

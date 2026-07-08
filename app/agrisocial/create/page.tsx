@@ -177,25 +177,39 @@ function CreateContent() {
             try {
                 const sigRes = await authFetch('/api/social/upload-signature')
                 const sig = await sigRes.json()
-                if (sig.available) {
-                    const resourceType = mediaFile.type === 'video' ? 'video' : 'image'
-                    const fd = new FormData()
-                    fd.append('file', mediaFile.blob)
-                    fd.append('api_key', sig.apiKey)
-                    fd.append('timestamp', sig.timestamp.toString())
-                    fd.append('signature', sig.signature)
-                    fd.append('folder', sig.folder)
-                    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
-                    const cld = await cldRes.json()
-                    if (cldRes.ok) { mediaUrl = cld.secure_url; mediaType = mediaFile.type }
-                    else { setError('Upload failed: ' + (cld.error?.message || 'Cloudinary error')); setSubmitting(false); return }
-                } else {
+                if (!sig.available) {
                     setError('Media upload requires Cloudinary configuration. Please contact admin.')
                     setSubmitting(false)
                     return
                 }
-            } catch {
-                setError('Upload failed. If the file is large, paste a direct URL instead.'); setSubmitting(false); return
+                if (!sig.apiKey || !sig.cloudName || !sig.signature) {
+                    setError('Upload signature incomplete — missing apiKey, cloudName, or signature. Check server env vars.')
+                    setSubmitting(false)
+                    return
+                }
+                const resourceType = mediaFile.type === 'video' ? 'video' : 'image'
+                const fd = new FormData()
+                fd.append('file', mediaFile.blob)
+                fd.append('api_key', sig.apiKey)
+                fd.append('timestamp', sig.timestamp.toString())
+                fd.append('signature', sig.signature)
+                fd.append('folder', sig.folder)
+                const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
+                const cld = await cldRes.json()
+                if (cldRes.ok && cld.secure_url) {
+                    mediaUrl = cld.secure_url
+                    mediaType = mediaFile.type
+                } else {
+                    const cldMsg = cld?.error?.message || `Cloudinary HTTP ${cldRes.status}`
+                    setError('Upload failed: ' + cldMsg)
+                    setSubmitting(false)
+                    return
+                }
+            } catch (e) {
+                const msg = e instanceof Error ? e.message : 'Unknown error'
+                setError('Upload failed: ' + msg + '. If the file is large, try a smaller image or paste a direct URL instead.')
+                setSubmitting(false)
+                return
             }
         }
 
