@@ -122,12 +122,29 @@ function AgriSocialDMInner() {
     useEffect(() => { fetchConversations() }, [fetchConversations])
     useEffect(() => { if (activeId) fetchActive(activeId) }, [activeId, fetchActive])
 
-    // Poll for new messages every 5s when chat is open
+    // Poll for new messages every 3s when chat is open (faster = more real-time feel)
+    // Also track previous message count to detect new messages
+    const prevMsgCountRef = useRef(0)
     useEffect(() => {
         if (!activeId) return
-        const i = setInterval(() => fetchActive(activeId), 5000)
+        const i = setInterval(async () => {
+            await fetchActive(activeId)
+            // Check for new messages from the other person (sound notification)
+            if (active && active.messages) {
+                const newCount = active.messages.length
+                if (newCount > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
+                    // New message arrived — play a subtle notification sound
+                    try {
+                        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=')
+                        audio.volume = 0.3
+                        audio.play().catch(() => null)
+                    } catch {}
+                }
+                prevMsgCountRef.current = newCount
+            }
+        }, 3000)
         return () => clearInterval(i)
-    }, [activeId, fetchActive])
+    }, [activeId, fetchActive, active])
 
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
