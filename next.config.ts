@@ -64,3 +64,5 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+// Force fresh deployment - 2026-07-08T01:54:55Z
