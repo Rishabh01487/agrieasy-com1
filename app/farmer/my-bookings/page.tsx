@@ -132,12 +132,12 @@ export default function MyBookings() {
                       <td style={{ padding: '14px' }}><span style={statusStyle(b.status)}>{b.status}</span></td>
                       <td style={{ padding: '14px' }}>
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                          <button
-                            onClick={() => setTrackingId(b._id)}
-                            style={{ background: FARMER.primaryLight, color: FARMER.primary, border: `1px solid ${FARMER.border}`, borderRadius: '6px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}
+                          <Link
+                            href={`/tracking?bookingId=${b._id}`}
+                            style={{ background: FARMER.primaryLight, color: FARMER.primary, border: `1px solid ${FARMER.border}`, borderRadius: '6px', padding: '5px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', textDecoration: 'none', transition: 'all 0.2s ease' }}
                           >
-                            Track
-                          </button>
+                            📍 Track
+                          </Link>
                           <button
                             // FIX: Use pickupLocation instead of farmerAddress
                             onClick={() => openMaps(b.pickupLocation || 'India')}

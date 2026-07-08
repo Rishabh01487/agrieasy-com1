@@ -3,8 +3,10 @@ import mongoose from 'mongoose'
 const BookingSchema = new mongoose.Schema({
   farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  transporterId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },  // the transporter/driver assigned
   listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Listing', required: true },
   vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle', required: true },
+  commodity: { type: String, default: '' },
   quantity: { type: Number, required: true },
   pickupLocation: { type: String, required: true },
   deliveryLocation: { type: String, required: true },
@@ -12,6 +14,12 @@ const BookingSchema = new mongoose.Schema({
   status: { type: String, enum: ['pending', 'confirmed', 'in-transit', 'delivered', 'cancelled'], default: 'pending' },
   estimatedArrivalTime: { type: Date },
   actualArrivalTime: { type: Date },
+  // Live driver location for real-time tracking
+  driverLocation: {
+    latitude: Number,
+    longitude: Number,
+    updatedAt: Date,
+  },
   trackingUpdates: [
     {
       timestamp: Date,
