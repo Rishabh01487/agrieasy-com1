@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
 
 type FormData = {
+  name: string
   role: 'farmer' | 'buyer' | 'transporter'
   email: string
   password: string
@@ -117,10 +118,7 @@ export default function Register() {
           ...data,
           role,
           address,
-          aadharNumber: data.aadhar,
-          farmerName: role === 'farmer' ? data.email.split('@')[0] : undefined,
-          transporterCompanyName: role === 'transporter' ? data.companyName : undefined,
-          transporterGstin: role === 'transporter' ? data.transporterGstin : undefined,
+          aadhaarNumber: data.aadhar,
         }),
       })
       const json = await res.json()
@@ -208,6 +206,11 @@ export default function Register() {
         )}
 
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div>
+            <label style={lbl}>Full Name</label>
+            <input type="text" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Rishabh Gupta" style={inp} />
+            {errors.name && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.name.message}</p>}
+          </div>
           <div>
             <label style={lbl}>Email</label>
             <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} />

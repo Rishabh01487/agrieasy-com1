@@ -40,7 +40,9 @@ function optSanitizedString(schema?: z.ZodString) {
 
 export const phoneSchema = z
   .string()
-  .regex(/^[6-9]\d{9}$/, 'Invalid Indian phone number (10 digits starting with 6-9)')
+  // Accept +91, 91 prefix, spaces, dashes — then strip non-digits and validate
+  .transform(s => s.replace(/[\s\-()]/g, '').replace(/^(\+91|91)/, ''))
+  .refine(s => /^[6-9]\d{9}$/.test(s), 'Invalid Indian phone number (10 digits starting with 6-9)')
   .transform(sanitize)
 
 export const objectIdSchema = z
