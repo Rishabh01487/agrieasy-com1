@@ -92,6 +92,9 @@ export async function POST(request: NextRequest) {
       description: data.description,
       location: data.location,
       images: data.images,
+      shopPhoto: body.shopPhoto || '',  // Cloudinary URL of the buyer's shop (optional)
+      quality: body.quality || '',
+      paymentConditions: body.paymentConditions || '',
       isActive: true,
     })
 

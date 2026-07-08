@@ -3,12 +3,16 @@ import mongoose from 'mongoose'
 const ListingSchema = new mongoose.Schema({
   buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   commodity: { type: String, required: true },
+  variety: { type: String },
   quantity: { type: Number, required: true },
   unit: { type: String, default: 'kg' },
   pricePerUnit: { type: Number, required: true },
   quality: { type: String },
   paymentConditions: { type: String },
+  description: { type: String, maxlength: 2000 },
   firmLocation: { type: String },
+  shopPhoto: { type: String, default: '' },  // Cloudinary URL of the buyer's shop
+  images: [{ type: String }],                // additional listing images
   location: {
     latitude: Number,
     longitude: Number,

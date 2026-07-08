@@ -94,6 +94,51 @@ export default function CreateListing() {
   const [loading, setLoading] = useState(false)
   const [firmLocation, setFirmLocation] = useState('')
   const [error, setError] = useState('')
+  // Shop photo upload state
+  const [shopPhoto, setShopPhoto] = useState('')
+  const [uploading, setUploading] = useState(false)
+
+  const handleShopPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    setError('')
+    try {
+      // Compress image
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+      await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
+      URL.revokeObjectURL(url)
+      let w = img.width, h = img.height
+      if (w > 800) { h = Math.round(h * 800 / w); w = 800 }
+      const canvas = document.createElement('canvas')
+      canvas.width = w; canvas.height = h
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, w, h)
+      const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
+      // Upload to Cloudinary
+      const sigRes = await authFetch('/api/social/upload-signature')
+      const sig = await sigRes.json()
+      if (!sig.available) { setError('Cloudinary not configured'); return }
+      const fd = new FormData()
+      fd.append('file', blob)
+      fd.append('api_key', sig.apiKey)
+      fd.append('timestamp', sig.timestamp.toString())
+      fd.append('signature', sig.signature)
+      fd.append('folder', sig.folder)
+      const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
+      const cld = await cldRes.json()
+      if (cldRes.ok && cld.secure_url) {
+        setShopPhoto(cld.secure_url)
+      } else {
+        setError('Upload failed: ' + (cld?.error?.message || 'Unknown error'))
+      }
+    } catch (err) {
+      setError('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const onSubmit = async (data: FormData) => {
     setLoading(true)
@@ -106,6 +151,7 @@ export default function CreateListing() {
         body: JSON.stringify({
           ...data,
           location: firmLocation,  // Schema expects 'location', not 'firmLocation'
+          shopPhoto,
           quantity: parseFloat(data.quantity.toString()),
           pricePerUnit: parseFloat(data.pricePerUnit.toString()),
         }),
@@ -208,9 +254,28 @@ export default function CreateListing() {
               <AddressAutocomplete value={firmLocation} onChange={setFirmLocation} placeholder="e.g., APMC Market, Pune, Maharashtra" />
             </div>
 
-            <button type="submit" disabled={loading} style={{
+            {/* Shop Photo Upload */}
+            <div>
+              <label style={lbl}>🏪 Shop Photo (optional)</label>
+              <p style={{ color: BUYER.muted, fontSize: '0.78rem', margin: '0 0 10px' }}>Upload a photo of your shop so farmers can see where to deliver</p>
+              {shopPhoto ? (
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={shopPhoto} alt="shop" style={{ width: 200, height: 150, objectFit: 'cover', borderRadius: 10, border: `1.5px solid ${BUYER.border}` }} />
+                  <button type="button" onClick={() => setShopPhoto('')} style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', fontSize: '0.85rem' }}>✕</button>
+                </div>
+              ) : (
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 200, height: 150, border: `2px dashed ${BUYER.border}`, borderRadius: 10, cursor: 'pointer', gap: 6, background: BUYER.bg, transition: 'border-color 0.2s' }}>
+                  <span style={{ fontSize: '1.8rem' }}>🏪</span>
+                  <span style={{ color: BUYER.muted, fontSize: '0.78rem', fontWeight: 600 }}>{uploading ? 'Uploading…' : 'Upload shop photo'}</span>
+                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleShopPhotoUpload} disabled={uploading} />
+                </label>
+              )}
+            </div>
+
+            <button type="submit" disabled={loading || uploading} style={{
               padding: '13px', background: loading ? BUYER.muted : BUYER.primary, color: '#fff',
-              border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+              border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, cursor: (loading || uploading) ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 14px rgba(5,150,105,0.25)', transition: 'all 0.2s ease',
             }}>
               {loading ? 'Publishing…' : '✅ Publish Listing'}

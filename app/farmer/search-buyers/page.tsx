@@ -15,6 +15,7 @@ interface Listing {
   quality?: string
   paymentConditions?: string
   location?: string
+  shopPhoto?: string
   buyerId: { _id: string; firmName: string; address: string; phone?: string }
   createdAt: string
 }
@@ -139,6 +140,10 @@ export default function SearchBuyers() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
             {sorted.map(l => (
               <div key={l._id} style={{ ...cardStyle(FARMER), boxShadow: SHARED.shadowMd, display: 'flex', flexDirection: 'column', gap: 10, padding: 16, border: `1px solid ${FARMER.borderLight}`, transition: 'all 0.2s' }}>
+                {l.shopPhoto && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={l.shopPhoto} alt="shop" style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 10 }} />
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 44, height: 44, borderRadius: 12, background: FARMER.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem' }}>🌾</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
