@@ -41,6 +41,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const [comments, setComments] = useState<Comment[]>([])
     const [posting, setPosting] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+    const [showLikesModal, setShowLikesModal] = useState(false)
     const [deleting, setDeleting] = useState(false)
     const [carouselIdx, setCarouselIdx] = useState(0)
     const [shareCopied, setShareCopied] = useState(false)
@@ -250,9 +251,23 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                                             <p style={{ color: SOCIAL.text, fontSize: '0.86rem', margin: 0, lineHeight: 1.5 }}>
                                                 <Link href={`/agrisocial/profile/${cid}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{cn}</Link>{' '}{c.text}
                                             </p>
-                                            <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+                                            <div style={{ display: 'flex', gap: 12, marginTop: 4, alignItems: 'center' }}>
                                                 <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>{timeAgo(c.createdAt)}</span>
                                                 {(c.likesCount || 0) > 0 && <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>❤️ {c.likesCount}</span>}
+                                                {viewerId && (
+                                                    <button onClick={async () => {
+                                                        // Toggle comment like (optimistic)
+                                                        const isLiked = c.likes?.includes(viewerId)
+                                                        setComments(prev => prev.map(cm => cm._id === c._id ? {
+                                                            ...cm,
+                                                            likes: isLiked ? (cm.likes || []).filter(x => x !== viewerId) : [...(cm.likes || []), viewerId],
+                                                            likesCount: isLiked ? Math.max(0, (cm.likesCount || 0) - 1) : (cm.likesCount || 0) + 1,
+                                                        } : cm))
+                                                        // Note: comment like API would go here — for now we just update the UI
+                                                    }} style={{ background: 'none', border: 'none', color: c.likes?.includes(viewerId) ? SOCIAL.red : SOCIAL.muted, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
+                                                        {c.likes?.includes(viewerId) ? '❤️' : '🤍'} Like
+                                                    </button>
+                                                )}
                                                 {viewerId && <button onClick={() => setReplyTo(replyTo === c._id ? null : c._id)} style={{ background: 'none', border: 'none', color: SOCIAL.muted, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}>Reply</button>}
                                             </div>
                                         </div>
@@ -298,7 +313,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                                 <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#94a3b8" />
                             )}
                         </div>
-                        <p style={{ color: SOCIAL.text, fontSize: '0.84rem', fontWeight: 700, margin: '0 0 4px' }}>{likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}</p>
+                        <p style={{ color: SOCIAL.text, fontSize: '0.84rem', fontWeight: 700, margin: '0 0 4px', cursor: 'pointer' }} onClick={() => setShowLikesModal(true)}>{likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}</p>
                         <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '0 0 6px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             <span>{new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                             {post.type === 'krishiclip' && (
@@ -347,6 +362,36 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                     )}
                 </div>
             </div>
+
+            {/* Likes modal — shows who liked this post */}
+            {showLikesModal && (
+                <div onClick={() => setShowLikesModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
+                    <div onClick={e => e.stopPropagation()} style={{ background: SOCIAL.white, borderRadius: 16, padding: 0, maxWidth: 400, width: '100%', maxHeight: '70vh', overflowY: 'auto', boxShadow: SHARED.shadowXl }}>
+                        <div style={{ padding: '16px 20px', borderBottom: `1px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, background: SOCIAL.white, zIndex: 1 }}>
+                            <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>Likes</h3>
+                            <button onClick={() => setShowLikesModal(false)} style={{ background: 'none', border: 'none', color: SOCIAL.muted, cursor: 'pointer', fontSize: '1.3rem' }}>✕</button>
+                        </div>
+                        {post.likes && post.likes.length > 0 ? (
+                            <div style={{ padding: '8px 0' }}>
+                                {post.likes.map((likeId, i) => {
+                                    // We don't have populated user data for each like,
+                                    // so show a generic entry with the user ID
+                                    return (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px' }}>
+                                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>U</div>
+                                            <span style={{ color: SOCIAL.text, fontSize: '0.86rem', fontWeight: 600 }}>User {String(likeId).slice(-6)}</span>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        ) : (
+                            <div style={{ padding: 40, textAlign: 'center', color: SOCIAL.muted }}>
+                                <p style={{ fontSize: '0.86rem', margin: 0 }}>No likes yet. Be the first!</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
