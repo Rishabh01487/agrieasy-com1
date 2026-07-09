@@ -27,6 +27,7 @@ const UserSchema = new mongoose.Schema({
   // Profile (Instagram-style)
   profilePic: { type: String, default: '' },   // Cloudinary URL
   bio: { type: String, maxlength: 500, default: '' },
+  upiId: { type: String, default: '' },         // UPI ID for direct payments (e.g., farmer@paytm)
 
   // Farmer specific
   aadharNumber: encryptedString,

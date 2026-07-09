@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         // Public profile fields only — PII (phone, email, full address) is
         // restricted to the user viewing their own profile.
         const user = await User.findById(userId)
-            .select('farmerName firmName role profilePic bio createdAt')
+            .select('farmerName firmName role profilePic bio upiId createdAt')
             .lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -94,6 +94,14 @@ export async function PATCH(req: NextRequest) {
         if (typeof body.bio === 'string') {
             updates.bio = sanitize(body.bio).slice(0, 500)
         }
+        if (typeof body.upiId === 'string') {
+            // Basic UPI ID validation: word chars + @ + word chars
+            const upi = sanitize(body.upiId).trim().toLowerCase()
+            if (upi && !/^[\w.\-]+@[\w]+$/.test(upi)) {
+                return NextResponse.json({ error: 'Invalid UPI ID format (e.g., yourname@paytm)' }, { status: 400 })
+            }
+            updates.upiId = upi
+        }
 
         if (Object.keys(updates).length === 0) {
             return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 })
@@ -103,7 +111,7 @@ export async function PATCH(req: NextRequest) {
             auth.user.userId,
             { $set: updates },
             { new: true },
-        ).select('farmerName firmName role profilePic bio createdAt')
+        ).select('farmerName firmName role profilePic bio upiId createdAt')
 
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 

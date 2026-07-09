@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 
-interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string }
+interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[] }
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
@@ -23,6 +23,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [showEditModal, setShowEditModal] = useState(false)
     const [editBio, setEditBio] = useState('')
     const [editPic, setEditPic] = useState('')
+    const [editUpiId, setEditUpiId] = useState('')
     const [uploading, setUploading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [editError, setEditError] = useState('')
@@ -109,7 +110,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                             <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>{name}</h1>
                             {isOwn ? (
                                 <>
-                                    <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditError(''); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
+                                    <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
                                     <Link href="/agrisocial/create" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>+ New Post</Link>
                                     <Link href="/agrisocial/saved" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>🔖 Saved</Link>
                                 </>
@@ -331,6 +332,18 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                             <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '4px 0 0', textAlign: 'right' }}>{editBio.length}/500</p>
                         </div>
 
+                        {/* UPI ID input */}
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: 'block', color: SOCIAL.muted, fontSize: '0.78rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>UPI ID (for receiving payments)</label>
+                            <input
+                                value={editUpiId}
+                                onChange={e => setEditUpiId(e.target.value)}
+                                placeholder="e.g., yourname@paytm, yourname@oksbi"
+                                style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontSize: '0.9rem', color: SOCIAL.text, outline: 'none', fontFamily: SHARED.font, boxSizing: 'border-box' }}
+                            />
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: '4px 0 0' }}>Set your UPI ID so others can pay you directly via UPI (0% fees)</p>
+                        </div>
+
                         {editError && <p style={{ color: SOCIAL.red, fontSize: '0.82rem', margin: '0 0 12px', textAlign: 'center' }}>{editError}</p>}
 
                         {/* Actions */}
@@ -342,6 +355,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                 try {
                                     const body: Record<string, string> = {}
                                     if (editBio !== (user.bio || '')) body.bio = editBio
+                                    if (editUpiId !== (user.upiId || '')) body.upiId = editUpiId
                                     if (editPic) body.profilePic = editPic
                                     if (Object.keys(body).length === 0) { setShowEditModal(false); return }
                                     const res = await authFetch('/api/social/profile', {
@@ -350,7 +364,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                     })
                                     const d = await res.json()
                                     if (res.ok && d.user) {
-                                        setData(prev => prev ? { ...prev, user: { ...prev.user, bio: d.user.bio, profilePic: d.user.profilePic } } : prev)
+                                        setData(prev => prev ? { ...prev, user: { ...prev.user, bio: d.user.bio, upiId: d.user.upiId, profilePic: d.user.profilePic } } : prev)
                                         setShowEditModal(false)
                                         setEditPic('')
                                     } else {

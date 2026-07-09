@@ -9,8 +9,7 @@ import { AGRI, SHARED, navStyle, inputStyle, labelStyle } from '@/lib/styles'
 const PAYMENT_METHODS = [
     { key: 'wallet', label: 'AgriPay Wallet', icon: '💳', desc: 'Instant • From wallet balance', color: AGRI.primary },
     { key: 'paylater', label: 'PayLater', icon: '💰', desc: 'Borrowed credit • Repay later', color: '#059669' },
-    { key: 'upi', label: 'UPI', icon: '📱', desc: 'Google Pay, PhonePe, Paytm • Direct from bank', color: '#7c3aed' },
-    { key: 'netbanking', label: 'Net Banking', icon: '🏦', desc: 'All major Indian banks supported', color: '#0891b2' },
+    { key: 'upi', label: 'UPI (Direct)', icon: '📱', desc: 'Google Pay, PhonePe, Paytm • 0% fees • Direct bank-to-bank', color: '#7c3aed' },
 ]
 
 function SendMoneyContent() {
@@ -18,109 +17,45 @@ function SendMoneyContent() {
     const searchParams = useSearchParams()
     const toParam = searchParams.get('to') || ''
 
-    const [step, setStep] = useState<'recipient' | 'amount' | 'confirm' | 'processing' | 'success'>('recipient')
+    const [step, setStep] = useState<'recipient' | 'amount' | 'confirm' | 'upi_pay' | 'success'>('recipient')
     const [recipient, setRecipient] = useState(toParam)
     const [recipientName, setRecipientName] = useState('')
+    const [recipientUpiId, setRecipientUpiId] = useState('')
     const [amount, setAmount] = useState('')
     const [note, setNote] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('wallet')
-    const [razorpayKey, setRazorpayKey] = useState('')
+    const [upiRefId, setUpiRefId] = useState('')
 
-    const isRazorpayMethod = paymentMethod === 'upi' || paymentMethod === 'netbanking'
-
-    // Load Razorpay script
-    useEffect(() => {
-        if (typeof window !== 'undefined' && !document.getElementById('razorpay-script')) {
-            const script = document.createElement('script')
-            script.id = 'razorpay-script'
-            script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-            script.async = true
-            document.body.appendChild(script)
-        }
-    }, [])
+    const isUpiDirect = paymentMethod === 'upi'
 
     const handleSend = async () => {
         const amt = parseFloat(amount)
         if (!amt || amt < 1) { setError('Min ₹1'); return }
         setLoading(true); setError('')
 
-        if (isRazorpayMethod) {
-            // UPI / Net Banking flow: create Razorpay order → open checkout → verify
+        if (isUpiDirect) {
+            // ── Direct UPI flow (FREE — no gateway, no fees) ──
             try {
-                // Step 1: Create order
-                const createRes = await authFetch('/api/agripay/transfer-razorpay', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'create', toIdentifier: recipient, amount: amt }),
-                })
-                const createData = await createRes.json()
-                if (!createRes.ok) { setError(createData.error || 'Failed to create order'); setLoading(false); return }
-
-                setRazorpayKey(createData.razorpayKey)
-                setRecipientName(createData.recipientName || recipient)
-                setStep('processing')
-
-                // Step 2: Open Razorpay checkout
-                const methodConfig = paymentMethod === 'upi'
-                    ? { method: { upi: true, card: false, netbanking: false, wallet: false } }
-                    : { method: { netbanking: true, card: false, upi: false, wallet: false } }
-
-                const rzp = new (window as any).Razorpay({
-                    key: createData.razorpayKey,
-                    amount: createData.amount,
-                    currency: createData.currency || 'INR',
-                    name: 'AgriPay',
-                    description: `Send ₹${amt} to ${createData.recipientName || recipient}`,
-                    order_id: createData.orderId,
-                    ...methodConfig,
-                    handler: async (response: any) => {
-                        // Step 3: Verify payment + credit recipient
-                        try {
-                            const verifyRes = await authFetch('/api/agripay/transfer-razorpay', {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    action: 'verify',
-                                    toIdentifier: recipient,
-                                    amount: amt,
-                                    razorpayOrderId: response.razorpay_order_id,
-                                    razorpayPaymentId: response.razorpay_payment_id,
-                                    razorpaySignature: response.razorpay_signature,
-                                    note,
-                                    paymentMethod,
-                                }),
-                            })
-                            const verifyData = await verifyRes.json()
-                            if (verifyRes.ok) {
-                                setStep('success')
-                                setTimeout(() => router.push('/agripay'), 3000)
-                            } else {
-                                setError(verifyData.error || 'Payment verification failed')
-                                setStep('confirm')
-                            }
-                        } catch {
-                            setError('Verification failed. If money was debited, it will be refunded.')
-                            setStep('confirm')
-                        }
-                        setLoading(false)
-                    },
-                    modal: {
-                        ondismiss: () => {
-                            setError('Payment cancelled. No money was debited.')
-                            setStep('confirm')
-                            setLoading(false)
-                        }
-                    },
-                    theme: { color: '#2563eb' },
-                })
-                rzp.open()
+                // Step 1: Fetch recipient's UPI ID
+                const res = await authFetch(`/api/agripay/upi-pay?toIdentifier=${encodeURIComponent(recipient)}`)
+                const data = await res.json()
+                if (!res.ok) {
+                    setError(data.error || 'Failed to get UPI info')
+                    setLoading(false)
+                    return
+                }
+                setRecipientUpiId(data.upiId)
+                setRecipientName(data.recipientName || recipient)
+                setStep('upi_pay')
+                setLoading(false)
             } catch {
-                setError('Failed to initiate payment. Try again.')
-                setStep('confirm')
+                setError('Network error')
                 setLoading(false)
             }
         } else {
-            // Wallet / PayLater flow (existing)
+            // ── Wallet / PayLater flow (existing) ──
             try {
                 const res = await authFetch('/api/agripay/transfer', {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -132,6 +67,42 @@ function SendMoneyContent() {
                 setTimeout(() => router.push('/agripay'), 3000)
             } catch { setError('Network error') } finally { setLoading(false) }
         }
+    }
+
+    // Generate UPI deep link
+    const upiDeepLink = recipientUpiId
+        ? `upi://pay?pa=${encodeURIComponent(recipientUpiId)}&pn=${encodeURIComponent(recipientName)}&am=${amount}&tn=${encodeURIComponent(note || 'AgriEasy Transfer')}&cu=INR`
+        : ''
+
+    // Generate QR code URL (using api.qrserver.com — free, no key needed)
+    const qrCodeUrl = upiDeepLink
+        ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiDeepLink)}`
+        : ''
+
+    const handleUpiPaid = async () => {
+        setLoading(true)
+        setError('')
+        try {
+            const res = await authFetch('/api/agripay/upi-pay', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    toIdentifier: recipient,
+                    amount: parseFloat(amount),
+                    note,
+                    upiRefId: upiRefId || '',
+                }),
+            })
+            const data = await res.json()
+            if (res.ok) {
+                setStep('success')
+                setTimeout(() => router.push('/agripay'), 3000)
+            } else {
+                setError(data.error || 'Failed to record payment')
+            }
+        } catch {
+            setError('Network error')
+        }
+        setLoading(false)
     }
 
     const steps = ['Recipient', 'Amount', 'Confirm']
@@ -149,22 +120,72 @@ function SendMoneyContent() {
             </nav>
 
             <div style={{ maxWidth: '540px', margin: '40px auto', padding: '0 24px' }}>
+                {/* SUCCESS */}
                 {step === 'success' ? (
                     <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '48px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
                         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#dcfce7', border: `2px solid ${AGRI.green}`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>✅</div>
                         <h2 style={{ color: AGRI.green, fontWeight: 800, margin: '0 0 8px' }}>Money Sent!</h2>
                         <p style={{ color: AGRI.textSecondary, fontWeight: 800, fontSize: '1.8rem', margin: '0 0 4px' }}>₹{amount}</p>
                         <p style={{ color: AGRI.muted, fontSize: '0.875rem' }}>via {selectedMethod?.label} to {recipientName || recipient}</p>
+                        {isUpiDirect && <p style={{ color: AGRI.green, fontSize: '0.78rem', margin: '8px 0 0', fontWeight: 600 }}>✓ 0% transaction fee — direct bank transfer</p>}
                         <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '12px 0 0' }}>Redirecting to AgriPay…</p>
                     </div>
-                ) : step === 'processing' ? (
-                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '48px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
-                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: AGRI.primaryLight, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>{selectedMethod?.icon}</div>
-                        <h2 style={{ color: AGRI.textSecondary, fontWeight: 800, margin: '0 0 8px' }}>Complete your {selectedMethod?.label} payment</h2>
-                        <p style={{ color: AGRI.muted, fontSize: '0.875rem', margin: '0 0 20px' }}>The {selectedMethod?.label} checkout window should be open. Complete the payment to send ₹{amount} to {recipientName || recipient}.</p>
-                        <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '12px 0 0' }}>Do not close this page.</p>
+                ) : step === 'upi_pay' ? (
+                    /* ── UPI PAYMENT SCREEN — deep link + QR code ── */
+                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '32px', boxShadow: SHARED.shadowMd }}>
+                        <h2 style={{ fontWeight: 800, fontSize: '1.3rem', margin: '0 0 6px', color: AGRI.textSecondary, textAlign: 'center' }}>📱 Pay via UPI</h2>
+                        <p style={{ color: AGRI.muted, fontSize: '0.84rem', margin: '0 0 20px', textAlign: 'center' }}>₹{amount} to {recipientName}</p>
+
+                        {/* Amount card */}
+                        <div style={{ background: AGRI.primaryLight, borderRadius: '14px', padding: '20px', textAlign: 'center', marginBottom: '20px' }}>
+                            <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '0 0 4px' }}>Amount to pay</p>
+                            <p style={{ color: AGRI.textSecondary, fontWeight: 900, fontSize: '2.4rem', margin: 0 }}>₹{amount}</p>
+                            <p style={{ color: AGRI.muted, fontSize: '0.74rem', margin: '6px 0 0' }}>to {recipientUpiId}</p>
+                        </div>
+
+                        {/* QR Code */}
+                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                            <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '0 0 10px', fontWeight: 600 }}>Scan with any UPI app to pay</p>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={qrCodeUrl} alt="UPI QR Code" style={{ width: 240, height: 240, borderRadius: 12, border: `1px solid ${AGRI.border}`, margin: '0 auto', display: 'block' }} />
+                            <p style={{ color: AGRI.muted, fontSize: '0.7rem', margin: '8px 0 0' }}>GPay · PhonePe · Paytm · BHIM · Amazon Pay</p>
+                        </div>
+
+                        {/* Open UPI App button (mobile) */}
+                        <a href={upiDeepLink} style={{
+                            display: 'block', textAlign: 'center', padding: '13px',
+                            background: AGRI.primary, color: '#fff', borderRadius: '12px',
+                            fontWeight: 800, fontSize: '1rem', textDecoration: 'none',
+                            marginBottom: '12px', transition: 'all 0.2s',
+                        }}>
+                            📱 Open UPI App
+                        </a>
+
+                        {/* UPI Ref ID input (optional) */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <label style={labelStyle(AGRI)}>UPI Reference / UTR Number (optional)</label>
+                            <input type="text" value={upiRefId} onChange={e => setUpiRefId(e.target.value)}
+                                placeholder="e.g., 412384929374" style={inputStyle(AGRI)} />
+                        </div>
+
+                        {error && <div style={{ background: AGRI.redLight, border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', marginBottom: '12px', color: AGRI.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
+
+                        {/* I've Paid button */}
+                        <button onClick={handleUpiPaid} disabled={loading}
+                            style={{ width: '100%', padding: '14px', background: AGRI.green, color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: loading ? 0.7 : 1, marginBottom: '8px' }}>
+                            {loading ? 'Recording…' : '✅ I\'ve Paid — Record Transaction'}
+                        </button>
+
+                        <button onClick={() => setStep('confirm')} style={{ width: '100%', padding: '10px', background: AGRI.bg, border: `1px solid ${AGRI.border}`, borderRadius: '10px', color: AGRI.muted, fontWeight: 700, cursor: 'pointer', fontSize: '0.84rem' }}>
+                            ← Back
+                        </button>
+
+                        <p style={{ color: AGRI.muted, fontSize: '0.72rem', margin: '12px 0 0', textAlign: 'center' }}>
+                            💡 This is a direct UPI transfer — money goes from your bank to their bank. <strong>0% fees.</strong> No payment gateway involved.
+                        </p>
                     </div>
                 ) : (
+                    /* ── NORMAL FLOW (recipient → amount → confirm) ── */
                     <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '32px', boxShadow: SHARED.shadowMd }}>
                         <h2 style={{ fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px', color: AGRI.textSecondary }}>↗️ Send Money</h2>
                         <p style={{ color: AGRI.muted, marginBottom: '22px', fontSize: '0.9rem' }}>Send to any AgriEasy user via your preferred method</p>
@@ -199,7 +220,6 @@ function SendMoneyContent() {
                                         style={{ background: 'none', border: 'none', outline: 'none', color: AGRI.textSecondary, fontSize: '2rem', fontWeight: 800, width: '100%' }} autoFocus />
                                 </div>
 
-                                {/* Payment Method Selection */}
                                 <label style={labelStyle(AGRI)}>Payment Method</label>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
                                     {PAYMENT_METHODS.map(m => (
@@ -215,10 +235,9 @@ function SendMoneyContent() {
                                     ))}
                                 </div>
 
-                                {/* UPI/Net Banking info banner */}
-                                {isRazorpayMethod && (
-                                    <div style={{ background: `${AGRI.primary}08`, border: `1px solid ${AGRI.border}`, borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.78rem', color: AGRI.muted }}>
-                                        🔒 You&apos;ll be redirected to a secure Razorpay checkout to complete the {selectedMethod?.label} payment. The money will be credited to the recipient&apos;s AgriPay wallet instantly after payment.
+                                {isUpiDirect && (
+                                    <div style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>
+                                        ✅ UPI Direct = <strong>0% fees</strong>. Money goes directly from your bank to their bank via UPI. No payment gateway involved.
                                     </div>
                                 )}
 
@@ -241,9 +260,9 @@ function SendMoneyContent() {
                                         <p style={{ color: AGRI.muted, fontSize: '0.75rem', margin: 0 }}>{selectedMethod?.desc}</p>
                                     </div>
                                 </div>
-                                {isRazorpayMethod && (
-                                    <div style={{ background: `${AGRI.primary}08`, border: `1px solid ${AGRI.border}`, borderRadius: '10px', padding: '10px 14px', marginTop: '12px', fontSize: '0.78rem', color: AGRI.muted }}>
-                                        🔒 A secure Razorpay checkout will open. Complete the {selectedMethod?.label} payment to send money.
+                                {isUpiDirect && (
+                                    <div style={{ background: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '10px', padding: '10px 14px', marginTop: '12px', fontSize: '0.78rem', color: '#065f46', fontWeight: 600 }}>
+                                        ✅ 0% fees — direct bank-to-bank UPI transfer. You'll see a QR code + "Open UPI App" button on the next screen.
                                     </div>
                                 )}
                             </div>
@@ -265,7 +284,7 @@ function SendMoneyContent() {
                                 else handleSend()
                             }} disabled={loading}
                                 style={{ flex: 2, padding: '13px', background: AGRI.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
-                                {loading ? 'Processing…' : step === 'confirm' ? `Pay via ${selectedMethod?.label} →` : step === 'amount' ? 'Review →' : 'Next →'}
+                                {loading ? 'Processing…' : step === 'confirm' ? (isUpiDirect ? '📱 Pay via UPI →' : '✅ Confirm & Send') : step === 'amount' ? 'Review →' : 'Next →'}
                             </button>
                         </div>
                     </div>
