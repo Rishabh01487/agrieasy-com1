@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
@@ -9,6 +9,8 @@ import { AGRI, SHARED, navStyle, inputStyle, labelStyle } from '@/lib/styles'
 const PAYMENT_METHODS = [
     { key: 'wallet', label: 'AgriPay Wallet', icon: '💳', desc: 'Instant • From wallet balance', color: AGRI.primary },
     { key: 'paylater', label: 'PayLater', icon: '💰', desc: 'Borrowed credit • Repay later', color: '#059669' },
+    { key: 'upi', label: 'UPI', icon: '📱', desc: 'Google Pay, PhonePe, Paytm • Direct from bank', color: '#7c3aed' },
+    { key: 'netbanking', label: 'Net Banking', icon: '🏦', desc: 'All major Indian banks supported', color: '#0891b2' },
 ]
 
 function SendMoneyContent() {
@@ -16,28 +18,120 @@ function SendMoneyContent() {
     const searchParams = useSearchParams()
     const toParam = searchParams.get('to') || ''
 
-    const [step, setStep] = useState<'recipient' | 'amount' | 'confirm' | 'success'>('recipient')
+    const [step, setStep] = useState<'recipient' | 'amount' | 'confirm' | 'processing' | 'success'>('recipient')
     const [recipient, setRecipient] = useState(toParam)
+    const [recipientName, setRecipientName] = useState('')
     const [amount, setAmount] = useState('')
     const [note, setNote] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('wallet')
+    const [razorpayKey, setRazorpayKey] = useState('')
+
+    const isRazorpayMethod = paymentMethod === 'upi' || paymentMethod === 'netbanking'
+
+    // Load Razorpay script
+    useEffect(() => {
+        if (typeof window !== 'undefined' && !document.getElementById('razorpay-script')) {
+            const script = document.createElement('script')
+            script.id = 'razorpay-script'
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+            script.async = true
+            document.body.appendChild(script)
+        }
+    }, [])
 
     const handleSend = async () => {
         const amt = parseFloat(amount)
         if (!amt || amt < 1) { setError('Min ₹1'); return }
         setLoading(true); setError('')
-        try {
-            const res = await authFetch('/api/agripay/transfer', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ toIdentifier: recipient, amount: amt, note, paymentMethod }),
-            })
-            const json = await res.json()
-            if (!res.ok) { setError(json.error || 'Transfer failed'); setLoading(false); return }
-            setStep('success')
-            setTimeout(() => router.push('/agripay'), 3000)
-        } catch { setError('Network error') } finally { setLoading(false) }
+
+        if (isRazorpayMethod) {
+            // UPI / Net Banking flow: create Razorpay order → open checkout → verify
+            try {
+                // Step 1: Create order
+                const createRes = await authFetch('/api/agripay/transfer-razorpay', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'create', toIdentifier: recipient, amount: amt }),
+                })
+                const createData = await createRes.json()
+                if (!createRes.ok) { setError(createData.error || 'Failed to create order'); setLoading(false); return }
+
+                setRazorpayKey(createData.razorpayKey)
+                setRecipientName(createData.recipientName || recipient)
+                setStep('processing')
+
+                // Step 2: Open Razorpay checkout
+                const methodConfig = paymentMethod === 'upi'
+                    ? { method: { upi: true, card: false, netbanking: false, wallet: false } }
+                    : { method: { netbanking: true, card: false, upi: false, wallet: false } }
+
+                const rzp = new (window as any).Razorpay({
+                    key: createData.razorpayKey,
+                    amount: createData.amount,
+                    currency: createData.currency || 'INR',
+                    name: 'AgriPay',
+                    description: `Send ₹${amt} to ${createData.recipientName || recipient}`,
+                    order_id: createData.orderId,
+                    ...methodConfig,
+                    handler: async (response: any) => {
+                        // Step 3: Verify payment + credit recipient
+                        try {
+                            const verifyRes = await authFetch('/api/agripay/transfer-razorpay', {
+                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    action: 'verify',
+                                    toIdentifier: recipient,
+                                    amount: amt,
+                                    razorpayOrderId: response.razorpay_order_id,
+                                    razorpayPaymentId: response.razorpay_payment_id,
+                                    razorpaySignature: response.razorpay_signature,
+                                    note,
+                                    paymentMethod,
+                                }),
+                            })
+                            const verifyData = await verifyRes.json()
+                            if (verifyRes.ok) {
+                                setStep('success')
+                                setTimeout(() => router.push('/agripay'), 3000)
+                            } else {
+                                setError(verifyData.error || 'Payment verification failed')
+                                setStep('confirm')
+                            }
+                        } catch {
+                            setError('Verification failed. If money was debited, it will be refunded.')
+                            setStep('confirm')
+                        }
+                        setLoading(false)
+                    },
+                    modal: {
+                        ondismiss: () => {
+                            setError('Payment cancelled. No money was debited.')
+                            setStep('confirm')
+                            setLoading(false)
+                        }
+                    },
+                    theme: { color: '#2563eb' },
+                })
+                rzp.open()
+            } catch {
+                setError('Failed to initiate payment. Try again.')
+                setStep('confirm')
+                setLoading(false)
+            }
+        } else {
+            // Wallet / PayLater flow (existing)
+            try {
+                const res = await authFetch('/api/agripay/transfer', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ toIdentifier: recipient, amount: amt, note, paymentMethod }),
+                })
+                const json = await res.json()
+                if (!res.ok) { setError(json.error || 'Transfer failed'); setLoading(false); return }
+                setStep('success')
+                setTimeout(() => router.push('/agripay'), 3000)
+            } catch { setError('Network error') } finally { setLoading(false) }
+        }
     }
 
     const steps = ['Recipient', 'Amount', 'Confirm']
@@ -48,7 +142,7 @@ function SendMoneyContent() {
         <div style={{ minHeight: '100vh', background: AGRI.bg, fontFamily: SHARED.font, color: AGRI.text }}>
             <nav style={{ ...navStyle(AGRI), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <div style={{ maxWidth: '540px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Link href="/agripay" style={{ color: AGRI.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem', transition: 'all 0.2s ease' }}>← AgriPay</Link>
+                    <Link href="/agripay" style={{ color: AGRI.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>← AgriPay</Link>
                     <span style={{ color: AGRI.muted }}>›</span>
                     <span style={{ color: AGRI.text, fontWeight: 600, fontSize: '0.875rem' }}>Send Money</span>
                 </div>
@@ -56,14 +150,22 @@ function SendMoneyContent() {
 
             <div style={{ maxWidth: '540px', margin: '40px auto', padding: '0 24px' }}>
                 {step === 'success' ? (
-                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '48px', textAlign: 'center', boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease' }}>
+                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '48px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
                         <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#dcfce7', border: `2px solid ${AGRI.green}`, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>✅</div>
                         <h2 style={{ color: AGRI.green, fontWeight: 800, margin: '0 0 8px' }}>Money Sent!</h2>
                         <p style={{ color: AGRI.textSecondary, fontWeight: 800, fontSize: '1.8rem', margin: '0 0 4px' }}>₹{amount}</p>
-                        <p style={{ color: AGRI.muted, fontSize: '0.875rem' }}>via {selectedMethod?.label} to {recipient}</p>
+                        <p style={{ color: AGRI.muted, fontSize: '0.875rem' }}>via {selectedMethod?.label} to {recipientName || recipient}</p>
+                        <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '12px 0 0' }}>Redirecting to AgriPay…</p>
+                    </div>
+                ) : step === 'processing' ? (
+                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '48px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: AGRI.primaryLight, margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>{selectedMethod?.icon}</div>
+                        <h2 style={{ color: AGRI.textSecondary, fontWeight: 800, margin: '0 0 8px' }}>Complete your {selectedMethod?.label} payment</h2>
+                        <p style={{ color: AGRI.muted, fontSize: '0.875rem', margin: '0 0 20px' }}>The {selectedMethod?.label} checkout window should be open. Complete the payment to send ₹{amount} to {recipientName || recipient}.</p>
+                        <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '12px 0 0' }}>Do not close this page.</p>
                     </div>
                 ) : (
-                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '32px', boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease' }}>
+                    <div style={{ background: AGRI.white, border: `1px solid ${AGRI.border}`, borderRadius: SHARED.radiusLg, padding: '32px', boxShadow: SHARED.shadowMd }}>
                         <h2 style={{ fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px', color: AGRI.textSecondary }}>↗️ Send Money</h2>
                         <p style={{ color: AGRI.muted, marginBottom: '22px', fontSize: '0.9rem' }}>Send to any AgriEasy user via your preferred method</p>
 
@@ -113,6 +215,13 @@ function SendMoneyContent() {
                                     ))}
                                 </div>
 
+                                {/* UPI/Net Banking info banner */}
+                                {isRazorpayMethod && (
+                                    <div style={{ background: `${AGRI.primary}08`, border: `1px solid ${AGRI.border}`, borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', fontSize: '0.78rem', color: AGRI.muted }}>
+                                        🔒 You&apos;ll be redirected to a secure Razorpay checkout to complete the {selectedMethod?.label} payment. The money will be credited to the recipient&apos;s AgriPay wallet instantly after payment.
+                                    </div>
+                                )}
+
                                 <input type="text" value={note} onChange={e => setNote(e.target.value)} placeholder="Add a note (optional)" style={inputStyle(AGRI)} />
                             </div>
                         )}
@@ -132,6 +241,11 @@ function SendMoneyContent() {
                                         <p style={{ color: AGRI.muted, fontSize: '0.75rem', margin: 0 }}>{selectedMethod?.desc}</p>
                                     </div>
                                 </div>
+                                {isRazorpayMethod && (
+                                    <div style={{ background: `${AGRI.primary}08`, border: `1px solid ${AGRI.border}`, borderRadius: '10px', padding: '10px 14px', marginTop: '12px', fontSize: '0.78rem', color: AGRI.muted }}>
+                                        🔒 A secure Razorpay checkout will open. Complete the {selectedMethod?.label} payment to send money.
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -140,7 +254,7 @@ function SendMoneyContent() {
                         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                             {step !== 'recipient' && (
                                 <button onClick={() => { setStep(step === 'confirm' ? 'amount' : 'recipient'); setError('') }}
-                                    style={{ flex: 1, padding: '13px', background: AGRI.bg, border: `1px solid ${AGRI.border}`, borderRadius: '12px', color: AGRI.muted, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                                    style={{ flex: 1, padding: '13px', background: AGRI.bg, border: `1px solid ${AGRI.border}`, borderRadius: '12px', color: AGRI.muted, fontWeight: 700, cursor: 'pointer' }}>
                                     ← Back
                                 </button>
                             )}
@@ -150,8 +264,8 @@ function SendMoneyContent() {
                                 else if (step === 'amount') { if (!amount || parseFloat(amount) < 1) { setError('Enter valid amount (min ₹1)'); return } setStep('confirm') }
                                 else handleSend()
                             }} disabled={loading}
-                                style={{ flex: 2, padding: '13px', background: AGRI.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: loading ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                                {loading ? 'Sending…' : step === 'confirm' ? '✅ Confirm & Send' : step === 'amount' ? 'Review →' : 'Next →'}
+                                style={{ flex: 2, padding: '13px', background: AGRI.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: loading ? 0.7 : 1 }}>
+                                {loading ? 'Processing…' : step === 'confirm' ? `Pay via ${selectedMethod?.label} →` : step === 'amount' ? 'Review →' : 'Next →'}
                             </button>
                         </div>
                     </div>

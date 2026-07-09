@@ -214,7 +214,7 @@ export const transferSchema = z.object({
   toIdentifier: sanitizedString(z.string().min(1, 'Recipient identifier required')),
   amount: positiveAmountSchema,
   note: optSanitizedString(z.string().max(200)),
-  paymentMethod: z.enum(['wallet', 'paylater']).default('wallet'),
+  paymentMethod: z.enum(['wallet', 'paylater', 'upi', 'netbanking']).default('wallet'),
 })
 
 export const topupSchema = z.object({
