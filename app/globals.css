@@ -179,7 +179,16 @@ img {
   content-visibility: auto;
 }
 
-/* Skeleton shimmer for loading states */
+/* ── Smooth fade-in for feed items (Instagram-style) ── */
+@keyframes feedFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.feed-item {
+  animation: feedFadeIn 0.35s ease-out forwards;
+}
+
+/* ── Skeleton shimmer for loading states ── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
@@ -189,6 +198,12 @@ img {
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 8px;
+}
+
+/* ── Toast animation ── */
+@keyframes toastSlideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 /* ── Mobile-first responsive overrides for the whole app ───────────

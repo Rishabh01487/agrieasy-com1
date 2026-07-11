@@ -87,11 +87,20 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
 
     const handleLike = async () => {
         if (!viewerId) return
+        const prevLiked = liked
+        const prevCount = likesCount
         const newLiked = !liked
         setLiked(newLiked)
         setLikesCount(c => newLiked ? c + 1 : Math.max(0, c - 1))
         onLike(post._id, newLiked, newLiked ? likesCount + 1 : likesCount - 1)
-        try { await authFetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) }) } catch {}
+        try {
+            const res = await authFetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) })
+            if (!res.ok) throw new Error('Failed')
+        } catch {
+            setLiked(prevLiked)
+            setLikesCount(prevCount)
+            onLike(post._id, prevLiked, prevCount)
+        }
     }
 
     const handleImageDoubleTap = () => {
@@ -130,15 +139,20 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
 
     const handleSave = async () => {
         if (!viewerId) return
+        const prevSaved = saved
         const newSaved = !saved
         setSaved(newSaved)
         try {
+            let res: Response
             if (newSaved) {
-                await authFetch(`/api/social/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) })
+                res = await authFetch(`/api/social/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ postId: post._id }) })
             } else {
-                await authFetch(`/api/social/save?postId=${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+                res = await authFetch(`/api/social/save?postId=${post._id}`, { method: 'DELETE' })
             }
-        } catch {}
+            if (!res.ok) throw new Error('Failed')
+        } catch {
+            setSaved(prevSaved)
+        }
     }
 
     const handleShare = async () => {
