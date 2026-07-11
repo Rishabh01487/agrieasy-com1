@@ -174,8 +174,9 @@ input[type="file"] { display: none; }
   }
 }
 
-/* ── Performance optimizations for feed/clips ── */
-img {
+/* ── Performance: skip rendering off-screen feed/clips images ── */
+.feed-item img,
+.clip-item img {
   content-visibility: auto;
 }
 
