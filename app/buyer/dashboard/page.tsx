@@ -143,6 +143,7 @@ export default function BuyerDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Link href="/buyer/profile" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>👤 My Profile</Link>
+            <Link href="/buyer/my-vehicles" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>🚚 My Vehicles</Link>
             <Link href="/agrisocial" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
             <Link href="/agripay" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>💳 Wallet</Link>
             <button onClick={logout} style={{ color: BUYER.red, background: SHARED.errorLight, border: '1px solid #fca5a5', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>Logout</button>
@@ -202,6 +203,7 @@ export default function BuyerDashboard() {
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <QuickAction icon="📝" label="Add Commodity" href="/buyer/create-listing" color="#3b82f6" />
             <QuickAction icon="👤" label="My Profile" href="/buyer/profile" color="#8b5cf6" />
+            <QuickAction icon="🚚" label="My Vehicles" href="/buyer/my-vehicles" color="#06b6d4" />
             <QuickAction icon="🧾" label="Billing" href="/buyer/billing" color="#10b981" />
             <QuickAction icon="📒" label="Ledger" href="/ledger" color="#f59e0b" />
             <QuickAction icon="💳" label="Payment" href="/buyer/payment" color="#06b6d4" />

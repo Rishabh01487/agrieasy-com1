@@ -118,6 +118,37 @@ export const registerSchema = z.object({
   ]).optional(),
 }).passthrough()  // Allow extra fields from the form (aadhar, companyName, etc.) — Zod v4 defaults to strict reject
 
+// ── Buyer vehicle schema ───────────────────────────────────────────
+// Buyer-owned vehicles offered to farmers for transporting produce.
+// Freight can be 'free' (buyer absorbs cost), 'flat', or 'per_km'.
+
+export const createBuyerVehicleSchema = z.object({
+  vehicleType: z.enum(['mini-truck', 'pickup-van', 'truck', 'tractor-trolley', 'tempo', 'tractor', 'other']),
+  vehicleDisplayName: optSanitizedString(z.string().max(100)),
+  registrationNumber: z.string().min(3, 'Registration number too short').max(20).regex(/^[A-Z0-9\- ]+$/i, 'Only letters, numbers, spaces and dashes allowed'),
+  capacityKg: z.number().positive('Capacity must be positive').max(50_000),
+  driverName: optSanitizedString(z.string().max(100)),
+  driverPhone: z.string().optional(),
+  freightType: z.enum(['free', 'flat', 'per_km']).default('free'),
+  freightAmount: z.number().min(0).max(100_000).default(0),
+  availability: z.enum(['available', 'unavailable']).default('available'),
+  notes: optSanitizedString(z.string().max(500)),
+  baseLocation: optSanitizedString(z.string().max(200)),
+})
+
+export const updateBuyerVehicleSchema = createBuyerVehicleSchema.partial()
+
+// ── Farmer profile / location schema ───────────────────────────────
+
+export const farmerProfileSchema = z.object({
+  farmerAddress: sanitizedString(z.string().min(5, 'Address is too short').max(500)),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  farmerName: optSanitizedString(z.string().max(100)),
+  bio: optSanitizedString(z.string().max(500)),
+  upiId: z.string().regex(/^[\w.\-]+@[\w]+$/, 'Invalid UPI ID format').optional().or(z.literal('')),
+})
+
 // ── Listing schemas ────────────────────────────────────────────────
 
 export const createListingSchema = z.object({

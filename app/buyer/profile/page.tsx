@@ -378,6 +378,20 @@ export default function BuyerProfilePage() {
           </div>
         </div>
 
+        {/* Link to My Vehicles */}
+        <Link href="/buyer/my-vehicles" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
+          <div style={{ ...cardStyle(BUYER), display: 'flex', alignItems: 'center', gap: 16, boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease', cursor: 'pointer' }}>
+            <div style={{ width: 52, height: 52, borderRadius: 14, background: '#06b6d418', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', flexShrink: 0 }}>🚚</div>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, color: BUYER.text, fontWeight: 800, fontSize: '1rem' }}>My Vehicles</p>
+              <p style={{ margin: '2px 0 0', color: BUYER.muted, fontSize: '0.82rem' }}>
+                Add your own vehicles — offer them free, flat-rate, or per-km. Farmers can pick them when booking.
+              </p>
+            </div>
+            <span style={{ color: BUYER.primary, fontWeight: 700, fontSize: '0.86rem' }}>Manage →</span>
+          </div>
+        </Link>
+
         {/* Save / actions */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <Link href="/buyer/dashboard" style={{

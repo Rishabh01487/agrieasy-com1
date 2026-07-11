@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Booking from '@/lib/models/Booking'
 import Listing from '@/lib/models/Listing'
+import Vehicle from '@/lib/models/Vehicle'
+import BuyerVehicle from '@/lib/models/BuyerVehicle'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
-import { parsePagination, paginationMeta, validationError } from '@/lib/api-response'
+import { parsePagination, paginationMeta, validationError, apiSuccess } from '@/lib/api-response'
 import { validateBody, createBookingSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
@@ -19,43 +21,144 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    const v = validateBody(createBookingSchema, body)
-    if (!v.success) return validationError('Validation failed', v.errors)
-    const data = v.data
 
-    // Extra fields not in schema (backward compat)
-    const { vehicleId, estimatedDistance, pickupLocation, pickupDateTime } = body
+    // Two flavors of booking:
+    //  (a) legacy single-commodity  — must pass listingId + vehicleId + pickupLocation + quantity
+    //  (b) new multi-commodity      — must pass commodities[] + (vehicleId OR buyerVehicleId) +
+    //                                  pickupLocation + deliveryLocation + pickupDateTime
+    const hasMultiCommodity = Array.isArray(body.commodities) && body.commodities.length > 0
+    const buyerVehicleId = body.buyerVehicleId
+    const vehicleId = body.vehicleId
 
-    if (!vehicleId || !pickupLocation) {
-      return NextResponse.json({ error: 'Missing required fields (vehicleId, pickupLocation)' }, { status: 400 })
+    if (!hasMultiCommodity) {
+      // Legacy path — validate using the original createBookingSchema (which
+      // expects listingId + quantity + deliveryAddress)
+      const v = validateBody(createBookingSchema, body)
+      if (!v.success) return validationError('Validation failed', v.errors)
+      const data = v.data
+
+      const { vehicleId: legacyVehicleId, estimatedDistance, pickupLocation, pickupDateTime } = body
+      if (!legacyVehicleId || !pickupLocation) {
+        return NextResponse.json({ error: 'Missing required fields (vehicleId, pickupLocation)' }, { status: 400 })
+      }
+
+      const listing = await Listing.findById(data.listingId)
+      if (!listing) return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
+
+      const parsedDistance = estimatedDistance ? Number(estimatedDistance) : undefined
+
+      const booking = await Booking.create({
+        farmerId: auth.user.userId,
+        buyerId: listing.buyerId,
+        listingId: data.listingId,
+        vehicleId: legacyVehicleId,
+        commodity: listing.commodity,
+        quantity: data.quantity,
+        totalQuantity: data.quantity,
+        pickupLocation,
+        deliveryLocation: data.deliveryAddress,
+        estimatedDistance: parsedDistance,
+        estimatedArrivalTime: pickupDateTime ? new Date(pickupDateTime) : undefined,
+        status: 'pending',
+      })
+
+      await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Booking', resourceId: booking._id.toString(), details: { vehicleId: legacyVehicleId, quantity: data.quantity }, request })
+      return apiSuccess({ booking }, undefined, 201)
     }
 
-    // Fetch listing to get buyerId
-    const listing = await Listing.findById(data.listingId)
-    if (!listing) return NextResponse.json({ error: 'Listing not found' }, { status: 404 })
+    // Multi-commodity path
+    if (!body.pickupLocation || !body.deliveryLocation) {
+      return validationError('pickupLocation and deliveryLocation are required', [{ field: 'pickupLocation', message: 'Required' }])
+    }
+    if (!vehicleId && !buyerVehicleId) {
+      return validationError('Please select a vehicle (transporter or buyer-owned)', [{ field: 'vehicleId', message: 'Either vehicleId or buyerVehicleId is required' }])
+    }
 
-    const parsedDistance = estimatedDistance ? Number(estimatedDistance) : undefined
+    // Resolve the buyerId from the first commodity's listing (all commodities
+    // in a single booking must belong to the same buyer — the farmer is going
+    // to ONE buyer's shop, not many).
+    const firstListingId = body.commodities[0].listingId
+    let buyerId: string | undefined
+    let primaryListingId: string | undefined
+    if (firstListingId) {
+      const firstListing = await Listing.findById(firstListingId).lean()
+      if (!firstListing) return NextResponse.json({ error: `Listing ${firstListingId} not found` }, { status: 404 })
+      buyerId = firstListing.buyerId.toString()
+      primaryListingId = firstListingId
+    } else if (body.buyerId) {
+      buyerId = body.buyerId
+    }
+
+    // Make sure all commodities belong to the same buyer (when they have listings)
+    for (const c of body.commodities) {
+      if (c.listingId) {
+        const l = await Listing.findById(c.listingId).lean()
+        if (!l) return NextResponse.json({ error: `Listing ${c.listingId} not found` }, { status: 404 })
+        if (buyerId && l.buyerId.toString() !== buyerId) {
+          return validationError('All commodities must belong to the same buyer', [{ field: 'commodities', message: 'Cannot mix buyers in one booking' }])
+        }
+        buyerId = l.buyerId.toString()
+      }
+    }
+
+    // Compute total quantity + freight
+    const commodities = body.commodities.map((c: any) => ({
+      listingId: c.listingId || undefined,
+      name: String(c.name || '').slice(100),
+      quantity: Number(c.quantity) || 0,
+      numberOfBags: Number(c.numberOfBags) || 0,
+      pricePerUnit: Number(c.pricePerUnit) || 0,
+    }))
+    const totalQuantity = commodities.reduce((s: number, c: any) => s + (c.quantity || 0), 0)
+    const estimatedDistance = body.estimatedDistance ? Number(body.estimatedDistance) : undefined
+
+    // Freight calculation
+    let freightAmount = 0
+    let freightType: 'free' | 'flat' | 'per_km' | 'transporter' = 'transporter'
+    if (buyerVehicleId) {
+      const bv = await BuyerVehicle.findById(buyerVehicleId).lean()
+      if (!bv) return NextResponse.json({ error: 'Buyer vehicle not found' }, { status: 404 })
+      freightType = bv.freightType as 'free' | 'flat' | 'per_km'
+      if (freightType === 'free') freightAmount = 0
+      else if (freightType === 'flat') freightAmount = bv.freightAmount || 0
+      else if (freightType === 'per_km') freightAmount = (bv.freightAmount || 0) * (estimatedDistance || 0)
+    } else if (vehicleId) {
+      const v = await Vehicle.findById(vehicleId).lean()
+      if (!v) return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 })
+      freightType = 'transporter'
+      freightAmount = (v.pricePerKm || 0) * (estimatedDistance || 0)
+    }
 
     const booking = await Booking.create({
       farmerId: auth.user.userId,
-      buyerId: listing.buyerId,
-      listingId: data.listingId,
-      vehicleId,
-      quantity: data.quantity,
-      pickupLocation,
-      deliveryLocation: data.deliveryAddress,
-      estimatedDistance: parsedDistance,
-      estimatedArrivalTime: pickupDateTime ? new Date(pickupDateTime) : undefined,
+      buyerId,
+      listingId: primaryListingId,
+      vehicleId: vehicleId || undefined,
+      buyerVehicleId: buyerVehicleId || undefined,
+      commodities,
+      totalQuantity,
+      pickupLocation: body.pickupLocation,
+      deliveryLocation: body.deliveryLocation,
+      estimatedDistance,
+      freightAmount,
+      freightType,
+      estimatedArrivalTime: body.pickupDateTime ? new Date(body.pickupDateTime) : undefined,
       status: 'pending',
     })
 
-    await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Booking', resourceId: booking._id.toString(), details: { vehicleId, quantity: data.quantity }, request })
+    await logAudit({
+      userId: auth.user.userId,
+      action: 'CREATE',
+      resource: 'Booking',
+      resourceId: booking._id.toString(),
+      details: { commodityCount: commodities.length, totalQuantity, freightAmount, freightType, vehicleId, buyerVehicleId },
+      request,
+    })
 
-    return NextResponse.json({ success: true, booking }, { status: 201 })
+    return apiSuccess({ booking }, undefined, 201)
   } catch (error: unknown) {
     console.error('Create booking error:', error)
     const msg = error instanceof Error ? error.message : 'Failed to create booking'
-    // Return 400 for validation errors, 500 for others
     const status = msg.includes('required') || msg.includes('Cast to') ? 400 : 500
     return NextResponse.json({ error: msg }, { status })
   }
@@ -83,6 +186,7 @@ export async function GET(request: NextRequest) {
       .populate('buyerId', 'firmName phone')
       .populate('listingId')
       .populate('vehicleId')
+      .populate('buyerVehicleId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

@@ -32,6 +32,12 @@ const UserSchema = new mongoose.Schema({
   // Farmer specific
   aadharNumber: encryptedString,
   farmerName: { type: String },
+  // Farmer's primary location — captured on first dashboard visit after
+  // registration. `farmerAddress` is the human-readable string the farmer
+  // picks from the autocomplete; `location` holds the lat/lng used for
+  // distance-based buyer discovery.
+  farmerAddress: { type: String, default: '' },
+  hasSetupLocation: { type: Boolean, default: false },
 
   // Buyer specific
   firmName: { type: String },
