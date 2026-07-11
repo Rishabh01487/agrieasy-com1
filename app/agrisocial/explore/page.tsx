@@ -124,7 +124,7 @@ function AgriSocialExploreInner() {
 
                 {/* Grid */}
                 {loading ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {[...Array(9)].map((_, i) => <div key={i} style={{ aspectRatio: '1', background: SOCIAL.bgSub, borderRadius: 4 }} />)}
                     </div>
                 ) : posts.length === 0 ? (
@@ -135,7 +135,7 @@ function AgriSocialExploreInner() {
                     </div>
                 ) : (
                     <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {posts.map((p, idx) => {
                             const authorName = typeof p.userId === 'object' ? (p.userId.farmerName || p.userId.firmName || 'User') : 'User'
                             const isLarge = idx % 7 === 6

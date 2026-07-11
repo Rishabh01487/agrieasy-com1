@@ -91,7 +91,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
 
             <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 80px' }}>
                 {/* Header */}
-                <div style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
+                <div className="ig-profile-header" style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
                     <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                         onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
                         {user.profilePic ? (
@@ -122,7 +122,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                             )}
                         </div>
                         {/* Stats — clickable (Instagram-style) */}
-                        <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+                        <div className="ig-profile-stats" style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
                             <div style={{ cursor: 'pointer' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
                             <button onClick={() => { setListUsers([]); setListModal('followers') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></button>
                             <button onClick={() => { setListUsers([]); setListModal('following') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></button>
@@ -183,7 +183,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {displayPosts.map(p => (
                             <Link key={p._id} href={`/agrisocial/post/${p._id}`}
-                                style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 6, overflow: 'hidden', textDecoration: 'none' }}>
+                                style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 2, overflow: 'hidden', textDecoration: 'none' }}>
                                 {(!p.mediaUrl || p.mediaType !== 'image') && (
                                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 6, textAlign: 'center' }}>
                                         <span style={{ fontSize: '1.2rem' }}>{p.type === 'krishiclip' ? '🎬' : '📢'}</span>

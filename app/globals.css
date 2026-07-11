@@ -112,7 +112,27 @@ input[type="file"] { display: none; }
 /* ── Instagram profile grid — always 3 columns even on mobile ── */
 .ig-profile-grid {
   grid-template-columns: repeat(3, 1fr) !important;
-  gap: 4px !important;
+  gap: 2px !important;
+}
+
+/* ── Instagram-style profile header on mobile (stacked) ── */
+@media (max-width: 640px) {
+  .ig-profile-header {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 12px !important;
+  }
+  .ig-profile-header > div:last-child {
+    text-align: center !important;
+  }
+  .ig-profile-header > div:last-child > div:first-child {
+    justify-content: center !important;
+  }
+  .ig-profile-stats {
+    justify-content: space-around !important;
+    gap: 0 !important;
+  }
 }
 
 /* ── Performance: skip rendering off-screen feed items ── */
@@ -127,6 +147,15 @@ input[type="file"] { display: none; }
     max-height: none !important;
     border-left: none !important;
     border-top: 1px solid #e2e8f0 !important;
+  }
+}
+
+/* ── AgriSocial: fix sticky nav getting covered by notch/status bar ── */
+@media (max-width: 640px) {
+  nav[style*="position: 'sticky'"][style*="top: 0"],
+  nav[style*="position: sticky"][style*="top: 0"] {
+    top: env(safe-area-inset-top, 0px) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
   }
 }
 
