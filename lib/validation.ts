@@ -14,15 +14,24 @@ const xssOptions = {
   stripIgnoreTagBody: true,
 }
 
+/**
+ * Sanitize a string by removing any HTML/script content.
+ * Safe to call on any user input before storing in DB.
+ */
 export function sanitize(input: unknown): string {
   if (typeof input !== 'string') return String(input || '')
   return xss(input, xssOptions)
 }
 
+/**
+ * Create a Zod string transform that sanitizes after validation.
+ * Chain .optional() on the result for optional fields.
+ */
 function sanitizedString(schema?: z.ZodString) {
   return (schema || z.string()).transform(sanitize)
 }
 
+/** Optional variant — applies .optional() after sanitization. */
 function optSanitizedString(schema?: z.ZodString) {
   return sanitizedString(schema).optional()
 }
@@ -31,6 +40,7 @@ function optSanitizedString(schema?: z.ZodString) {
 
 export const phoneSchema = z
   .string()
+  // Accept +91, 91 prefix, spaces, dashes — then strip non-digits and validate
   .transform(s => s.replace(/[\s\-()]/g, '').replace(/^(\+91|91)/, ''))
   .refine(s => /^[6-9]\d{9}$/.test(s), 'Invalid Indian phone number (10 digits starting with 6-9)')
   .transform(sanitize)
@@ -77,6 +87,7 @@ export const verifyOtpSchema = z.object({
 
 export const loginSchema = z.object({
   // Accept either a 10-digit Indian phone OR an email address — the API
+  // looks the user up by both fields.
   phone: z.string().min(1, 'Phone or email is required').transform(sanitize),
   password: z.string().min(1, 'Password is required'),
 })
@@ -95,6 +106,7 @@ export const registerSchema = z.object({
   drivingLicense: z.string().min(1).optional(),
   // Address — accept either a plain string (from the autocomplete form) OR a
   // structured object {state, district, pinCode, fullAddress}. The register
+  // API normalizes both to a single string before saving to the DB.
   address: z.union([
     sanitizedString(z.string().min(5, 'Address is too short').max(500)),
     z.object({
@@ -140,6 +152,7 @@ export const farmerProfileSchema = z.object({
 // ── Listing schemas ────────────────────────────────────────────────
 
 // Per-commodity entry used by the multi-commodity create-listing flow.
+// Each selected commodity gets its own price + unit.
 export const commodityEntrySchema = z.object({
   name: sanitizedString(z.string().min(2, 'Commodity name too short').max(100)),
   pricePerUnit: positiveAmountSchema,
@@ -147,15 +160,20 @@ export const commodityEntrySchema = z.object({
 })
 
 export const createListingSchema = z.object({
+  // Single-commodity fields (legacy / backward-compat)
   commodity: sanitizedString(z.string().min(2).max(100)).optional(),
   pricePerUnit: positiveAmountSchema.optional(),
   // Multi-commodity fields — when present, the API creates one listing per entry.
   // Each entry has its own name + pricePerUnit + unit. The shared fields below
+  // (date, photo, quality, payment, location, quantity) apply to every listing.
   commodities: z.array(commodityEntrySchema).max(50, 'Maximum 50 commodities per request').optional(),
   variety: optSanitizedString(z.string().max(100)),
+  // Quantity optional — buyers can post a commodity with just price + date.
   quantity: z.number().min(0).max(100_000).optional().default(0),
   unit: z.enum(['kg', 'quintal', 'ton', 'bags']).optional().default('kg'),
+  // ISO date string — the date this price applies to. Optional, defaults to now.
   priceDate: z.string().optional(),
+  // Optional Cloudinary URL of the commodity photo.
   commodityPhoto: z.string().url().optional().or(z.literal('')),
   description: optSanitizedString(z.string().max(2000)),
   location: sanitizedString(z.string().min(2).max(200)),
@@ -177,20 +195,14 @@ export const createBookingSchema = z.object({
 
 // ── Vehicle schemas ────────────────────────────────────────────────
 
-const vehicleRegTransform = z.string()
-  .transform(s => s.toUpperCase().replace(/[\s-]/g, ''))
-  .refine(s => /^[A-Z0-9]{5,12}$/.test(s), 'Enter a valid vehicle number (e.g. MH12AB1234, KA05ABC1234, BH22A1234)')
-
 export const createVehicleSchema = z.object({
   vehicleType: z.enum(['mini-truck', 'pickup-van', 'truck', 'tractor-trolley', 'tempo']),
-  registrationNumber: vehicleRegTransform,
+  registrationNumber: z.string().regex(/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, 'Invalid registration number (e.g. MH12AB1234)'),
   capacity: z.number().positive().max(50_000, 'Capacity too large'),
-  capacityUnit: z.enum(['kg', 'ton']).optional().default('kg'),
-  // Accept either `baseRatePerKm` (canonical) or `pricePerKm` (what the
-  baseRatePerKm: z.number().min(0).max(1000).optional(),
-  pricePerKm: z.number().min(0).max(1000).optional(),
-  availability: z.enum(['available', 'unavailable', 'on_trip']).optional().default('available'),
-}).passthrough()
+  capacityUnit: z.enum(['kg', 'ton']),
+  baseRatePerKm: z.number().min(0).max(1000),
+  availability: z.enum(['available', 'unavailable', 'on_trip']),
+})
 
 // ── Social schemas ─────────────────────────────────────────────────
 //
@@ -246,7 +258,6 @@ export const sendMessageSchema = z.object({
 
 export const NOTIFICATION_TYPES = [
   'like', 'comment', 'follow', 'mention', 'message', 'comment_like', 'story',
-  'booking_request', 'booking_status',
 ] as const
 
 // ── AgriPay schemas ────────────────────────────────────────────────
@@ -286,6 +297,10 @@ export const payBillSchema = z.object({
 
 // ── Validation helper ──────────────────────────────────────────────
 
+/**
+ * Validates request body against a Zod schema.
+ * Returns { success, data, error } — use `success` to branch.
+ */
 export function validateBody<T>(schema: z.ZodType<T>, body: unknown) {
   const result = schema.safeParse(body)
   if (result.success) {
@@ -298,6 +313,10 @@ export function validateBody<T>(schema: z.ZodType<T>, body: unknown) {
   return { success: false as const, errors }
 }
 
+/**
+ * Validates query parameters against a partial schema.
+ * Non-specified params are ignored (pass-through).
+ */
 export function validateQuery<T extends Record<string, unknown>>(
   schema: z.ZodType<Partial<T>>,
   query: Record<string, string | string[] | undefined>,
