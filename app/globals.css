@@ -115,7 +115,7 @@ input[type="file"] { display: none; }
   gap: 4px !important;
 }
 
-/* ── Instagram post layout — stack media + comments on mobile ── */
+/* ── Performance: skip rendering off-screen feed items ── */
 @media (max-width: 768px) {
   .ig-post-layout {
     grid-template-columns: 1fr !important;
@@ -128,6 +128,23 @@ input[type="file"] { display: none; }
     border-left: none !important;
     border-top: 1px solid #e2e8f0 !important;
   }
+}
+
+/* ── Performance optimizations for feed/clips ── */
+img {
+  content-visibility: auto;
+}
+
+/* Skeleton shimmer for loading states */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
 }
 
 /* ── Mobile-first responsive overrides for the whole app ───────────

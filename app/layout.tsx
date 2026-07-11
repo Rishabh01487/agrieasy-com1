@@ -4,6 +4,7 @@ import "./globals.css";
 import AuthProvider from "./providers";
 import PWABootstrap from "./components/PWABootstrap";
 import BottomTabBar from "./components/BottomTabBar";
+import CookieConsent from "./components/CookieConsent";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,6 +66,7 @@ export default function RootLayout({
           {children}
           <PWABootstrap />
           <BottomTabBar />
+          <CookieConsent />
         </AuthProvider>
       </body>
     </html>
