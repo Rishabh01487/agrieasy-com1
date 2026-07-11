@@ -86,6 +86,7 @@ export default function BuyerDashboard() {
   const router = useRouter()
   const [listings, setListings] = useState<Listing[]>([])
   const [profile, setProfile] = useState<BuyerProfile | null>(null)
+  const [pendingBookings, setPendingBookings] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [userEmail, setUserEmail] = useState('')
@@ -99,10 +100,11 @@ export default function BuyerDashboard() {
     setUserEmail(userEmail || '')
     const fetchAll = async () => {
       try {
-        // Fetch listings + buyer profile in parallel
-        const [listingsRes, profileRes] = await Promise.all([
+        // Fetch listings + buyer profile + incoming bookings in parallel
+        const [listingsRes, profileRes, bookingsRes] = await Promise.all([
           authFetch('/api/listings?buyerId=' + userId),
           authFetch('/api/buyer/profile').catch(() => null),
+          authFetch('/api/bookings?role=buyer&status=pending&limit=100').catch(() => null),
         ])
         if (!listingsRes.ok) {
           setError('Failed to load commodities')
@@ -114,6 +116,11 @@ export default function BuyerDashboard() {
           const pdata = await profileRes.json()
           const p = pdata?.data?.profile || pdata?.profile
           if (p) setProfile(p)
+        }
+        if (bookingsRes && bookingsRes.ok) {
+          const bdata = await bookingsRes.json()
+          const bs = bdata?.data?.bookings || bdata?.bookings || []
+          setPendingBookings(bs.length)
         }
       } catch (err) {
         console.error('Error fetching data:', err)
@@ -143,6 +150,7 @@ export default function BuyerDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Link href="/buyer/profile" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>👤 My Profile</Link>
+            <Link href="/buyer/bookings" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>📅 Bookings</Link>
             <Link href="/buyer/my-vehicles" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>🚚 My Vehicles</Link>
             <Link href="/agrisocial" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
             <Link href="/agripay" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>💳 Wallet</Link>
@@ -192,16 +200,40 @@ export default function BuyerDashboard() {
         {/* Stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14, marginBottom: 24 }}>
           <StatCard icon="📋" label="Commodities" value={activeCount} sub="In your price-list" href="/buyer/create-listing" />
-          <StatCard icon="⚖️" label="Total Demand" value={`${totalDemandQty.toLocaleString('en-IN')} kg`} sub="Across all commodities" accent="#3b82f6" />
+          <StatCard icon="📅" label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? '⏳ Awaiting your confirmation' : 'No pending bookings'} href="/buyer/bookings" accent="#f59e0b" />
           <StatCard icon="💰" label="Avg Price" value={`₹${avgPrice}`} sub="Per unit across commodities" accent="#10b981" />
-          <StatCard icon="➕" label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" accent="#f59e0b" />
+          <StatCard icon="➕" label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" accent="#3b82f6" />
         </div>
+
+        {/* Pending-bookings alert banner */}
+        {pendingBookings > 0 && (
+          <Link href="/buyer/bookings" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              border: '1.5px solid #f59e0b',
+              borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease', cursor: 'pointer',
+            }}>
+              <span style={{ fontSize: '1.6rem' }}>📅</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, color: '#92400e', fontWeight: 800, fontSize: '0.95rem' }}>
+                  {pendingBookings} {pendingBookings === 1 ? 'farmer wants' : 'farmers want'} to sell to your shop!
+                </p>
+                <p style={{ margin: '2px 0 0', color: '#92400e', fontSize: '0.82rem' }}>
+                  Tap to review and confirm the bookings.
+                </p>
+              </div>
+              <span style={{ color: '#92400e', fontWeight: 800, fontSize: '0.9rem' }}>Review →</span>
+            </div>
+          </Link>
+        )}
 
         {/* Quick actions */}
         <div style={{ marginBottom: 28 }}>
           <h2 style={{ color: BUYER.text, fontSize: '1.05rem', fontWeight: 800, margin: '0 0 12px' }}>Quick actions</h2>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <QuickAction icon="📝" label="Add Commodity" href="/buyer/create-listing" color="#3b82f6" />
+            <QuickAction icon="📅" label="Bookings" href="/buyer/bookings" color="#f59e0b" />
             <QuickAction icon="👤" label="My Profile" href="/buyer/profile" color="#8b5cf6" />
             <QuickAction icon="🚚" label="My Vehicles" href="/buyer/my-vehicles" color="#06b6d4" />
             <QuickAction icon="🧾" label="Billing" href="/buyer/billing" color="#10b981" />

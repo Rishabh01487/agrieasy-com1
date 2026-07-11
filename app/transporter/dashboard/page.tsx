@@ -20,6 +20,8 @@ interface Vehicle {
 export default function TransporterDashboard() {
   const router = useRouter()
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
+  const [pendingBookings, setPendingBookings] = useState(0)
+  const [inTransitBookings, setInTransitBookings] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -29,26 +31,38 @@ export default function TransporterDashboard() {
       router.replace('/auth/login')
       return
     }
-    const fetchVehicles = async () => {
+    const fetchAll = async () => {
       setLoading(true)
       setError('')
       try {
-        const response = await authFetch(`/api/vehicles?transporterId=${userId}`)
-        if (!response.ok) {
-          const data = await response.json().catch(() => null)
+        // Fetch vehicles + pending bookings in parallel
+        const [vehiclesRes, pendingRes, inTransitRes] = await Promise.all([
+          authFetch(`/api/vehicles?transporterId=${userId}`),
+          authFetch('/api/bookings?role=transporter&status=pending&limit=100').catch(() => null),
+          authFetch('/api/bookings?role=transporter&status=in-transit&limit=100').catch(() => null),
+        ])
+        if (!vehiclesRes.ok) {
+          const data = await vehiclesRes.json().catch(() => null)
           setError(data?.error || 'Failed to load vehicles.')
-          setLoading(false)
-          return
+        } else {
+          const data = await vehiclesRes.json()
+          setVehicles(data?.data?.vehicles || data?.vehicles || [])
         }
-        const data = await response.json()
-        setVehicles(data?.data?.vehicles || data?.vehicles || [])
+        if (pendingRes && pendingRes.ok) {
+          const data = await pendingRes.json()
+          setPendingBookings((data?.data?.bookings || data?.bookings || []).length)
+        }
+        if (inTransitRes && inTransitRes.ok) {
+          const data = await inTransitRes.json()
+          setInTransitBookings((data?.data?.bookings || data?.bookings || []).length)
+        }
       } catch (err) {
         setError('Network error. Please check your connection and try again.')
       } finally {
         setLoading(false)
       }
     }
-    void fetchVehicles()
+    void fetchAll()
   }, [router])
 
   const handleToggleAvailability = async (vehicleId: string, current: boolean) => {
@@ -88,7 +102,8 @@ export default function TransporterDashboard() {
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <Link href="/transporter/my-vehicles" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>🚛 My Fleet</Link>
-            <Link href="/transporter/add-vehicle" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primary, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
+            <Link href="/transporter/bookings" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primary, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>📅 Bookings{pendingBookings > 0 ? ` (${pendingBookings})` : ''}</Link>
+            <Link href="/transporter/add-vehicle" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
             <Link href="/ledger" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📒 Ledger</Link>
             <Link href="/agrisocial" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
             <button onClick={logout} style={{ color: TRANSPORTER.red, padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: SHARED.errorLight, border: '1px solid #fca5a5', cursor: 'pointer', transition: 'all 0.2s ease' }}>Logout</button>
@@ -108,6 +123,29 @@ export default function TransporterDashboard() {
           </div>
         )}
 
+        {/* Pending bookings alert banner */}
+        {pendingBookings > 0 && (
+          <Link href="/transporter/bookings" style={{ textDecoration: 'none', display: 'block', marginBottom: 20 }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              border: '1.5px solid #f59e0b',
+              borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
+              boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease', cursor: 'pointer',
+            }}>
+              <span style={{ fontSize: '1.6rem' }}>🚚</span>
+              <div style={{ flex: 1 }}>
+                <p style={{ margin: 0, color: '#92400e', fontWeight: 800, fontSize: '0.95rem' }}>
+                  {pendingBookings} {pendingBookings === 1 ? 'farmer booked' : 'farmers booked'} your vehicle!
+                </p>
+                <p style={{ margin: '2px 0 0', color: '#92400e', fontSize: '0.82rem' }}>
+                  Tap to accept the booking and dispatch your driver.
+                </p>
+              </div>
+              <span style={{ color: '#92400e', fontWeight: 800, fontSize: '0.9rem' }}>Review →</span>
+            </div>
+          </Link>
+        )}
+
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px', color: TRANSPORTER.muted }}>Loading vehicles…</div>
         ) : (
@@ -117,7 +155,8 @@ export default function TransporterDashboard() {
               {[
                 { label: 'Total Vehicles', value: vehicles.length, icon: '🚛' },
                 { label: 'Available Now', value: available, icon: '✅' },
-                { label: 'On Trip / Inactive', value: vehicles.length - available, icon: '🔄' },
+                { label: 'Pending Bookings', value: pendingBookings, icon: '⏳', link: '/transporter/bookings' },
+                { label: 'In Transit', value: inTransitBookings, icon: '🚚', link: '/transporter/bookings' },
               ].map(c => (
                 <div key={c.label} style={card}>
                   <div style={{ fontSize: '1.8rem', marginBottom: '10px' }}>{c.icon}</div>

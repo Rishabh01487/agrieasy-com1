@@ -35,6 +35,8 @@ const BookingSchema = new mongoose.Schema({
   freightType: { type: String, enum: ['free', 'flat', 'per_km', 'transporter'], default: 'transporter' },
 
   status: { type: String, enum: ['pending', 'confirmed', 'in-transit', 'delivered', 'cancelled'], default: 'pending' },
+  // Free-text note from transporter/driver — e.g. "Leaving in 30 min, ETA 4pm"
+  driverNote: { type: String, maxlength: 500, default: '' },
   estimatedArrivalTime: { type: Date },
   actualArrivalTime: { type: Date },
   // Live driver location for real-time tracking
