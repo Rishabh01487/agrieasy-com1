@@ -42,6 +42,10 @@ const BuyerVehicleSchema = new mongoose.Schema({
     latitude: Number,
     longitude: Number,
   },
+  // When this vehicle becomes available again — same semantics as
+  // Vehicle.availableFrom. Set when the buyer dispatches the vehicle on
+  // a booking. Farmers see "Available from HH:MM" if this is in the future.
+  availableFrom: { type: Date, default: null },
 
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

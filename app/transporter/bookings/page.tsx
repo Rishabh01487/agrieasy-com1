@@ -27,6 +27,14 @@ interface Booking {
   estimatedArrivalTime?: string
   actualArrivalTime?: string
   createdAt: string
+  // Driver counter-offer
+  driverResponse?: 'pending' | 'accepted' | 'counter-offered' | 'rejected'
+  driverOfferedTime?: string
+  // Payment
+  paymentStatus?: string
+  paymentMethod?: string
+  paymentAmount?: number
+  billAmount?: number
   farmerId?: { _id: string; farmerName?: string; phone?: string; address?: string; email?: string }
   buyerId?: { _id: string; firmName?: string; phone?: string; address?: string }
   vehicleId?: { _id: string; vehicleType: string; registrationNumber: string; driverName?: string; driverPhone?: string } | null
@@ -51,6 +59,9 @@ export default function TransporterBookings() {
   const [filter, setFilter] = useState<string>('all')
   const [acting, setActing] = useState<string | null>(null)
   const [dispatchNote, setDispatchNote] = useState<Record<string, string>>({})
+  // Counter-offer state: per-booking date+time inputs
+  const [counterOfferTime, setCounterOfferTime] = useState<Record<string, { date: string; time: string; note: string }>>({})
+  const [showCounterOffer, setShowCounterOffer] = useState<string | null>(null)
 
   const fetchBookings = async () => {
     setLoading(true)
@@ -89,6 +100,34 @@ export default function TransporterBookings() {
         setError(json?.error?.message || json?.error || 'Failed to update booking')
         return
       }
+      void fetchBookings()
+    } catch {
+      setError('Network error')
+    } finally {
+      setActing(null)
+    }
+  }
+
+  const submitCounterOffer = async (id: string) => {
+    const offer = counterOfferTime[id]
+    if (!offer || !offer.date || !offer.time) {
+      setError('Pick a date and time for your counter-offer')
+      return
+    }
+    setActing(id)
+    try {
+      const offeredTime = new Date(`${offer.date}T${offer.time}`).toISOString()
+      const res = await authFetch(`/api/bookings/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ driverOfferedTime: offeredTime, driverResponse: 'counter-offered', driverNote: offer.note || '' }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        setError(json?.error?.message || json?.error || 'Failed to send counter-offer')
+        return
+      }
+      setShowCounterOffer(null)
       void fetchBookings()
     } catch {
       setError('Network error')
@@ -257,21 +296,100 @@ export default function TransporterBookings() {
 
                   {/* Actions */}
                   {b.status === 'pending' && (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => updateStatus(b._id, 'confirmed')}
-                        disabled={acting === b._id}
-                        style={{ flex: 1, padding: '10px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.86rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
-                      >
-                        ✅ Accept Booking
-                      </button>
-                      <button
-                        onClick={() => updateStatus(b._id, 'cancelled')}
-                        disabled={acting === b._id}
-                        style={{ padding: '10px 18px', background: SHARED.errorLight, color: SHARED.error, border: '1px solid #fca5a5', borderRadius: 10, fontSize: '0.86rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
-                      >
-                        Decline
-                      </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {/* Counter-offer status banner */}
+                      {b.driverResponse === 'counter-offered' && (
+                        <div style={{ padding: 10, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8 }}>
+                          <p style={{ margin: 0, color: '#92400e', fontSize: '0.82rem', fontWeight: 700 }}>
+                            ⏱ You counter-offered {b.driverOfferedTime ? new Date(b.driverOfferedTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : ''} — waiting for farmer to accept.
+                          </p>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <button
+                          onClick={() => updateStatus(b._id, 'confirmed')}
+                          disabled={acting === b._id}
+                          style={{ flex: 1, padding: '10px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.86rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
+                        >
+                          ✅ Accept as-is
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (showCounterOffer === b._id) {
+                              setShowCounterOffer(null)
+                            } else {
+                              // Default counter-offer to 1 hour after the farmer's requested pickup
+                              const baseTime = b.estimatedArrivalTime ? new Date(b.estimatedArrivalTime) : new Date()
+                              baseTime.setHours(baseTime.getHours() + 1)
+                              setCounterOfferTime(prev => ({
+                                ...prev,
+                                [b._id]: {
+                                  date: baseTime.toISOString().slice(0, 10),
+                                  time: baseTime.toTimeString().slice(0, 5),
+                                  note: '',
+                                },
+                              }))
+                              setShowCounterOffer(b._id)
+                            }
+                          }}
+                          disabled={acting === b._id}
+                          style={{ padding: '10px 14px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: 10, fontSize: '0.84rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
+                        >
+                          ⏱ Counter-offer time
+                        </button>
+                        <button
+                          onClick={() => updateStatus(b._id, 'cancelled')}
+                          disabled={acting === b._id}
+                          style={{ padding: '10px 14px', background: SHARED.errorLight, color: SHARED.error, border: '1px solid #fca5a5', borderRadius: 10, fontSize: '0.84rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
+                        >
+                          Decline
+                        </button>
+                      </div>
+                      {/* Counter-offer form */}
+                      {showCounterOffer === b._id && (
+                        <div style={{ padding: 12, background: TRANSPORTER.bgSub, borderRadius: 10, border: `1px solid ${TRANSPORTER.border}` }}>
+                          <p style={{ margin: '0 0 8px', color: TRANSPORTER.text, fontSize: '0.82rem', fontWeight: 700 }}>
+                            Propose a new pickup time (e.g., &quot;Available 1 hour after the farmer&apos;s time&quot;):
+                          </p>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+                            <input
+                              type="date"
+                              value={counterOfferTime[b._id]?.date || ''}
+                              onChange={e => setCounterOfferTime(prev => ({ ...prev, [b._id]: { ...(prev[b._id] || { date: '', time: '', note: '' }), date: e.target.value } }))}
+                              min={new Date().toISOString().split('T')[0]}
+                              style={{ ...inp, padding: '8px 12px', fontSize: '0.85rem' }}
+                            />
+                            <input
+                              type="time"
+                              value={counterOfferTime[b._id]?.time || ''}
+                              onChange={e => setCounterOfferTime(prev => ({ ...prev, [b._id]: { ...(prev[b._id] || { date: '', time: '', note: '' }), time: e.target.value } }))}
+                              style={{ ...inp, padding: '8px 12px', fontSize: '0.85rem' }}
+                            />
+                          </div>
+                          <input
+                            type="text"
+                            value={counterOfferTime[b._id]?.note || ''}
+                            onChange={e => setCounterOfferTime(prev => ({ ...prev, [b._id]: { ...(prev[b._id] || { date: '', time: '', note: '' }), note: e.target.value } }))}
+                            placeholder="Note for farmer (optional) — e.g., My vehicle is on another trip"
+                            style={{ ...inp, padding: '8px 12px', fontSize: '0.85rem', marginBottom: 8 }}
+                          />
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={() => submitCounterOffer(b._id)}
+                              disabled={acting === b._id}
+                              style={{ flex: 1, padding: '9px 14px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
+                            >
+                              {acting === b._id ? 'Sending…' : '✅ Send Counter-offer'}
+                            </button>
+                            <button
+                              onClick={() => setShowCounterOffer(null)}
+                              style={{ padding: '9px 14px', background: TRANSPORTER.white, color: TRANSPORTER.muted, border: `1px solid ${TRANSPORTER.border}`, borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   {b.status === 'confirmed' && (

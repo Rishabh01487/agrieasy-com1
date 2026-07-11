@@ -28,6 +28,13 @@ interface Booking {
   estimatedArrivalTime?: string
   actualArrivalTime?: string
   createdAt: string
+  // Payment fields
+  paymentStatus?: 'unpaid' | 'billed' | 'pending' | 'paid' | 'failed'
+  paymentMethod?: string
+  billAmount?: number
+  billNote?: string
+  paymentAmount?: number
+  paidAt?: string
   farmerId?: { _id: string; farmerName?: string; phone?: string; address?: string; email?: string }
   vehicleId?: { _id: string; vehicleType: string; registrationNumber: string; driverName?: string; driverPhone?: string; transporterId?: { transporterCompanyName?: string } } | null
   buyerVehicleId?: { _id: string; vehicleType: string; vehicleDisplayName?: string; registrationNumber: string; driverName?: string; driverPhone?: string; freightType: string; freightAmount: number } | null
@@ -302,6 +309,35 @@ export default function BuyerBookings() {
                     <p style={{ margin: 0, color: SHARED.warning, fontSize: '0.78rem', textAlign: 'center', fontWeight: 600 }}>
                       Dispatch your driver to the pickup location. (Use the &quot;In Transit&quot; button once they leave.)
                     </p>
+                  )}
+                  {b.status === 'delivered' && (
+                    <div>
+                      {/* Payment status badge */}
+                      {b.paymentStatus === 'paid' ? (
+                        <div style={{ padding: 10, background: SHARED.successLight, border: '1px solid #6ee7b7', borderRadius: 8, marginBottom: 8 }}>
+                          <p style={{ margin: 0, color: SHARED.success, fontSize: '0.82rem', fontWeight: 700 }}>
+                            ✅ Paid ₹{(b.paymentAmount || 0).toLocaleString('en-IN')} via {b.paymentMethod}
+                            {b.paidAt && ` on ${new Date(b.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}
+                          </p>
+                        </div>
+                      ) : b.paymentStatus === 'pending' ? (
+                        <div style={{ padding: 10, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 8, marginBottom: 8 }}>
+                          <p style={{ margin: 0, color: '#92400e', fontSize: '0.82rem', fontWeight: 700 }}>
+                            ⏳ UPI payment in progress — confirm after completing in UPI app
+                          </p>
+                          <Link href={`/buyer/bookings/${b._id}/pay`} style={{ color: BUYER.primary, fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>
+                            Confirm payment →
+                          </Link>
+                        </div>
+                      ) : (
+                        <Link
+                          href={`/buyer/bookings/${b._id}/pay`}
+                          style={{ display: 'block', width: '100%', padding: '12px 16px', background: SHARED.success, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer', textAlign: 'center', textDecoration: 'none', boxShadow: '0 4px 14px rgba(5,150,105,0.25)' }}
+                        >
+                          💰 {b.paymentStatus === 'billed' ? `Pay ₹${(b.billAmount || 0).toLocaleString('en-IN')}` : 'Bill & Pay Farmer'}
+                        </Link>
+                      )}
+                    </div>
                   )}
                 </div>
               )

@@ -17,6 +17,7 @@ interface Vehicle {
   driverName?: string
   driverPhone?: string
   transporterId?: { transporterCompanyName?: string }
+  availableFrom?: string | null
 }
 
 interface BuyerVehicle {
@@ -31,6 +32,7 @@ interface BuyerVehicle {
   freightAmount: number
   availability: string
   notes?: string
+  availableFrom?: string | null
 }
 
 interface SellItem {
@@ -74,6 +76,27 @@ function freightLabel(v: BuyerVehicle, distanceKm: number): { cost: number; labe
   // per_km
   const cost = Math.round(v.freightAmount * distanceKm)
   return { cost, label: `₹${v.freightAmount}/km × ${distanceKm}km` }
+}
+
+// Returns a human-readable label for when a vehicle becomes available again.
+// Returns null if the vehicle is available immediately.
+function availableFromLabel(availableFrom?: string | null): { label: string; badge: string } | null {
+  if (!availableFrom) return null
+  const d = new Date(availableFrom)
+  if (isNaN(d.getTime())) return null
+  if (d.getTime() <= Date.now()) return null
+  const now = new Date()
+  const isSameDay = d.toDateString() === now.toDateString()
+  const tomorrow = new Date(now)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const isTomorrow = d.toDateString() === tomorrow.toDateString()
+  const time = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true })
+  if (isSameDay) return { label: `Available from ${time} today`, badge: `⏱ ${time}` }
+  if (isTomorrow) return { label: `Available from ${time} tomorrow`, badge: `⏱ tmrw ${time}` }
+  return {
+    label: `Available from ${d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}`,
+    badge: `⏱ ${d.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} ${time}`,
+  }
 }
 
 function BookVehicleContent() {
@@ -344,6 +367,7 @@ function BookVehicleContent() {
               {buyerVehicles.map(v => {
                 const isSelected = selectedBuyerVehicleId === v._id
                 const f = freightLabel(v, distanceNum)
+                const af = availableFromLabel(v.availableFrom)
                 return (
                   <button
                     key={v._id}
@@ -360,13 +384,21 @@ function BookVehicleContent() {
                       <span style={{ fontWeight: 700, color: FARMER.text, fontSize: '0.86rem' }}>
                         {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
                       </span>
-                      {v.freightType === 'free' && (
-                        <span style={{ background: '#dcfce7', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4 }}>FREE</span>
-                      )}
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                        {v.freightType === 'free' && (
+                          <span style={{ background: '#dcfce7', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: 4 }}>FREE</span>
+                        )}
+                        {af && (
+                          <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.66rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4 }} title={af.label}>
+                            {af.badge}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <p style={{ color: FARMER.muted, fontSize: '0.74rem', margin: '0 0 4px' }}>{v.vehicleDisplayName || v.registrationNumber}</p>
                     <p style={{ color: FARMER.text, fontSize: '0.78rem', margin: '0 0 6px' }}>Capacity: {v.capacityKg.toLocaleString('en-IN')} kg</p>
                     <p style={{ color: FARMER.primary, fontWeight: 700, fontSize: '0.82rem', margin: 0 }}>{f.label}</p>
+                    {af && <p style={{ color: '#92400e', fontSize: '0.7rem', margin: '4px 0 0', fontWeight: 600 }}>{af.label}</p>}
                     {v.notes && <p style={{ color: FARMER.muted, fontSize: '0.7rem', margin: '4px 0 0' }}>{v.notes}</p>}
                   </button>
                 )
@@ -388,6 +420,7 @@ function BookVehicleContent() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10 }}>
               {transporterVehicles.map(v => {
                 const isSelected = selectedVehicleId === v._id
+                const af = availableFromLabel(v.availableFrom)
                 return (
                   <button
                     key={v._id}
@@ -400,12 +433,20 @@ function BookVehicleContent() {
                       transition: 'all 0.15s ease',
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: FARMER.text, fontSize: '0.86rem', marginBottom: 4 }}>
-                      {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+                      <span style={{ fontWeight: 700, color: FARMER.text, fontSize: '0.86rem' }}>
+                        {VEHICLE_TYPE_LABELS[v.vehicleType] || v.vehicleType}
+                      </span>
+                      {af && (
+                        <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.66rem', fontWeight: 700, padding: '2px 6px', borderRadius: 4 }} title={af.label}>
+                          {af.badge}
+                        </span>
+                      )}
                     </div>
                     <p style={{ color: FARMER.muted, fontSize: '0.74rem', margin: '0 0 4px', fontFamily: 'monospace' }}>{v.registrationNumber}</p>
                     <p style={{ color: FARMER.text, fontSize: '0.78rem', margin: '0 0 4px' }}>Capacity: {v.capacity.toLocaleString('en-IN')} {v.capacityUnit || 'kg'}</p>
                     <p style={{ color: FARMER.primary, fontWeight: 700, fontSize: '0.82rem', margin: 0 }}>₹{v.pricePerKm}/km</p>
+                    {af && <p style={{ color: '#92400e', fontSize: '0.7rem', margin: '4px 0 0', fontWeight: 600 }}>{af.label}</p>}
                     {distanceNum > 0 && (
                       <p style={{ color: FARMER.muted, fontSize: '0.72rem', margin: '4px 0 0' }}>
                         ≈ ₹{Math.round(v.pricePerKm * distanceNum).toLocaleString('en-IN')} for {distanceNum} km
