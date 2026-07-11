@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { getUserInfo } from '@/lib/auth-fetch'
 import { SHARED } from '@/lib/styles'
@@ -37,9 +37,17 @@ const TABS: Record<string, TabItem[]> = {
   ],
 }
 
+const HIDE_ON_PREFIXES = [
+  '/auth/',
+  '/admin',
+  '/agrisocial',
+  '/agripay',
+  '/tracking',
+  '/ledger',
+]
+
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
-  const router = useRouter()
   const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
@@ -48,15 +56,14 @@ export default function BottomTabBar() {
   }, [])
 
   if (!role || !TABS[role]) return null
-  if (pathname.startsWith('/auth/') || pathname.startsWith('/admin')) return null
+
+  if (HIDE_ON_PREFIXES.some(prefix => pathname.startsWith(prefix))) return null
 
   const tabs = TABS[role]
-
   const isActive = (tab: TabItem) => tab.match.some(m => pathname.startsWith(m) || pathname === tab.href)
 
   return (
     <>
-      {/* Spacer so content doesn't hide behind the tab bar */}
       <div style={{ height: 64 }} aria-hidden />
       <nav
         className="bottom-tab-bar"

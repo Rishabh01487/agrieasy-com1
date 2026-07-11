@@ -450,6 +450,9 @@ button, nav a {
  * content near the bottom of long pages isn't hidden behind it. */
 @media (max-width: 640px) {
   body {
-    padding-bottom: 64px;  /* matches BottomTabBar height + safe area */
+    padding-bottom: 0px;
+  }
+  body:has(.bottom-tab-bar) {
+    padding-bottom: 64px;
   }
 }
