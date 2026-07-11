@@ -21,7 +21,7 @@ const SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Permissions-Policy': 'camera=(self), microphone=(self), geolocation=(self)',
   'Content-Security-Policy': [
-    "default-src 'self'",
+    "default-src 'self' upi: tez: phonepe: paytmmp: bhim: amzn:",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://unpkg.com",
     "frame-src 'self' https://checkout.razorpay.com",
     "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.tile.openstreetmap.org https://api.qrserver.com",

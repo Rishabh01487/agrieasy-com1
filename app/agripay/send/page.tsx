@@ -168,7 +168,7 @@ function SendMoneyContent() {
                         </div>
 
                         {/* QR Code — only show if UPI ID is entered */}
-                        {upiIdToPay && (
+                        {upiIdToPay && upiIdToPay.includes('@') && (
                             <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                                 <p style={{ color: AGRI.muted, fontSize: '0.78rem', margin: '0 0 10px', fontWeight: 600 }}>Scan with any UPI app to pay</p>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -177,16 +177,32 @@ function SendMoneyContent() {
                             </div>
                         )}
 
-                        {/* Open UPI App button — only show if UPI ID is entered (mobile) */}
-                        {upiIdToPay && (
-                            <a href={upiDeepLink} style={{
-                                display: 'block', textAlign: 'center', padding: '13px',
-                                background: AGRI.primary, color: '#fff', borderRadius: '12px',
-                                fontWeight: 800, fontSize: '1rem', textDecoration: 'none',
-                                marginBottom: '12px',
-                            }}>
-                                📱 Open UPI App
-                            </a>
+                        {/* Pay via UPI App buttons — show specific apps + generic */}
+                        {upiIdToPay && upiIdToPay.includes('@') && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+                                {/* Generic UPI deep link */}
+                                <a href={upiDeepLink} style={{
+                                    display: 'block', textAlign: 'center', padding: '14px',
+                                    background: AGRI.primary, color: '#fff', borderRadius: '12px',
+                                    fontWeight: 800, fontSize: '1rem', textDecoration: 'none',
+                                }}>
+                                    📱 Open UPI App
+                                </a>
+
+                                {/* Specific UPI app deep links (these work better on mobile) */}
+                                <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <a href={`tez://upi/pay?pa=${encodeURIComponent(upiIdToPay)}&pn=${encodeURIComponent(recipientName || 'Recipient')}&am=${amount}&tn=${encodeURIComponent(note || 'AgriEasy')}&cu=INR`} style={{ padding: '8px 14px', background: '#fff', border: `1.5px solid ${AGRI.border}`, borderRadius: '10px', fontSize: '0.78rem', fontWeight: 700, color: AGRI.text, textDecoration: 'none' }}>🟢 GPay</a>
+                                    <a href={`phonepe://pay?pa=${encodeURIComponent(upiIdToPay)}&pn=${encodeURIComponent(recipientName || 'Recipient')}&am=${amount}&tn=${encodeURIComponent(note || 'AgriEasy')}&cu=INR`} style={{ padding: '8px 14px', background: '#fff', border: `1.5px solid ${AGRI.border}`, borderRadius: '10px', fontSize: '0.78rem', fontWeight: 700, color: AGRI.text, textDecoration: 'none' }}>🟣 PhonePe</a>
+                                    <a href={`paytmmp://pay?pa=${encodeURIComponent(upiIdToPay)}&pn=${encodeURIComponent(recipientName || 'Recipient')}&am=${amount}&tn=${encodeURIComponent(note || 'AgriEasy')}&cu=INR`} style={{ padding: '8px 14px', background: '#fff', border: `1.5px solid ${AGRI.border}`, borderRadius: '10px', fontSize: '0.78rem', fontWeight: 700, color: AGRI.text, textDecoration: 'none' }}>🔵 Paytm</a>
+                                    <a href={`bhim://pay?pa=${encodeURIComponent(upiIdToPay)}&pn=${encodeURIComponent(recipientName || 'Recipient')}&am=${amount}&tn=${encodeURIComponent(note || 'AgriEasy')}&cu=INR`} style={{ padding: '8px 14px', background: '#fff', border: `1.5px solid ${AGRI.border}`, borderRadius: '10px', fontSize: '0.78rem', fontWeight: 700, color: AGRI.text, textDecoration: 'none' }}>🟠 BHIM</a>
+                                </div>
+
+                                {/* Desktop notice */}
+                                <p style={{ color: AGRI.muted, fontSize: '0.72rem', margin: '8px 0 0', textAlign: 'center' }}>
+                                    📱 On mobile: tap a button above to open the UPI app.<br/>
+                                    💻 On desktop: scan the QR code with your phone's UPI app.
+                                </p>
+                            </div>
                         )}
 
                         {/* UPI Ref ID input (optional) */}
