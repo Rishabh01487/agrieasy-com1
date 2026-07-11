@@ -5,6 +5,7 @@ import AuthProvider from "./providers";
 import PWABootstrap from "./components/PWABootstrap";
 import BottomTabBar from "./components/BottomTabBar";
 import CookieConsent from "./components/CookieConsent";
+import { ToastProvider } from "./components/Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,10 +64,12 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          {children}
-          <PWABootstrap />
-          <BottomTabBar />
-          <CookieConsent />
+          <ToastProvider>
+            {children}
+            <PWABootstrap />
+            <BottomTabBar />
+            <CookieConsent />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>
