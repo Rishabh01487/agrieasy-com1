@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { TRANSPORTER, SHARED, cardStyle, navStyle, getStatusStyle } from '@/lib/styles'
-import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Vehicle {
   _id: string
@@ -19,20 +18,10 @@ interface Vehicle {
 }
 
 export default function TransporterDashboard() {
-  const { t } = useLanguage()
   const router = useRouter()
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [pendingBookings, setPendingBookings] = useState(0)
   const [inTransitBookings, setInTransitBookings] = useState(0)
-  const [activeTrips, setActiveTrips] = useState<Array<{
-    _id: string
-    pickupLocation: string
-    deliveryLocation: string
-    totalQuantity: number
-    commodities?: Array<{ name: string; quantity: number }>
-    farmerId?: { farmerName?: string; phone?: string }
-    buyerId?: { firmName?: string }
-  }>>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -46,11 +35,11 @@ export default function TransporterDashboard() {
       setLoading(true)
       setError('')
       try {
-        // Fetch vehicles + pending + in-transit bookings in parallel
+        // Fetch vehicles + pending bookings in parallel
         const [vehiclesRes, pendingRes, inTransitRes] = await Promise.all([
           authFetch(`/api/vehicles?transporterId=${userId}`),
           authFetch('/api/bookings?role=transporter&status=pending&limit=100').catch(() => null),
-          authFetch('/api/bookings?role=transporter&status=in-transit&limit=10').catch(() => null),
+          authFetch('/api/bookings?role=transporter&status=in-transit&limit=100').catch(() => null),
         ])
         if (!vehiclesRes.ok) {
           const data = await vehiclesRes.json().catch(() => null)
@@ -65,9 +54,7 @@ export default function TransporterDashboard() {
         }
         if (inTransitRes && inTransitRes.ok) {
           const data = await inTransitRes.json()
-          const trips = data?.data?.bookings || data?.bookings || []
-          setInTransitBookings(trips.length)
-          setActiveTrips(trips)
+          setInTransitBookings((data?.data?.bookings || data?.bookings || []).length)
         }
       } catch (err) {
         setError('Network error. Please check your connection and try again.')
@@ -118,9 +105,8 @@ export default function TransporterDashboard() {
             <Link href="/transporter/bookings" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primary, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>📅 Bookings{pendingBookings > 0 ? ` (${pendingBookings})` : ''}</Link>
             <Link href="/transporter/add-vehicle" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
             <Link href="/ledger" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📒 Ledger</Link>
-            <Link href="/agrisocial" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📱 {t('nav.agrisocial')}</Link>
-            <Link href="/settings" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>⚙️ {t('nav.settings')}</Link>
-            <button onClick={logout} style={{ color: TRANSPORTER.red, padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: SHARED.errorLight, border: '1px solid #fca5a5', cursor: 'pointer', transition: 'all 0.2s ease' }}>{t('nav.logout')}</button>
+            <Link href="/agrisocial" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
+            <button onClick={logout} style={{ color: TRANSPORTER.red, padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: SHARED.errorLight, border: '1px solid #fca5a5', cursor: 'pointer', transition: 'all 0.2s ease' }}>Logout</button>
           </div>
         </div>
       </nav>
@@ -179,47 +165,6 @@ export default function TransporterDashboard() {
                 </div>
               ))}
             </div>
-
-            {/* Active trips — surface in-transit bookings with one-tap access to live tracking */}
-            {activeTrips.length > 0 && (
-              <div style={{ ...card, marginBottom: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: TRANSPORTER.textSecondary }}>🚚 Active trips</h3>
-                    <p style={{ margin: '4px 0 0', color: TRANSPORTER.muted, fontSize: '0.78rem' }}>Tap a trip to open the live map & share your location with the farmer</p>
-                  </div>
-                  <span style={{ background: TRANSPORTER.primary, color: '#fff', fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: 100 }}>
-                    {activeTrips.length} in transit
-                  </span>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {activeTrips.map(t => (
-                    <Link
-                      key={t._id}
-                      href={`/transporter/tracking/${t._id}`}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 12, padding: 12,
-                        background: TRANSPORTER.bgSub, borderRadius: 10, textDecoration: 'none',
-                        border: `1px solid ${TRANSPORTER.borderLight}`, transition: 'all 0.15s',
-                      }}
-                    >
-                      <div style={{ width: 40, height: 40, borderRadius: 10, background: TRANSPORTER.primaryLight, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🚛</div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, color: TRANSPORTER.text, fontWeight: 700, fontSize: '0.86rem' }}>
-                          {(t.commodities && t.commodities.length > 0)
-                            ? t.commodities.map((c: any) => c.name).join(', ')
-                            : 'Goods'} · {(t.totalQuantity || 0).toLocaleString('en-IN')} kg
-                        </p>
-                        <p style={{ margin: '2px 0 0', color: TRANSPORTER.muted, fontSize: '0.74rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          🌾 {t.pickupLocation} → 🛒 {t.deliveryLocation}
-                        </p>
-                      </div>
-                      <span style={{ color: TRANSPORTER.primary, fontWeight: 700, fontSize: '0.78rem', flexShrink: 0 }}>📍 Track →</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Fleet table */}
             <div style={card}>

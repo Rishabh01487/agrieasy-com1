@@ -8,6 +8,8 @@ const BookingSchema = new mongoose.Schema({
   vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },  // transporter vehicle (optional)
   buyerVehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'BuyerVehicle' },  // buyer's own vehicle (optional)
 
+  // Multi-commodity support — each item represents one commodity the farmer
+  // is selling to this buyer in this trip.
   commodities: [
     {
       listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Listing' },
@@ -17,6 +19,7 @@ const BookingSchema = new mongoose.Schema({
       pricePerUnit: { type: Number, default: 0 },     // agreed price at booking time
     },
   ],
+  // Aggregated quantity across all commodities (denormalized for easy queries)
   totalQuantity: { type: Number, default: 0 },
 
   commodity: { type: String, default: '' },  // legacy — kept for backward compat with single-commodity bookings
@@ -26,42 +29,17 @@ const BookingSchema = new mongoose.Schema({
   deliveryLocation: { type: String, required: true },
   estimatedDistance: { type: Number },
 
+  // Freight charged for this booking (computed from vehicle's freight type +
+  // distance, or 0 for free buyer vehicles).
   freightAmount: { type: Number, default: 0 },
   freightType: { type: String, enum: ['free', 'flat', 'per_km', 'transporter'], default: 'transporter' },
 
   status: { type: String, enum: ['pending', 'confirmed', 'in-transit', 'delivered', 'cancelled'], default: 'pending' },
+  // Free-text note from transporter/driver — e.g. "Leaving in 30 min, ETA 4pm"
   driverNote: { type: String, maxlength: 500, default: '' },
   estimatedArrivalTime: { type: Date },
   actualArrivalTime: { type: Date },
-
-  // ── Driver counter-offer ─────────────────────────────────────────
-  // When the transporter/driver cannot make the farmer's requested pickup
-  // time, they can counter-offer an alternative. The farmer can accept or
-  // reject the counter-offer.
-  driverResponse: {
-    type: String,
-    enum: ['pending', 'accepted', 'counter-offered', 'rejected'],
-    default: 'pending',
-  },
-  driverOfferedTime: { type: Date },  // the alternative pickup time proposed by driver
-
-  // ── Payment on delivery ──────────────────────────────────────────
-  // After the commodity is weighed at the buyer's shop, the buyer enters
-  paymentStatus: {
-    type: String,
-    enum: ['unpaid', 'billed', 'pending', 'paid', 'failed'],
-    default: 'unpaid',
-  },
-  paymentMethod: {
-    type: String,
-    enum: ['wallet', 'agripay-upi', 'direct-upi', 'netbanking', 'cash'],
-  },
-  billAmount: { type: Number, default: 0 },        // final amount entered by buyer after weighing
-  billNote: { type: String, maxlength: 500, default: '' },  // e.g. "Actual weight 495 kg"
-  paymentAmount: { type: Number, default: 0 },     // amount actually paid (may differ if partial)
-  paidAt: { type: Date },
-  paymentRef: { type: String, default: '' },       // wallet txn id / UPI ref / etc.
-
+  // Live driver location for real-time tracking
   driverLocation: {
     latitude: Number,
     longitude: Number,

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { BUYER, SHARED, cardStyle, navStyle } from '@/lib/styles'
-import { useLanguage } from '@/lib/i18n/LanguageContext'
 
 interface Listing {
   _id: string
@@ -84,7 +83,6 @@ function freshnessBadge(dateStr?: string) {
 }
 
 export default function BuyerDashboard() {
-  const { t } = useLanguage()
   const router = useRouter()
   const [listings, setListings] = useState<Listing[]>([])
   const [profile, setProfile] = useState<BuyerProfile | null>(null)
@@ -155,9 +153,8 @@ export default function BuyerDashboard() {
             <Link href="/buyer/bookings" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>📅 Bookings</Link>
             <Link href="/buyer/my-vehicles" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>🚚 My Vehicles</Link>
             <Link href="/agrisocial" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
-            <Link href="/agripay" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>💳 {t('nav.wallet')}</Link>
-            <Link href="/settings" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>⚙️ {t('nav.settings')}</Link>
-            <button onClick={logout} style={{ color: BUYER.red, background: SHARED.errorLight, border: '1px solid #fca5a5', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>{t('nav.logout')}</button>
+            <Link href="/agripay" style={{ color: BUYER.primary, textDecoration: 'none', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, background: BUYER.primaryLight, transition: 'all 0.2s ease' }}>💳 Wallet</Link>
+            <button onClick={logout} style={{ color: BUYER.red, background: SHARED.errorLight, border: '1px solid #fca5a5', padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s ease' }}>Logout</button>
           </div>
         </div>
       </nav>
@@ -205,7 +202,7 @@ export default function BuyerDashboard() {
           <StatCard icon="📋" label="Commodities" value={activeCount} sub="In your price-list" href="/buyer/create-listing" />
           <StatCard icon="📅" label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? '⏳ Awaiting your confirmation' : 'No pending bookings'} href="/buyer/bookings" accent="#f59e0b" />
           <StatCard icon="💰" label="Avg Price" value={`₹${avgPrice}`} sub="Per unit across commodities" accent="#10b981" />
-          <StatCard icon="➕" label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" accent="#31372B" />
+          <StatCard icon="➕" label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" accent="#3b82f6" />
         </div>
 
         {/* Pending-bookings alert banner */}
@@ -235,7 +232,7 @@ export default function BuyerDashboard() {
         <div style={{ marginBottom: 28 }}>
           <h2 style={{ color: BUYER.text, fontSize: '1.05rem', fontWeight: 800, margin: '0 0 12px' }}>Quick actions</h2>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <QuickAction icon="📝" label="Add Commodity" href="/buyer/create-listing" color="#31372B" />
+            <QuickAction icon="📝" label="Add Commodity" href="/buyer/create-listing" color="#3b82f6" />
             <QuickAction icon="📅" label="Bookings" href="/buyer/bookings" color="#f59e0b" />
             <QuickAction icon="👤" label="My Profile" href="/buyer/profile" color="#8b5cf6" />
             <QuickAction icon="🚚" label="My Vehicles" href="/buyer/my-vehicles" color="#06b6d4" />

@@ -258,6 +258,7 @@ export const sendMessageSchema = z.object({
 
 export const NOTIFICATION_TYPES = [
   'like', 'comment', 'follow', 'mention', 'message', 'comment_like', 'story',
+  'booking_request', 'booking_status',
 ] as const
 
 // ── AgriPay schemas ────────────────────────────────────────────────
