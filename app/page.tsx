@@ -143,12 +143,6 @@ export default function Home() {
         <p className="fade-up" style={{ ...footerStyle, animationDelay: '1s' }}>
           Trusted by farmers, buyers &amp; transporters across India 🇮🇳
         </p>
-
-        {/* Beta + Gamma testing links */}
-        <div className="fade-up" style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16, animationDelay: '1.2s' }}>
-          <Link href="/beta" style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.1)', color: '#fff', textDecoration: 'none', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, border: '1px solid rgba(255,255,255,0.2)' }}>🧪 Beta</Link>
-          <Link href="/gamma" style={{ padding: '6px 14px', background: 'rgba(255,255,255,0.1)', color: '#fff', textDecoration: 'none', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, border: '1px solid rgba(255,255,255,0.2)' }}>🔬 Gamma</Link>
-        </div>
       </div>
 
       {/* ── Animations & hover ──────────────────────────────────── */}
