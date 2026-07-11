@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon } from '@/lib/icons'
-import { shareContent } from '@/lib/share'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -96,13 +95,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
             }).catch(() => null)
         } catch {}
-        const url = typeof window !== 'undefined' ? `${window.location.origin}/agrisocial/post/${clip._id}` : ''
-        if (!url) return
-        const result = await shareContent(url, 'KrishiClip', clip.caption)
-        if (result === 'copied' || result === 'shared') {
-            setShareCopied(true)
-            setTimeout(() => setShareCopied(false), 1800)
-        }
+        window.location.href = `/agrisocial/dm?sharePost=${clip._id}`
     }
 
     const handleDelete = async () => {
