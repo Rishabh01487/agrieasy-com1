@@ -212,9 +212,21 @@ export async function POST(request: NextRequest) {
     // Return shape: always `listings` array (single-element for legacy path).
     // Backward-compat: also expose `listing` for callers expecting one object.
     return apiSuccess({ listings: created, listing: created[0] }, undefined, 201)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Create listing error:', error)
-    const msg = error instanceof Error ? error.message : 'Failed to create listing'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    // Never leak raw Zod / Mongoose internals to the client — they end up
+    // as a JSON blob in the red error banner, which is confusing.
+    let userMessage = 'Failed to create listing. Please try again.'
+    if (error instanceof Error) {
+      // Common, safe-to-show cases:
+      if (error.message.includes('ENCRYPTION_KEY')) {
+        userMessage = 'Server is missing encryption config. Please contact support.'
+      } else if (error.message.includes('duplicate key')) {
+        userMessage = 'One of these commodities already exists for your shop.'
+      } else if (error.message.includes('Validation failed') || error.message.includes('required')) {
+        userMessage = error.message
+      }
+    }
+    return NextResponse.json({ error: userMessage }, { status: 500 })
   }
 }

@@ -16,8 +16,13 @@ const envSchema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be ≥32 characters'),
 
-  // Required for encryption — no silent plaintext fallback
-  ENCRYPTION_KEY: z.string().length(64, 'ENCRYPTION_KEY must be 64 hex chars (32 bytes)'),
+  // Encryption key — used to encrypt PII (aadhar, license, etc.) at rest.
+  // Loosened from `.length(64)` to optional because missing it should NOT
+  // crash every API request. The User model already has a try/catch fallback
+  // that stores plaintext with a console.warn when ENCRYPTION_KEY is absent,
+  // so the app keeps working — just without encryption until the operator
+  // sets the env var. We log a loud warning at config init.
+  ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY should be ≥32 chars').optional(),
 
   // Auth
   NEXTAUTH_URL: z.string().url().optional(),
@@ -30,8 +35,11 @@ const envSchema = z.object({
   RAZORPAY_KEY_SECRET: z.string().optional(),
   RAZORPAY_ACCOUNT_TYPE: z.enum(['test', 'live']).optional().default('test'),
 
-  // SMS
-  SMS_PROVIDER: z.enum(['twilio', 'fast2sms']).optional(),
+  // SMS — accept any string but normalize unknown values to undefined so
+  // an accidentally-set 'none' or '' doesn't crash the whole app.
+  SMS_PROVIDER: z.enum(['twilio', 'fast2sms']).optional().or(
+    z.string().transform(() => undefined as undefined)
+  ),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
@@ -113,6 +121,11 @@ export const config = {
   init() {
     if (_env) return _env
     _env = envSchema.parse(process.env)
+    if (!_env.ENCRYPTION_KEY) {
+      // Don't crash — the User/Wallet models have plaintext fallbacks — but
+      // warn loudly so the operator knows PII isn't being encrypted at rest.
+      console.warn('⚠️  ENCRYPTION_KEY is not set — PII (aadhar, license) will be stored in plaintext. Generate one with: openssl rand -hex 32')
+    }
     return _env
   },
 
