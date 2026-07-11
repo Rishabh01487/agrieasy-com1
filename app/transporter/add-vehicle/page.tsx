@@ -94,8 +94,28 @@ export default function AddVehicle() {
 
               <div>
                 <label style={lbl}>Vehicle Registration Number</label>
-                <input type="text" {...register('registrationNumber', { required: 'Registration number is required', pattern: { value: /^[A-Z]{2}[-\s]?\d{2}[-\s]?[A-Z]{1,3}[-\s]?\d{4}$|^[A-Z0-9-]+$/, message: 'Enter a valid vehicle number (e.g. UP-01-AM-2345)' } })} placeholder="e.g., UP-01-AM-2345" style={{ ...inp, textTransform: 'uppercase' }} />
+                <input
+                  type="text"
+                  {...register('registrationNumber', {
+                    required: 'Registration number is required',
+                    validate: v => {
+                      // Strip spaces/dashes and check length — same logic as server
+                      const clean = v.toUpperCase().replace(/[\s-]/g, '')
+                      if (!/^[A-Z0-9]{5,12}$/.test(clean)) {
+                        return 'Enter a valid vehicle number (e.g. MH12AB1234, KA05ABC1234, BH22A1234)'
+                      }
+                      return true
+                    },
+                  })}
+                  placeholder="e.g., MH 12 AB 1234 or KA05ABC1234"
+                  style={{ ...inp, textTransform: 'uppercase' }}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                />
                 {errors.registrationNumber && <p style={{ color: SHARED.error, fontSize: '0.8rem', marginTop: '4px' }}>{errors.registrationNumber.message}</p>}
+                <p style={{ color: TRANSPORTER.muted, fontSize: '0.74rem', margin: '4px 0 0' }}>
+                  Supports all-India formats — BH series, defense, single-letter series, etc. Spaces and dashes are auto-removed.
+                </p>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
