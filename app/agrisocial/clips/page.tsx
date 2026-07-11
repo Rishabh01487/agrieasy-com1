@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon } from '@/lib/icons'
+import BottomSheet from '@/app/components/BottomSheet'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -14,7 +15,16 @@ const CATEGORIES = [
 ]
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
+interface Comment { _id: string; userId: User | string; text: string; createdAt: string }
 interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number }
+
+function timeAgo(iso: string) {
+    const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+    if (s < 60) return `${s}s`
+    if (s < 3600) return `${Math.floor(s / 60)}m`
+    if (s < 86400) return `${Math.floor(s / 3600)}h`
+    return `${Math.floor(s / 86400)}d`
+}
 
 function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId: string; isActive: boolean; onDelete?: (id: string) => void }) {
     const [liked, setLiked] = useState(viewerId ? clip.likes?.includes(viewerId) : false)
@@ -25,6 +35,11 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [muted, setMuted] = useState(false)
     const [paused, setPaused] = useState(false)
     const [heartBurst, setHeartBurst] = useState(false)
+    const [showComments, setShowComments] = useState(false)
+    const [comments, setComments] = useState<Comment[]>([])
+    const [commentText, setCommentText] = useState('')
+    const [postingComment, setPostingComment] = useState(false)
+    const [loadingComments, setLoadingComments] = useState(false)
     const lastTapRef = useRef<number>(0)
     const videoRef = useRef<HTMLVideoElement>(null)
 
@@ -98,6 +113,39 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         window.location.href = `/agrisocial/dm?sharePost=${clip._id}`
     }
 
+    const openComments = async () => {
+        setShowComments(true)
+        if (comments.length === 0 && !loadingComments) {
+            setLoadingComments(true)
+            try {
+                const res = await authFetch(`/api/social/posts/${clip._id}`)
+                if (res.ok) {
+                    const d = await res.json()
+                    setComments(d.post?.comments || [])
+                }
+            } catch {}
+            setLoadingComments(false)
+        }
+    }
+
+    const handleComment = async () => {
+        if (!commentText.trim() || !viewerId) return
+        setPostingComment(true)
+        try {
+            const res = await authFetch('/api/social/comment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: viewerId, postId: clip._id, text: commentText }),
+            })
+            if (res.ok) {
+                const d = await res.json()
+                setComments(c => [...c, d.comment])
+                setCommentText('')
+            }
+        } catch {}
+        setPostingComment(false)
+    }
+
     const handleDelete = async () => {
         if (!viewerId) return
         const res = await authFetch(`/api/social/posts/${clip._id}`, {
@@ -168,10 +216,10 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>
                 </button>
                 {/* Comment — links to the post detail page where comments live */}
-                <Link href={`/agrisocial/post/${clip._id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease', textDecoration: 'none' }}>
+                <button onClick={openComments} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="comment" size={32} color="#fff" />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.commentsCount || 0}</span>
-                </Link>
+                </button>
                 {/* Share — copies link + tracks share count */}
                 <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="send" size={30} color="#fff" />
@@ -224,6 +272,50 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             <div style={{ position: 'absolute', top: '60px', left: '16px', background: 'rgba(234,88,12,0.85)', borderRadius: '100px', padding: '4px 12px', backdropFilter: 'blur(8px)' }}>
                 <span style={{ color: SOCIAL.clips.text, fontSize: '0.72rem', fontWeight: 800 }}>🎬 KrishiClip</span>
             </div>
+
+            {/* Comment bottom sheet — slides up like Instagram Reels */}
+            <BottomSheet open={showComments} onClose={() => setShowComments(false)} title="Comments" height="tall">
+                {loadingComments ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: SOCIAL.muted, fontSize: '0.86rem' }}>Loading comments…</div>
+                ) : comments.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: 40, color: SOCIAL.muted, fontSize: '0.86rem' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>💬</div>
+                        No comments yet. Be the first!
+                    </div>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+                        {comments.map(c => {
+                            const cn = typeof c.userId === 'object' ? ((c.userId as User).farmerName || (c.userId as User).firmName || 'User') : 'User'
+                            const cid = typeof c.userId === 'object' ? (c.userId as User)._id : ''
+                            return (
+                                <div key={c._id} style={{ display: 'flex', gap: 10 }}>
+                                    <Link href={`/agrisocial/profile/${cid}`} style={{ width: 32, height: 32, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', textDecoration: 'none', flexShrink: 0 }}>{cn[0]?.toUpperCase()}</Link>
+                                    <div>
+                                        <p style={{ color: SOCIAL.text, fontSize: '0.86rem', margin: 0, lineHeight: 1.5 }}>
+                                            <Link href={`/agrisocial/profile/${cid}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{cn}</Link>{' '}{c.text}
+                                        </p>
+                                        <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>{timeAgo(c.createdAt)}</span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+                {viewerId && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', position: 'sticky', bottom: 0, background: '#fff', padding: '10px 0', borderTop: `1px solid ${SOCIAL.border}` }}>
+                        <input
+                            value={commentText}
+                            onChange={e => setCommentText(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleComment()}
+                            placeholder="Add a comment…"
+                            style={{ flex: 1, padding: '9px 14px', background: SOCIAL.bg, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 100, fontSize: '0.86rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }}
+                        />
+                        <button onClick={handleComment} disabled={postingComment || !commentText.trim()} style={{ background: 'none', border: 'none', color: SOCIAL.primary, fontWeight: 700, fontSize: '0.86rem', cursor: (postingComment || !commentText.trim()) ? 'not-allowed' : 'pointer', opacity: (postingComment || !commentText.trim()) ? 0.5 : 1 }}>
+                            {postingComment ? '…' : 'Post'}
+                        </button>
+                    </div>
+                )}
+            </BottomSheet>
         </div>
     )
 }
