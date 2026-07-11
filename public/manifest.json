@@ -1,9 +1,10 @@
 {
-    "name": "AgriEasy.com",
+    "name": "AgriEasy.com — India's Agricultural Marketplace",
     "short_name": "AgriEasy",
-    "description": "India's agricultural marketplace + AgriSocial community \u2014 connecting farmers, buyers, and transporters with Instagram-style social, direct messaging, wallet, and more.",
-    "start_url": "/",
+    "description": "Connect farmers directly with buyers for seamless agricultural trade. End-to-end: list commodities, find buyers nearby, book vehicles, track live, pay via AgriPay.",
+    "start_url": "/?source=pwa",
     "display": "standalone",
+    "display_override": ["standalone", "minimal-ui", "browser"],
     "orientation": "portrait",
     "background_color": "#f8fafc",
     "theme_color": "#2563eb",
@@ -12,35 +13,41 @@
     "categories": [
         "business",
         "shopping",
-        "productivity"
+        "productivity",
+        "agriculture"
     ],
     "icons": [
         {
             "src": "/icons/icon-192.png",
             "sizes": "192x192",
             "type": "image/png",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
         },
         {
             "src": "/icons/icon-512.png",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "any maskable"
-        }
-    ],
-    "screenshots": [
+            "purpose": "any"
+        },
         {
-            "src": "/screenshots/home.png",
-            "sizes": "1280x720",
+            "src": "/icons/icon-512.png",
+            "sizes": "512x512",
             "type": "image/png",
-            "form_factor": "wide",
-            "label": "AgriEasy Home Screen"
+            "purpose": "maskable"
         }
     ],
     "shortcuts": [
         {
             "name": "AgriSocial Feed",
-            "url": "/agrisocial",
+            "short_name": "Feed",
+            "description": "Open the AgriSocial community feed",
+            "url": "/agrisocial?source=pwa_shortcut",
             "icons": [
                 {
                     "src": "/icons/icon-192.png",
@@ -50,7 +57,9 @@
         },
         {
             "name": "Farmer Login",
-            "url": "/auth/login?role=farmer",
+            "short_name": "Farmer",
+            "description": "Sign in as a farmer",
+            "url": "/auth/login?role=farmer&source=pwa_shortcut",
             "icons": [
                 {
                     "src": "/icons/icon-192.png",
@@ -60,7 +69,21 @@
         },
         {
             "name": "Buyer Login",
-            "url": "/auth/login?role=buyer",
+            "short_name": "Buyer",
+            "description": "Sign in as a buyer",
+            "url": "/auth/login?role=buyer&source=pwa_shortcut",
+            "icons": [
+                {
+                    "src": "/icons/icon-192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        },
+        {
+            "name": "AgriPay Wallet",
+            "short_name": "Wallet",
+            "description": "Open your AgriPay wallet",
+            "url": "/agripay?source=pwa_shortcut",
             "icons": [
                 {
                     "src": "/icons/icon-192.png",
