@@ -115,27 +115,49 @@ input[type="file"] { display: none; }
   gap: 2px !important;
 }
 
-/* ── Instagram-style profile header on mobile (stacked) ── */
+/* ── Instagram-style profile header on mobile ── */
 @media (max-width: 640px) {
   .ig-profile-header {
     flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
+    align-items: stretch !important;
     gap: 12px !important;
   }
+  .ig-profile-header > div:first-child {
+    width: 88px !important;
+    height: 88px !important;
+    margin: 0 auto !important;
+  }
+  .ig-profile-header > div:first-child > div,
+  .ig-profile-header > div:first-child > img {
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 2rem !important;
+  }
   .ig-profile-header > div:last-child {
+    min-width: 0 !important;
     text-align: center !important;
   }
   .ig-profile-header > div:last-child > div:first-child {
     justify-content: center !important;
+    flex-wrap: wrap !important;
   }
   .ig-profile-stats {
     justify-content: space-around !important;
     gap: 0 !important;
+    padding: 0 8px !important;
   }
 }
 
-/* ── Performance: skip rendering off-screen feed items ── */
+/* ── AgriSocial: fix sticky nav getting covered by notch/status bar ── */
+/* React outputs inline styles as position:sticky (no quotes, no space after colon) */
+@media (max-width: 640px) {
+  nav[style*="sticky"],
+  nav[style*="position:sticky"] {
+    top: env(safe-area-inset-top, 0px) !important;
+  }
+}
+
+/* ── Instagram post layout — stack media + comments on mobile ── */
 @media (max-width: 768px) {
   .ig-post-layout {
     grid-template-columns: 1fr !important;
@@ -147,15 +169,6 @@ input[type="file"] { display: none; }
     max-height: none !important;
     border-left: none !important;
     border-top: 1px solid #e2e8f0 !important;
-  }
-}
-
-/* ── AgriSocial: fix sticky nav getting covered by notch/status bar ── */
-@media (max-width: 640px) {
-  nav[style*="position: 'sticky'"][style*="top: 0"],
-  nav[style*="position: sticky"][style*="top: 0"] {
-    top: env(safe-area-inset-top, 0px) !important;
-    padding-top: env(safe-area-inset-top, 0px) !important;
   }
 }
 
