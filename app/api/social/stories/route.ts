@@ -57,8 +57,14 @@ export async function GET(req: NextRequest) {
 
         // Populate user info
         const userIds = Array.from(byUserMap.keys())
-        const users = await User.find({ _id: { $in: userIds } }).select('farmerName firmName role').lean()
+        const users = await User.find({ _id: { $in: userIds } }).select('farmerName firmName role profilePic').lean()
         const userMap = new Map(users.map((u: any) => [u._id.toString(), u]))
+
+        // Always include the viewer's own user data (for the "Your Story" circle)
+        const viewerUser = await User.findById(auth.user.userId).select('farmerName firmName role profilePic').lean()
+        if (viewerUser && !userMap.has(auth.user.userId)) {
+            userMap.set(auth.user.userId, viewerUser)
+        }
 
         const grouped = Array.from(byUserMap.values()).map((g) => ({
             ...g,
@@ -72,7 +78,7 @@ export async function GET(req: NextRequest) {
             return 0
         })
 
-        return NextResponse.json({ success: true, data: { stories: grouped } })
+        return NextResponse.json({ success: true, data: { stories: grouped, viewer: viewerUser } })
     } catch (e) {
         console.error(e)
         return NextResponse.json({ error: 'Failed to fetch stories' }, { status: 500 })

@@ -351,7 +351,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     )
 }
 
-function StoryTray({ stories, viewerId }: { stories: StoryGroup[]; viewerId: string }) {
+function StoryTray({ stories, viewerId, viewerProfilePic }: { stories: StoryGroup[]; viewerId: string; viewerProfilePic?: string }) {
     const router = useRouter()
 
     const ownStory = stories.find(s => s.userId === viewerId)
@@ -364,9 +364,13 @@ function StoryTray({ stories, viewerId }: { stories: StoryGroup[]; viewerId: str
                 style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: 0, minWidth: '72px' }}>
                 <div style={{ position: 'relative', width: 62, height: 62 }}>
                     <div className={ownStory ? 'story-ring' : ''} style={{ width: 62, height: 62, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem', border: '2px solid #fff' }}>
-                            {'Y'}
-                        </div>
+                        {(ownStory?.user?.profilePic || viewerProfilePic) ? (
+                            <img src={ownStory?.user?.profilePic || viewerProfilePic} alt="You" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff' }} />
+                        ) : (
+                            <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem', border: '2px solid #fff' }}>
+                                You
+                            </div>
+                        )}
                     </div>
                     {!ownStory && (
                         <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: '50%', background: SOCIAL.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 800, border: '2px solid #fff', lineHeight: 1 }}>
@@ -386,9 +390,13 @@ function StoryTray({ stories, viewerId }: { stories: StoryGroup[]; viewerId: str
                     <button key={g.userId} onClick={() => router.push(`/agrisocial/stories/${g.userId}`)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', padding: 0, minWidth: '72px' }}>
                         <div className={g.hasUnviewed ? 'story-ring' : 'story-ring story-ring--viewed'} style={{ width: 62, height: 62, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem', border: '2px solid #fff' }}>
-                                {name[0]?.toUpperCase()}
-                            </div>
+                            {g.user?.profilePic ? (
+                                <img src={g.user.profilePic} alt={name} style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff' }} />
+                            ) : (
+                                <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem', border: '2px solid #fff' }}>
+                                    {name[0]?.toUpperCase()}
+                                </div>
+                            )}
                         </div>
                         <span style={{ color: SOCIAL.textSecondary, fontSize: '0.72rem', fontWeight: 600, maxWidth: '70px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {name.split(' ')[0]}
@@ -452,6 +460,7 @@ function SuggestedSidebar({ users, viewerId }: { users: SuggestedUser[]; viewerI
 export default function AgriSocialFeed() {
     const [posts, setPosts] = useState<Post[]>([])
     const [stories, setStories] = useState<StoryGroup[]>([])
+    const [viewerProfilePic, setViewerProfilePic] = useState<string>('')
     const [suggested, setSuggested] = useState<SuggestedUser[]>([])
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
@@ -497,6 +506,7 @@ export default function AgriSocialFeed() {
             if (res.ok) {
                 const d = await res.json()
                 setStories(d.data?.stories || d.stories || [])
+                if (d.data?.viewer?.profilePic) setViewerProfilePic(d.data.viewer.profilePic)
             }
         } catch {}
     }, [userId])
@@ -611,7 +621,7 @@ export default function AgriSocialFeed() {
                 {/* Main column */}
                 <div style={{ minWidth: 0, maxWidth: '600px', margin: '0 auto', width: '100%' }}>
                     {/* Stories tray */}
-                    <StoryTray stories={stories} viewerId={userId} />
+                    <StoryTray stories={stories} viewerId={userId} viewerProfilePic={viewerProfilePic} />
 
                     {/* Feed mode tabs (Instagram-style: Following / Favourites / Latest) */}
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto' }} className="no-scrollbar">
