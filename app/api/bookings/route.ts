@@ -104,11 +104,21 @@ export async function POST(request: NextRequest) {
     // Compute total quantity + freight
     const commodities = body.commodities.map((c: any) => ({
       listingId: c.listingId || undefined,
-      name: String(c.name || '').slice(100),
+      name: String(c.name || '').slice(0, 100),
       quantity: Number(c.quantity) || 0,
       numberOfBags: Number(c.numberOfBags) || 0,
       pricePerUnit: Number(c.pricePerUnit) || 0,
     }))
+    // Guard: if any commodity is missing a name or has zero quantity, return
+    // a clear validation error instead of letting Mongoose throw a cryptic one.
+    const missingName = commodities.find((c: any) => !c.name || c.name.trim() === '')
+    if (missingName) {
+      return validationError('Each commodity needs a name', [{ field: 'commodities', message: 'Commodity name is missing' }])
+    }
+    const zeroQty = commodities.find((c: any) => !c.quantity || c.quantity <= 0)
+    if (zeroQty) {
+      return validationError(`Quantity is required for ${zeroQty.name}`, [{ field: 'commodities', message: `${zeroQty.name}: quantity must be greater than 0` }])
+    }
     const totalQuantity = commodities.reduce((s: number, c: any) => s + (c.quantity || 0), 0)
     const estimatedDistance = body.estimatedDistance ? Number(body.estimatedDistance) : undefined
 
