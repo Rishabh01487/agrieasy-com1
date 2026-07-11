@@ -57,7 +57,25 @@ export default function AgriSocialNotifications() {
         setLoading(false)
     }, [])
 
-    useEffect(() => { fetchNotifications() }, [fetchNotifications])
+    useEffect(() => {
+        fetchNotifications()
+    }, [fetchNotifications])
+
+    const unreadCount = notifications.filter(n => !n.isRead).length
+
+    useEffect(() => {
+        if (notifications.length > 0 && unreadCount > 0) {
+            const timer = setTimeout(() => {
+                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+                authFetch('/api/social/notifications/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}',
+                }).catch(() => {})
+            }, 1500)
+            return () => clearTimeout(timer)
+        }
+    }, [notifications.length, unreadCount])
 
     const markAllRead = async () => {
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
@@ -65,8 +83,6 @@ export default function AgriSocialNotifications() {
             await authFetch('/api/social/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
         } catch {}
     }
-
-    const unreadCount = notifications.filter(n => !n.isRead).length
 
     const filtered = notifications.filter(n => {
         if (filter === 'follows') return n.type === 'follow'
