@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server'
 
 const SECURITY_HEADERS: Record<string, string> = {
@@ -41,4 +40,53 @@ function applyCors(request: NextRequest, response: NextResponse) {
   }
 
   return response
+}
+
+function generateRequestId(): string {
+  const timestamp = Date.now().toString(36)
+  const random = Math.random().toString(36).substring(2, 10)
+  return `${timestamp}-${random}`
+}
+
+export function middleware(request: NextRequest) {
+  const start = performance.now()
+  const requestId = request.headers.get('x-request-id') || generateRequestId()
+  const url = request.nextUrl
+
+  const response = NextResponse.next()
+
+  response.headers.set('X-Request-Id', requestId)
+
+  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
+    response.headers.set(key, value)
+  }
+
+  applyCors(request, response)
+
+  const isStatic = url.pathname.startsWith('/_next') ||
+    url.pathname.startsWith('/icons/') ||
+    url.pathname === '/favicon.ico'
+
+  if (!isStatic) {
+    const duration = performance.now() - start
+    console.log(
+      JSON.stringify({
+        level: 'info',
+        msg: 'request',
+        method: request.method,
+        path: url.pathname,
+        requestId,
+        userAgent: request.headers.get('user-agent') || '',
+        ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown',
+        duration: `${duration.toFixed(2)}ms`,
+      })
+    )
+  }
+
+  return response
+}
+
+// eslint-disable-next-line no-redeclare
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|icons/|favicon.ico).*)'],
 }
