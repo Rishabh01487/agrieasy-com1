@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { FARMER, SHARED, cardStyle, navStyle } from '@/lib/styles'
+import { DashboardSkeleton } from '@/app/components/DashboardSkeleton'
 
 interface Listing {
   _id: string
@@ -137,14 +138,22 @@ export default function FarmerDashboard() {
 
   if (checkingLocation) {
     return (
-      <div style={{ minHeight: '100vh', background: FARMER.bg, fontFamily: SHARED.font, display: 'flex', alignItems: 'center', justifyContent: 'center', color: FARMER.primary, fontWeight: 700 }}>
-        Loading your workspace…
-      </div>
+      <DashboardSkeleton
+        role="farmer"
+        primary={FARMER.primary}
+        primaryLight={FARMER.primaryLight}
+        bg={FARMER.bg}
+        bgSub={FARMER.bgSub}
+        border={FARMER.border}
+        text={FARMER.text}
+        muted={FARMER.muted}
+        gradient={FARMER.gradient}
+      />
     )
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: FARMER.bg, fontFamily: SHARED.font, color: FARMER.text }}>
+    <div className="dashboard-content" style={{ minHeight: '100vh', background: FARMER.bg, fontFamily: SHARED.font, color: FARMER.text }}>
       {/* Nav */}
       <nav style={{ ...navStyle(FARMER), background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

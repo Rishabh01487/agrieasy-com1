@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { BUYER, SHARED, cardStyle, navStyle } from '@/lib/styles'
+import { DashboardSkeleton } from '@/app/components/DashboardSkeleton'
 
 interface Listing {
   _id: string
@@ -134,8 +135,24 @@ export default function BuyerDashboard() {
   const totalDemandQty = listings.reduce((s, l) => s + (l.quantity || 0), 0)
   const avgPrice = listings.length > 0 ? Math.round(listings.reduce((s, l) => s + l.pricePerUnit, 0) / listings.length) : 0
 
+  if (loading) {
+    return (
+      <DashboardSkeleton
+        role="buyer"
+        primary={BUYER.primary}
+        primaryLight={BUYER.primaryLight}
+        bg={BUYER.bg}
+        bgSub={BUYER.bgSub}
+        border={BUYER.border}
+        text={BUYER.text}
+        muted={BUYER.muted}
+        gradient={BUYER.gradient}
+      />
+    )
+  }
+
   return (
-    <div style={{ minHeight: '100vh', background: BUYER.bg, fontFamily: SHARED.font, color: BUYER.text }}>
+    <div className="dashboard-content" style={{ minHeight: '100vh', background: BUYER.bg, fontFamily: SHARED.font, color: BUYER.text }}>
       {/* Nav */}
       <nav style={{ ...navStyle(BUYER), background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

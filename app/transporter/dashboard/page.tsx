@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { TRANSPORTER, SHARED, cardStyle, navStyle, getStatusStyle } from '@/lib/styles'
+import { DashboardSkeleton } from '@/app/components/DashboardSkeleton'
 
 interface Vehicle {
   _id: string
@@ -101,8 +102,24 @@ export default function TransporterDashboard() {
     transition: 'all 0.2s ease',
   }
 
+  if (loading) {
+    return (
+      <DashboardSkeleton
+        role="transporter"
+        primary={TRANSPORTER.primary}
+        primaryLight={TRANSPORTER.primaryLight}
+        bg={TRANSPORTER.bg}
+        bgSub={TRANSPORTER.bgSub}
+        border={TRANSPORTER.border}
+        text={TRANSPORTER.text}
+        muted={TRANSPORTER.muted}
+        gradient={TRANSPORTER.gradient}
+      />
+    )
+  }
+
   return (
-    <div style={{ minHeight: '100vh', background: TRANSPORTER.bg, fontFamily: SHARED.font, color: TRANSPORTER.text }}>
+    <div className="dashboard-content" style={{ minHeight: '100vh', background: TRANSPORTER.bg, fontFamily: SHARED.font, color: TRANSPORTER.text }}>
       <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

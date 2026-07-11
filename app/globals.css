@@ -188,6 +188,15 @@ img {
   animation: feedFadeIn 0.35s ease-out forwards;
 }
 
+/* ── Dashboard content fade-in (when skeleton is replaced by real data) ── */
+@keyframes dashboardFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.dashboard-content {
+  animation: dashboardFadeIn 0.3s ease-out forwards;
+}
+
 /* ── Skeleton shimmer for loading states ── */
 @keyframes shimmer {
   0% { background-position: -200% 0; }
