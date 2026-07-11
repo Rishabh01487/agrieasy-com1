@@ -37,16 +37,44 @@ export async function POST(req: NextRequest) {
             },
         })
 
-        // If a bookingId is provided, also update the booking's live tracking
+        // If a bookingId is provided, also update the booking's live tracking.
+        // The driver is either:
+        //   - the transporter (when booking.transporterId matches), OR
+        //   - the buyer's own driver (when booking.buyerVehicleId is set and
+        //     the buyer owns that vehicle)
         if (body.bookingId) {
             const booking = await Booking.findById(body.bookingId)
-            if (booking && booking.transporterId?.toString() === auth.user.userId) {
-                booking.driverLocation = {
-                    latitude: body.latitude,
-                    longitude: body.longitude,
-                    updatedAt: new Date(),
+            if (booking) {
+                const isTransporter = booking.transporterId?.toString() === auth.user.userId
+                let isBuyerVehicleOwner = false
+                if (booking.buyerVehicleId) {
+                    const BuyerVehicle = (await import('@/lib/models/BuyerVehicle')).default
+                    const bv = await BuyerVehicle.findById(booking.buyerVehicleId).lean()
+                    if (bv && bv.buyerId.toString() === auth.user.userId) {
+                        isBuyerVehicleOwner = true
+                    }
                 }
-                await booking.save()
+                if (isTransporter || isBuyerVehicleOwner) {
+                    booking.driverLocation = {
+                        latitude: body.latitude,
+                        longitude: body.longitude,
+                        updatedAt: new Date(),
+                    }
+                    // Also push to tracking history
+                    if (!Array.isArray(booking.trackingUpdates)) {
+                        ;(booking as any).trackingUpdates = []
+                    }
+                    booking.trackingUpdates.push({
+                        timestamp: new Date(),
+                        location: { latitude: body.latitude, longitude: body.longitude },
+                        status: booking.status,
+                    })
+                    // Cap history at 100 entries to avoid unbounded growth
+                    if (booking.trackingUpdates.length > 100) {
+                        booking.trackingUpdates = booking.trackingUpdates.slice(-100)
+                    }
+                    await booking.save()
+                }
             }
         }
 
@@ -73,26 +101,43 @@ export async function GET(req: NextRequest) {
         if (bookingId) {
             // Return all 3 parties' locations for a booking
             const booking = await Booking.findById(bookingId)
-                .populate('farmerId', 'farmerName firmName role location')
-                .populate('buyerId', 'farmerName firmName role location')
-                .populate('transporterId', 'farmerName firmName role location')
+                .populate('farmerId', 'farmerName firmName role location phone')
+                .populate('buyerId', 'farmerName firmName role location phone')
+                .populate('transporterId', 'farmerName firmName transporterCompanyName role location phone')
+                .populate('vehicleId', 'vehicleType registrationNumber driverName driverPhone')
+                .populate('buyerVehicleId', 'vehicleType vehicleDisplayName registrationNumber driverName driverPhone')
                 .lean()
 
             if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
+
+            // Build a commodity summary that works for both new multi-commodity
+            // bookings and legacy single-commodity ones.
+            let commoditySummary = booking.commodity || ''
+            let totalQty = booking.quantity || 0
+            if (Array.isArray(booking.commodities) && booking.commodities.length > 0) {
+                commoditySummary = booking.commodities.map((c: any) => `${c.name} (${c.quantity} kg)`).join(' · ')
+                totalQty = booking.totalQuantity || booking.commodities.reduce((s: number, c: any) => s + (c.quantity || 0), 0)
+            }
 
             return NextResponse.json({
                 success: true,
                 booking: {
                     _id: booking._id,
                     status: booking.status,
-                    commodity: booking.commodity,
-                    quantity: booking.quantity,
+                    commodity: commoditySummary,
+                    commodities: booking.commodities || [],
+                    totalQuantity: totalQty,
+                    quantity: totalQty,  // legacy field
                     pickupLocation: booking.pickupLocation || '',
                     deliveryLocation: booking.deliveryLocation || '',
                     driverLocation: booking.driverLocation || null,
+                    trackingUpdates: (booking.trackingUpdates || []).slice(-20),  // last 20 pings
+                    estimatedArrivalTime: booking.estimatedArrivalTime || null,
                     farmer: booking.farmerId,
                     buyer: booking.buyerId,
                     transporter: booking.transporterId,
+                    vehicle: booking.vehicleId,
+                    buyerVehicle: booking.buyerVehicleId,
                 },
             })
         }

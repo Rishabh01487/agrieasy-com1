@@ -412,13 +412,21 @@ export default function TransporterBookings() {
                     </div>
                   )}
                   {b.status === 'in-transit' && (
-                    <button
-                      onClick={() => updateStatus(b._id, 'delivered')}
-                      disabled={acting === b._id}
-                      style={{ width: '100%', padding: '10px 16px', background: SHARED.success, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.86rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
-                    >
-                      📦 Mark Delivered at Buyer&apos;s Shop
-                    </button>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <Link
+                        href={`/transporter/tracking/${b._id}`}
+                        style={{ display: 'block', textAlign: 'center', padding: '11px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 14px rgba(37,99,235,0.25)' }}
+                      >
+                        📍 Open Live Map & Share Location
+                      </Link>
+                      <button
+                        onClick={() => updateStatus(b._id, 'delivered')}
+                        disabled={acting === b._id}
+                        style={{ width: '100%', padding: '10px 16px', background: SHARED.success, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.86rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer' }}
+                      >
+                        📦 Mark Delivered at Buyer&apos;s Shop
+                      </button>
+                    </div>
                   )}
                 </div>
               )
