@@ -407,3 +407,49 @@ button, nav a {
     user-select: text;
   }
 }
+
+/* ── Mobile UI component visibility helpers ──────────────────────── */
+
+/* Bottom tab bar — hidden on desktop, shown on mobile */
+.bottom-tab-bar {
+  display: none !important;
+}
+@media (max-width: 640px) {
+  .bottom-tab-bar {
+    display: flex !important;
+  }
+}
+
+/* Side menu trigger (☰) — hidden on desktop, shown on mobile */
+.side-menu-trigger {
+  display: none !important;
+}
+@media (max-width: 640px) {
+  .side-menu-trigger {
+    display: block !important;
+  }
+}
+
+/* Helper classes for showing/hiding elements by viewport */
+.hide-on-mobile {
+  /* visible by default on desktop */
+}
+.show-on-mobile-only {
+  display: none !important;
+}
+@media (max-width: 640px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+  .show-on-mobile-only {
+    display: block !important;
+  }
+}
+
+/* When the bottom tab bar is visible, add bottom padding to body so
+ * content near the bottom of long pages isn't hidden behind it. */
+@media (max-width: 640px) {
+  body {
+    padding-bottom: 64px;  /* matches BottomTabBar height + safe area */
+  }
+}
