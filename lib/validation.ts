@@ -123,9 +123,14 @@ export const registerSchema = z.object({
 export const createListingSchema = z.object({
   commodity: sanitizedString(z.string().min(2).max(100)),
   variety: optSanitizedString(z.string().max(100)),
-  quantity: z.number().positive('Quantity must be positive').max(100_000),
-  unit: z.enum(['kg', 'quintal', 'ton', 'bags']),
+  // Quantity optional — buyers can post a commodity with just price + date.
+  quantity: z.number().min(0).max(100_000).optional().default(0),
+  unit: z.enum(['kg', 'quintal', 'ton', 'bags']).optional().default('kg'),
   pricePerUnit: positiveAmountSchema,
+  // ISO date string — the date this price applies to. Optional, defaults to now.
+  priceDate: z.string().optional(),
+  // Optional Cloudinary URL of the commodity photo.
+  commodityPhoto: z.string().url().optional().or(z.literal('')),
   description: optSanitizedString(z.string().max(2000)),
   location: sanitizedString(z.string().min(2).max(200)),
   images: z.array(z.string().url()).max(10, 'Maximum 10 images allowed').optional().default([]),

@@ -4,9 +4,15 @@ const ListingSchema = new mongoose.Schema({
   buyerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   commodity: { type: String, required: true },
   variety: { type: String },
-  quantity: { type: Number, required: true },
+  // Quantity is optional — buyers use listings as a commodity price-list,
+  // not always as a fixed-quantity demand. Defaults to 0 when omitted.
+  quantity: { type: Number, default: 0 },
   unit: { type: String, default: 'kg' },
   pricePerUnit: { type: Number, required: true },
+  // The date this price applies to. Buyers can update it next day or anytime.
+  priceDate: { type: Date, default: Date.now },
+  // Optional photo of the commodity (e.g. produce sample / grade reference).
+  commodityPhoto: { type: String, default: '' },
   quality: { type: String },
   paymentConditions: { type: String },
   description: { type: String, maxlength: 2000 },

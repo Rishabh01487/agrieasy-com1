@@ -60,10 +60,18 @@ export async function PATCH(
       body.pricePerUnit = p.data
     }
 
-    const allowedFields = ['commodity', 'quantity', 'unit', 'pricePerUnit', 'quality', 'paymentConditions', 'firmLocation', 'location', 'isActive']
+    const allowedFields = ['commodity', 'quantity', 'unit', 'pricePerUnit', 'quality', 'paymentConditions', 'firmLocation', 'location', 'isActive', 'commodityPhoto', 'priceDate', 'description']
     const updateData: Record<string, unknown> = {}
     for (const field of allowedFields) {
       if (body[field] !== undefined) updateData[field] = body[field]
+    }
+    // Normalize priceDate if provided
+    if (updateData.priceDate) {
+      const d = new Date(updateData.priceDate as string)
+      if (isNaN(d.getTime())) {
+        return validationError('Invalid priceDate', [{ field: 'priceDate', message: 'Could not parse date' }])
+      }
+      updateData.priceDate = d
     }
     updateData.updatedAt = new Date()
 
