@@ -8,14 +8,12 @@ import { authFetch } from '@/lib/auth-fetch'
 import { BUYER, SHARED, inputStyle, labelStyle, cardStyle, navStyle } from '@/lib/styles'
 
 type FormData = {
-  commodity: string
   quantity?: number
   unit: string
   pricePerUnit: number
   priceDate: string
   quality?: string
   paymentConditions?: string
-  firmLocation: string
 }
 
 interface NominatimAddress {
@@ -29,7 +27,26 @@ interface NominatimResult {
   shortLabel?: string
 }
 
-const commodities = ['Wheat', 'Rice', 'Maize', 'Barley', 'Paddy', 'Oilseeds', 'Cotton', 'Sugarcane', 'Soybean', 'Onion', 'Potato', 'Tomato', 'Mustard', 'Gram', 'Tur Dal']
+const PRESET_COMMODITIES = [
+  { name: 'Wheat', icon: '🌾' },
+  { name: 'Rice', icon: '🍚' },
+  { name: 'Maize', icon: '🌽' },
+  { name: 'Barley', icon: '🌾' },
+  { name: 'Paddy', icon: '🌱' },
+  { name: 'Oilseeds', icon: '🌻' },
+  { name: 'Cotton', icon: '☁️' },
+  { name: 'Sugarcane', icon: '🎋' },
+  { name: 'Soybean', icon: '🫘' },
+  { name: 'Onion', icon: '🧅' },
+  { name: 'Potato', icon: '🥔' },
+  { name: 'Tomato', icon: '🍅' },
+  { name: 'Mustard', icon: '🌼' },
+  { name: 'Gram', icon: '🫘' },
+  { name: 'Tur Dal', icon: '🫘' },
+  { name: 'Vegetables', icon: '🥬' },
+  { name: 'Fruits', icon: '🍎' },
+  { name: 'Spices', icon: '🌶️' },
+]
 
 const inp = inputStyle(BUYER)
 const lbl = labelStyle(BUYER)
@@ -117,13 +134,170 @@ async function uploadToCloudinary(file: File): Promise<string> {
   return cld.secure_url as string
 }
 
+// Multi-select commodity picker — chip toggles for preset commodities,
+// plus an input to add a custom commodity on the fly.
+function CommodityPicker({
+  selected,
+  onChange,
+}: {
+  selected: string[]
+  onChange: (next: string[]) => void
+}) {
+  const [customInput, setCustomInput] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // Determine which preset chips to show vs. custom ones added by the buyer
+  const presetNames = new Set(PRESET_COMMODITIES.map(c => c.name.toLowerCase()))
+  const customSelected = selected.filter(c => !presetNames.has(c.toLowerCase()))
+  const presetSelected = new Set(
+    selected.filter(c => presetNames.has(c.toLowerCase())).map(c => c.toLowerCase())
+  )
+
+  const toggle = (name: string) => {
+    const lower = name.toLowerCase()
+    if (presetSelected.has(lower)) {
+      // Remove (case-insensitive match)
+      onChange(selected.filter(c => c.toLowerCase() !== lower))
+    } else {
+      onChange([...selected, name])
+    }
+  }
+
+  const addCustom = () => {
+    const v = customInput.trim()
+    if (!v) return
+    // Prevent duplicates (case-insensitive)
+    if (selected.some(c => c.toLowerCase() === v.toLowerCase())) {
+      setCustomInput('')
+      return
+    }
+    onChange([...selected, v])
+    setCustomInput('')
+    inputRef.current?.focus()
+  }
+
+  const removeCustom = (name: string) => {
+    onChange(selected.filter(c => c !== name))
+  }
+
+  return (
+    <div>
+      {/* Selected count badge */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <p style={{ margin: 0, color: BUYER.muted, fontSize: '0.78rem' }}>
+          Tap to select — you can pick multiple.
+        </p>
+        {selected.length > 0 && (
+          <span style={{ background: BUYER.primary, color: '#fff', fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 100 }}>
+            {selected.length} selected
+          </span>
+        )}
+      </div>
+
+      {/* Preset commodity chips */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {PRESET_COMMODITIES.map(c => {
+          const isSelected = presetSelected.has(c.name.toLowerCase())
+          return (
+            <button
+              key={c.name}
+              type="button"
+              onClick={() => toggle(c.name)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '7px 14px', borderRadius: 100,
+                background: isSelected ? BUYER.primary : `${BUYER.primary}10`,
+                color: isSelected ? '#fff' : BUYER.text,
+                border: `1.5px solid ${isSelected ? BUYER.primary : `${BUYER.primary}30`}`,
+                fontSize: '0.84rem', fontWeight: 700,
+                cursor: 'pointer', transition: 'all 0.15s ease',
+                fontFamily: SHARED.font,
+              }}
+            >
+              <span style={{ fontSize: '0.95rem' }}>{c.icon}</span>
+              {c.name}
+              {isSelected && <span style={{ marginLeft: 2 }}>✓</span>}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Custom-add input */}
+      <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={customInput}
+          onChange={e => setCustomInput(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              addCustom()
+            }
+          }}
+          placeholder="Add a commodity not in the list…"
+          style={{ ...inp, flex: 1 }}
+        />
+        <button
+          type="button"
+          onClick={addCustom}
+          disabled={!customInput.trim()}
+          style={{
+            padding: '0 18px', background: customInput.trim() ? BUYER.primary : BUYER.muted,
+            color: '#fff', border: 'none', borderRadius: 12,
+            fontSize: '0.86rem', fontWeight: 700, cursor: customInput.trim() ? 'pointer' : 'not-allowed',
+            transition: 'all 0.2s ease', flexShrink: 0,
+          }}
+        >
+          + Add
+        </button>
+      </div>
+
+      {/* Custom-added chips (removable) */}
+      {customSelected.length > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <p style={{ margin: '0 0 6px', color: BUYER.muted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            Your custom commodities
+          </p>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {customSelected.map(name => (
+              <span
+                key={name}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '5px 12px', borderRadius: 100,
+                  background: BUYER.primaryLight, color: BUYER.primary,
+                  border: `1px solid ${BUYER.border}`, fontSize: '0.82rem', fontWeight: 700,
+                }}
+              >
+                🌾 {name}
+                <button
+                  type="button"
+                  onClick={() => removeCustom(name)}
+                  style={{
+                    background: 'none', border: 'none', color: BUYER.muted,
+                    cursor: 'pointer', padding: 0, fontSize: '0.9rem', lineHeight: 1,
+                  }}
+                  aria-label={`Remove ${name}`}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function CreateListing() {
   const router = useRouter()
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormData>()
   const [loading, setLoading] = useState(false)
   const [firmLocation, setFirmLocation] = useState('')
   const [error, setError] = useState('')
-  // Commodity photo upload state
+  const [selectedCommodities, setSelectedCommodities] = useState<string[]>([])
   const [commodityPhoto, setCommodityPhoto] = useState('')
   const [uploading, setUploading] = useState(false)
   // Default priceDate to today (YYYY-MM-DD for the date input)
@@ -145,49 +319,80 @@ export default function CreateListing() {
   }
 
   const onSubmit = async (data: FormData) => {
-    setLoading(true)
     setError('')
-    if (!firmLocation.trim()) { setError('Please enter your firm location.'); setLoading(false); return }
-    try {
-      const res = await authFetch('/api/listings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          commodity: data.commodity,
-          unit: data.unit,
-          pricePerUnit: parseFloat(data.pricePerUnit.toString()),
-          quantity: data.quantity ? parseFloat(data.quantity.toString()) : 0,
-          priceDate: data.priceDate ? new Date(data.priceDate).toISOString() : new Date().toISOString(),
-          quality: data.quality || '',
-          paymentConditions: data.paymentConditions || '',
-          location: firmLocation,
-          commodityPhoto,
-        }),
-      })
-      if (!res.ok) {
-        let msg = 'Failed to create commodity listing'
-        try {
-          const json = await res.json()
-          const apiMsg = json?.error?.message || json?.error
-          if (Array.isArray(json?.error?.details) && json.error.details.length > 0) {
-            msg = json.error.details.map((d: any) => `${d.field}: ${d.message}`).join(' • ')
-          } else if (typeof apiMsg === 'string') {
-            msg = apiMsg
-          }
-        } catch { /* response not JSON */ }
-        setError(msg)
-        setLoading(false)
-        return
+    if (selectedCommodities.length === 0) {
+      setError('Please select at least one commodity.')
+      return
+    }
+    if (!firmLocation.trim()) {
+      setError('Please enter your firm location.')
+      return
+    }
+    setLoading(true)
+
+    const payload = {
+      unit: data.unit,
+      pricePerUnit: parseFloat(data.pricePerUnit.toString()),
+      quantity: data.quantity ? parseFloat(data.quantity.toString()) : 0,
+      priceDate: data.priceDate ? new Date(data.priceDate).toISOString() : new Date().toISOString(),
+      quality: data.quality || '',
+      paymentConditions: data.paymentConditions || '',
+      location: firmLocation,
+      commodityPhoto,
+    }
+
+    // Create one listing per selected commodity. Run sequentially so a 429
+    // (rate-limit) on the POST route doesn't kill the whole batch — partial
+    // success is better than all-or-nothing.
+    const failed: string[] = []
+    for (const commodity of selectedCommodities) {
+      try {
+        const res = await authFetch('/api/listings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, commodity }),
+        })
+        if (!res.ok) {
+          let msg = `Failed to add ${commodity}`
+          try {
+            const json = await res.json()
+            const apiMsg = json?.error?.message || json?.error
+            if (Array.isArray(json?.error?.details) && json.error.details.length > 0) {
+              msg = `${commodity}: ${json.error.details.map((d: any) => d.message).join(', ')}`
+            } else if (typeof apiMsg === 'string') {
+              msg = `${commodity}: ${apiMsg}`
+            }
+          } catch { /* response not JSON */ }
+          failed.push(msg)
+        }
+      } catch {
+        failed.push(`${commodity}: network error`)
       }
-      router.push('/buyer/dashboard')
-    } catch (err) {
-      console.error('Error:', err)
-      setError('Network error. Please try again.')
-    } finally { setLoading(false) }
+    }
+
+    setLoading(false)
+
+    if (failed.length === selectedCommodities.length) {
+      // All failed — show errors, stay on page
+      setError(failed.join(' • '))
+      return
+    }
+    if (failed.length > 0) {
+      // Partial success — show which failed, but still redirect
+      // (the dashboard will reflect what did get created)
+      console.warn('Some commodities failed:', failed)
+    }
+    router.push('/buyer/dashboard')
   }
 
   // keep react-hook-form in sync with the date default
   useEffect(() => { setValue('priceDate', todayStr as unknown as never) }, [setValue, todayStr])
+
+  const submitLabel = selectedCommodities.length === 0
+    ? '✅ Add Commodity'
+    : selectedCommodities.length === 1
+      ? '✅ Add Commodity'
+      : `✅ Add ${selectedCommodities.length} Commodities`
 
   return (
     <div style={{ minHeight: '100vh', background: BUYER.bg, fontFamily: SHARED.font }}>
@@ -205,9 +410,9 @@ export default function CreateListing() {
 
       <div style={{ maxWidth: '720px', margin: '40px auto', padding: '0 24px' }}>
         <div style={{ ...cardStyle(BUYER), boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease' }}>
-          <h2 style={{ color: BUYER.textSecondary, fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px' }}>🌾 Add a Commodity</h2>
+          <h2 style={{ color: BUYER.textSecondary, fontWeight: 800, fontSize: '1.5rem', margin: '0 0 6px' }}>🌾 Add Commodities</h2>
           <p style={{ color: BUYER.muted, marginBottom: '28px', fontSize: '0.9rem' }}>
-            Add a commodity you buy at your shop. Set today&apos;s price — you can update it any time.
+            Pick one or more commodities you buy at your shop. Set today&apos;s price — you can update it any time.
           </p>
 
           {error && (
@@ -218,18 +423,8 @@ export default function CreateListing() {
 
           <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div>
-              <label style={lbl}>Commodity Type</label>
-              <input
-                type="text"
-                list="commodity-list"
-                {...register('commodity', { required: 'Please select or type a commodity' })}
-                placeholder="e.g., Wheat, Rice, Onion…"
-                style={inp}
-              />
-              <datalist id="commodity-list">
-                {commodities.map(c => <option key={c} value={c} />)}
-              </datalist>
-              {errors.commodity && <p style={{ color: SHARED.error, fontSize: '0.8rem', marginTop: '4px' }}>{errors.commodity.message}</p>}
+              <label style={lbl}>Commodities</label>
+              <CommodityPicker selected={selectedCommodities} onChange={setSelectedCommodities} />
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
@@ -314,7 +509,7 @@ export default function CreateListing() {
               border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, cursor: (loading || uploading) ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease',
             }}>
-              {loading ? 'Publishing…' : '✅ Add Commodity'}
+              {loading ? 'Publishing…' : submitLabel}
             </button>
           </form>
         </div>
