@@ -55,6 +55,10 @@ export default function RootLayout({
         <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
         <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png" />
         <link rel="icon" href="/icons/icon-192.png" />
+        <link rel="preconnect" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://res.cloudinary.com" />
+        <link rel="dns-prefetch" href="https://nominatim.openstreetmap.org" />
+        <link rel="dns-prefetch" href="https://*.tile.openstreetmap.org" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>

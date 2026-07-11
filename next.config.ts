@@ -7,20 +7,18 @@ dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
 const nextConfig: NextConfig = {
   devIndicators: false,
-  // ─── Performance & Scalability ──────────────────────────────
-  compress: true,                   // Gzip compression for all responses
-  poweredByHeader: false,           // Don't expose Next.js version in headers
+  compress: true,
+  poweredByHeader: false,
 
-  // ─── Image Optimization ─────────────────────────────────────
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400,         // Cache images for 24 hours
+    minimumCacheTTL: 86400,
     remotePatterns: [
-      { protocol: 'https', hostname: 'lh3.googleusercontent.com' }, // Google profile pics
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
     ],
   },
 
-  // ─── HTTP Headers (Security + Performance) ───────────────────
   async headers() {
     return [
       {
@@ -41,13 +39,20 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
       },
       {
+        source: '/sw.js',
+        headers: [{ key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' }],
+      },
+      {
+        source: '/_next/static/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
         source: '/.well-known/assetlinks.json',
         headers: [{ key: 'Content-Type', value: 'application/json' }],
       },
     ];
   },
 
-  // ─── Redirects ───────────────────────────────────────────────
   async redirects() {
     return [
       {
@@ -60,6 +65,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-// Force fresh deployment - 2026-07-08T01:54:55Z
-// Trigger fresh deploy 2026-07-11T05:30:13Z
