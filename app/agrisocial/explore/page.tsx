@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { useIsMobile } from '@/lib/use-is-mobile'
 
 const CATEGORIES = [
     { key: 'all', label: 'All', icon: '🌐' }, { key: 'farming', label: 'Farming', icon: '🌾' },
@@ -39,6 +40,7 @@ function AgriSocialExploreInner() {
     const [category, setCategory] = useState('all')
     const [typeFilter, setTypeFilter] = useState('all')
     const [tag, setTag] = useState(initialTag || '')
+    const isMobile = useIsMobile()
 
     const loadPage = async (pageNum: number, append: boolean) => {
         try {
@@ -124,7 +126,7 @@ function AgriSocialExploreInner() {
 
                 {/* Grid */}
                 {loading ? (
-                    <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 2 : 4 }}>
                         {[...Array(9)].map((_, i) => <div key={i} style={{ aspectRatio: '1', background: SOCIAL.bgSub, borderRadius: 4 }} />)}
                     </div>
                 ) : posts.length === 0 ? (
@@ -135,7 +137,7 @@ function AgriSocialExploreInner() {
                     </div>
                 ) : (
                     <>
-                    <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 2 : 4 }}>
                         {posts.map((p, idx) => {
                             const authorName = typeof p.userId === 'object' ? (p.userId.farmerName || p.userId.firmName || 'User') : 'User'
                             const isLarge = idx % 7 === 6

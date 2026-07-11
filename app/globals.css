@@ -151,9 +151,11 @@ input[type="file"] { display: none; }
 /* ── AgriSocial: fix sticky nav getting covered by notch/status bar ── */
 /* React outputs inline styles as position:sticky (no quotes, no space after colon) */
 @media (max-width: 640px) {
-  nav[style*="sticky"],
-  nav[style*="position:sticky"] {
+  nav[style*="sticky"] {
     top: env(safe-area-inset-top, 0px) !important;
+    padding-top: env(safe-area-inset-top, 0px) !important;
+    min-height: 56px !important;
+    height: auto !important;
   }
 }
 
