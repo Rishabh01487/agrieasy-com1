@@ -20,14 +20,6 @@ interface SideMenuProps {
   header?: React.ReactNode
 }
 
-/**
- * Hamburger side drawer for secondary navigation. Triggered by a ☰ button
- * (rendered by the parent). Slides in from the left with a backdrop overlay.
- *
- * On mobile, the top nav bar shows only ☰ + the page title — everything else
- * lives in this drawer. On desktop, this drawer is hidden (the full nav bar
- * is shown instead).
- */
 export default function SideMenu({ items = [], header }: SideMenuProps) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
@@ -40,12 +32,10 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
     setUserEmail(userEmail || '')
   }, [])
 
-  // Close on route change
   useEffect(() => {
     setOpen(false)
   }, [pathname])
 
-  // Close on Escape key
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent) => {
@@ -55,7 +45,6 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [open])
 
-  // Lock body scroll when open
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden'
@@ -63,7 +52,6 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
     }
   }, [open])
 
-  // Build the standard menu based on role
   const standardItems: SideMenuItem[] = role === 'farmer' ? [
     { icon: '🏠', label: 'Dashboard', href: '/farmer/dashboard' },
     { icon: '🔍', label: 'Search Buyers', href: '/farmer/search-buyers' },
@@ -88,7 +76,6 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
 
   const allItems = [...standardItems, ...items]
 
-  // Shared items (always shown at the bottom)
   const sharedItems: SideMenuItem[] = [
     { icon: '📱', label: 'AgriSocial', href: '/agrisocial' },
     { icon: '💳', label: 'AgriPay Wallet', href: '/agripay' },

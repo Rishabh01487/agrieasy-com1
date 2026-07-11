@@ -51,7 +51,6 @@ export default function TransactionHistory() {
                 const d = await res.json()
                 const list: Transaction[] = d?.data?.transactions || d?.transactions || []
                 setTxns(list)
-                // Calculate totals
                 let credits = 0, debits = 0
                 list.forEach(t => {
                     if (t.type === 'send' || t.type === 'bill_pay' || t.type === 'paylater_repay') debits += t.amount

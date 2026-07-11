@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 import dns from "dns";
 
-// Force Google DNS globally — fixes ISP-level MongoDB SRV blocking
 dns.setDefaultResultOrder("ipv4first");
 dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
@@ -33,7 +32,6 @@ const nextConfig: NextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
         ],
       },
-      // Cache static assets aggressively
       {
         source: '/icons/(.*)',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
@@ -42,7 +40,6 @@ const nextConfig: NextConfig = {
         source: '/manifest.json',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
       },
-      // Support Play Store TWA asset links
       {
         source: '/.well-known/assetlinks.json',
         headers: [{ key: 'Content-Type', value: 'application/json' }],
@@ -53,7 +50,6 @@ const nextConfig: NextConfig = {
   // ─── Redirects ───────────────────────────────────────────────
   async redirects() {
     return [
-      // Redirect bare /dashboard to role-specific dashboards
       {
         source: '/dashboard',
         destination: '/auth/login',

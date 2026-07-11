@@ -35,11 +35,9 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         }
     }, [isActive, paused])
 
-    // Tap to pause/play, double-tap to like (Instagram Reels behavior)
     const handleVideoTap = () => {
         const now = Date.now()
         if (now - lastTapRef.current < 300) {
-            // Double tap → like
             if (!liked) {
                 setLiked(true)
                 setLikesCount(c => c + 1)
@@ -48,7 +46,6 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             setHeartBurst(true)
             setTimeout(() => setHeartBurst(false), 1000)
         } else {
-            // Single tap → toggle pause
             setPaused(p => !p)
         }
         lastTapRef.current = now
@@ -92,12 +89,10 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
 
     const handleShare = async () => {
         try {
-            // Track the share on the server (bumps sharedCount + rankScore)
             await authFetch(`/api/social/posts/${clip._id}/share`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
             }).catch(() => null)
         } catch {}
-        // Copy the clip URL to clipboard
         const url = typeof window !== 'undefined' ? `${window.location.origin}/agrisocial/post/${clip._id}` : ''
         try {
             if (navigator.clipboard && url) {
@@ -275,7 +270,6 @@ export default function KrishiClips() {
         void loadClips(1, false)
     }, [category])
 
-    // Infinite scroll for clips
     useEffect(() => {
         const sentinel = sentinelRef.current
         const container = containerRef.current

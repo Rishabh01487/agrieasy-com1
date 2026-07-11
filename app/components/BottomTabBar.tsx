@@ -10,12 +10,9 @@ interface TabItem {
   icon: string
   label: string
   href: string
-  // Pattern to match against the current path to mark this tab as active
   match: string[]
 }
 
-// Role-specific tab configurations. Each role gets 5 tabs — the standard
-// native-app pattern (home, search, primary action, notifications/activity, profile).
 const TABS: Record<string, TabItem[]> = {
   farmer: [
     { icon: '🏠', label: 'Home', href: '/farmer/dashboard', match: ['/farmer/dashboard'] },
@@ -40,11 +37,6 @@ const TABS: Record<string, TabItem[]> = {
   ],
 }
 
-/**
- * Mobile-only bottom tab bar — the standard native-app navigation pattern.
- * Hidden on desktop (>= 641px) via CSS. Sits above the iPhone home indicator
- * using env(safe-area-inset-bottom).
- */
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
   const router = useRouter()
@@ -55,7 +47,6 @@ export default function BottomTabBar() {
     setRole(userRole)
   }, [])
 
-  // Don't render on auth pages, admin, or if no role
   if (!role || !TABS[role]) return null
   if (pathname.startsWith('/auth/') || pathname.startsWith('/admin')) return null
 

@@ -21,14 +21,6 @@ interface OverflowMenuProps {
   align?: 'left' | 'right'
 }
 
-/**
- * Three-dots overflow menu — the standard native-app pattern for
- * secondary actions on a card or list item. Tap ⋮ → small dropdown
- * appears with action items. Closes on outside tap or Escape.
- *
- * On mobile, the dropdown becomes a BottomSheet (slides up from bottom)
- * for better thumb reachability.
- */
 export default function OverflowMenu({ items, trigger, align = 'right' }: OverflowMenuProps) {
   const [open, setOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -41,7 +33,6 @@ export default function OverflowMenu({ items, trigger, align = 'right' }: Overfl
     return () => window.removeEventListener('resize', check)
   }, [])
 
-  // Close on outside click
   useEffect(() => {
     if (!open) return
     const handler = (e: MouseEvent) => {

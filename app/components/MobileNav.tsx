@@ -21,18 +21,6 @@ interface MobileNavProps {
   accent?: string
 }
 
-/**
- * Responsive navigation wrapper:
- *
- * - Desktop (≥641px): renders a standard sticky top nav with the title on
- *   the left, right-actions on the right, optional ⋮ overflow.
- *
- * - Mobile (≤640px): renders a minimal top bar (☰ + title + ⋮) and a
- *   bottom tab bar (rendered separately by BottomTabBar in the layout).
- *   The ☰ opens a slide-in SideMenu drawer with all the nav links.
- *
- * Usage: wrap each dashboard / listing page's content in <MobileNav>.
- */
 export default function MobileNav({ title, backHref, rightActions, overflowItems, children, accent = '#2563eb' }: MobileNavProps) {
   return (
     <>

@@ -138,7 +138,6 @@ function AgriSocialExploreInner() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {posts.map((p, idx) => {
                             const authorName = typeof p.userId === 'object' ? (p.userId.farmerName || p.userId.firmName || 'User') : 'User'
-                            // Every 7th post is a large 2×2 tile (Instagram-style mixed grid)
                             const isLarge = idx % 7 === 6
                             return (
                                 <Link key={p._id} href={`/agrisocial/post/${p._id}`}

@@ -142,8 +142,6 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
 
     // Build a threaded comment view (top-level + their replies)
     // Sort top-level comments by relevance (Instagram-style):
-    // 1. Comments with more likes first
-    // 2. Then by recency (newer first)
     const topLevel = comments.filter(c => !c.parentId).sort((a, b) => {
         const aLikes = a.likesCount || 0
         const bLikes = b.likesCount || 0
@@ -264,14 +262,12 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                                                 {(c.likesCount || 0) > 0 && <span style={{ color: SOCIAL.muted, fontSize: '0.7rem' }}>❤️ {c.likesCount}</span>}
                                                 {viewerId && (
                                                     <button onClick={async () => {
-                                                        // Toggle comment like (optimistic)
                                                         const isLiked = c.likes?.includes(viewerId)
                                                         setComments(prev => prev.map(cm => cm._id === c._id ? {
                                                             ...cm,
                                                             likes: isLiked ? (cm.likes || []).filter(x => x !== viewerId) : [...(cm.likes || []), viewerId],
                                                             likesCount: isLiked ? Math.max(0, (cm.likesCount || 0) - 1) : (cm.likesCount || 0) + 1,
                                                         } : cm))
-                                                        // Note: comment like API would go here — for now we just update the UI
                                                     }} style={{ background: 'none', border: 'none', color: c.likes?.includes(viewerId) ? SOCIAL.red : SOCIAL.muted, fontSize: '0.7rem', fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 2 }}>
                                                         {c.likes?.includes(viewerId) ? '❤️' : '🤍'} Like
                                                     </button>
@@ -382,8 +378,6 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                         {post.likes && post.likes.length > 0 ? (
                             <div style={{ padding: '8px 0' }}>
                                 {post.likes.map((likeId, i) => {
-                                    // We don't have populated user data for each like,
-                                    // so show a generic entry with the user ID
                                     return (
                                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 20px' }}>
                                             <div style={{ width: 36, height: 36, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>U</div>

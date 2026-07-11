@@ -11,8 +11,6 @@ interface User { _id: string; farmerName?: string; firmName?: string; role?: str
 interface StoryItem { _id: string; mediaUrl: string; mediaType: string; caption?: string; duration?: number; viewed: boolean; likesCount?: number; viewedByCount?: number; createdAt: string }
 interface StoryGroup { userId: string; user: User; stories: StoryItem[]; hasUnviewed: boolean }
 
-// Build an Instagram-style @handle from a user's name.
-// "Rishabh Gupta" → "@rishabhgupta", "Test Firm Pvt Ltd" → "@testfirmpvtltd"
 function makeHandle(user: User): string {
     const name = user.farmerName || user.firmName || 'user'
     return '@' + name.toLowerCase().replace(/[^a-z0-9]/g, '')
@@ -57,8 +55,6 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
 
     const current = groups[gIdx]
     const story = current?.stories?.[sIdx]
-    // Use the actual video duration for video stories; fall back to the
-    // story.duration field (default 5s) for images.
     const durationSecs = (story?.mediaType === 'video' && videoDuration) ? videoDuration : (story?.duration || 5)
     const duration = durationSecs * 1000
 
@@ -68,21 +64,17 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
         authFetch(`/api/social/stories/${story._id}/view`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }).catch(() => null)
     }, [story?._id])
 
-    // Reset video duration when story changes
     useEffect(() => {
         setVideoDuration(null)
         setProgress(0)
     }, [story?._id])
 
-    // Auto-advance progress — syncs to video.currentTime for video stories
     useEffect(() => {
         if (!story || paused || ended) return
         setProgress(0)
         const start = Date.now()
 
         // For videos, prefer syncing to the video's currentTime so the
-        // progress bar matches the actual playback exactly (handles
-        // buffering, seeks, variable duration).
         const videoEl = videoRef.current
         if (story.mediaType === 'video' && videoEl) {
             const onTimeUpdate = () => {
@@ -108,7 +100,6 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
             }
         }
 
-        // For images, use a timer
         const tick = () => {
             const elapsed = Date.now() - start
             const pct = Math.min(100, (elapsed / duration) * 100)
@@ -134,7 +125,6 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
             setSIdx(0)
             setProgress(0)
         } else {
-            // All stories done — show end card instead of immediately leaving
             setEnded(true)
         }
     }
@@ -176,7 +166,6 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
     const handleLike = async () => {
         if (liked) return
         setLiked(true)
-        // Persist the like to the server
         if (story?._id) {
             try {
                 await authFetch(`/api/social/stories/${story._id}/like`, {
@@ -184,12 +173,9 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
                 })
             } catch {}
         }
-        // Visual feedback: heart stays "liked" (no auto-reset — Instagram keeps it liked)
     }
 
     // ── END CARD — Instagram-style "story ended" screen ───────────────
-    // After the last story completes, show the AgriSocial logo + the
-    // creator's @handle, with options to view profile or go back to feed.
     if (ended) {
         return (
             <div style={{
@@ -287,7 +273,6 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
         )
     }
 
-    // ── ACTIVE STORY VIEWER ───────────────────────────────────────────
     return (
         <div style={{ height: '100vh', background: '#000', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {/* Media */}
@@ -343,14 +328,12 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
                         }}
                     >
                         {muted ? (
-                            // Muted icon — speaker with X
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                                 <line x1="23" y1="9" x2="17" y2="15" />
                                 <line x1="17" y1="9" x2="23" y2="15" />
                             </svg>
                         ) : (
-                            // Unmuted icon — speaker with sound waves
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                                 <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
                                 <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />

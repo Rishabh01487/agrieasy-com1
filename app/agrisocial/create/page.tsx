@@ -33,7 +33,6 @@ function CreateContent() {
     const [postType, setPostType] = useState<'post' | 'krishiclip' | 'story'>(defaultPostType)
     const [mode, setMode] = useState<Mode>('choose')
     const [mediaFile, setMediaFile] = useState<MediaFile | null>(null)
-    // Carousel: multiple images for 'post' type (up to 10)
     const [carouselFiles, setCarouselFiles] = useState<MediaFile[]>([])
     const [carouselIdx, setCarouselIdx] = useState(0)
     const [selectedFilter, setSelectedFilter] = useState(0)
@@ -155,7 +154,6 @@ function CreateContent() {
         const files = e.target.files
         if (!files || files.length === 0) return
 
-        // For 'post' type with multiple images → carousel mode
         if (postType === 'post' && files.length > 1) {
             const newFiles: MediaFile[] = []
             for (let i = 0; i < Math.min(files.length, 10); i++) {
@@ -174,7 +172,6 @@ function CreateContent() {
             return
         }
 
-        // Single file (existing behavior)
         const file = files[0]
         let blob: Blob = file
         if (file.type.startsWith('image')) {
@@ -204,7 +201,6 @@ function CreateContent() {
         let mediaType = 'text'
         let allMediaUrls: string[] = []
 
-        // Determine which files to upload — carousel (multiple) or single
         const filesToUpload = carouselFiles.length > 0 ? carouselFiles : (mediaFile ? [mediaFile] : [])
 
         if (filesToUpload.length > 0 && filesToUpload.some(f => f.blob)) {
@@ -222,7 +218,6 @@ function CreateContent() {
                     return
                 }
 
-                // Upload each file to Cloudinary
                 for (const file of filesToUpload) {
                     if (!file.blob) continue
                     const resourceType = file.type === 'video' ? 'video' : 'image'
@@ -243,7 +238,6 @@ function CreateContent() {
                         return
                     }
                 }
-                // Set primary mediaUrl + mediaType from the first uploaded file
                 if (allMediaUrls.length > 0) {
                     mediaUrl = allMediaUrls[0]
                     mediaType = filesToUpload[0].type
@@ -256,8 +250,6 @@ function CreateContent() {
             }
         }
 
-        // ── Story creation ───────────────────────────────────────────
-        // Stories require media (image or video) and go to a separate API.
         if (postType === 'story') {
             if (!mediaUrl) {
                 setError('Stories require a photo or video. Upload one to continue.')
@@ -291,8 +283,6 @@ function CreateContent() {
             }
         }
 
-        // ── Post / KrishiClip creation ────────────────────────────────
-        // Extract hashtags from caption (Instagram-style: #word)
         const hashtags = (caption.match(/#(\w+)/g) || []).map(t => t.slice(1).toLowerCase())
 
         const res = await authFetch('/api/social/posts', {

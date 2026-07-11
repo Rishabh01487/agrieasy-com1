@@ -28,7 +28,6 @@ interface Message {
     messages: Message[]
 }
 
-// Helper: safely extract a string ID from a senderId that may be a populated User or a raw string.
 function senderIdOf(s: User | string): string {
     return typeof s === 'object' ? s._id : s
 }
@@ -100,7 +99,6 @@ function AgriSocialDMInner() {
         } catch {}
     }, [])
 
-    // Start a conversation with a specific user (from URL ?userId=)
     useEffect(() => {
         if (!targetUserId) return
         (async () => {
@@ -122,18 +120,14 @@ function AgriSocialDMInner() {
     useEffect(() => { fetchConversations() }, [fetchConversations])
     useEffect(() => { if (activeId) fetchActive(activeId) }, [activeId, fetchActive])
 
-    // Poll for new messages every 3s when chat is open (faster = more real-time feel)
-    // Also track previous message count to detect new messages
     const prevMsgCountRef = useRef(0)
     useEffect(() => {
         if (!activeId) return
         const i = setInterval(async () => {
             await fetchActive(activeId)
-            // Check for new messages from the other person (sound notification)
             if (active && active.messages) {
                 const newCount = active.messages.length
                 if (newCount > prevMsgCountRef.current && prevMsgCountRef.current > 0) {
-                    // New message arrived — play a subtle notification sound
                     try {
                         const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=')
                         audio.volume = 0.3
@@ -226,7 +220,6 @@ function AgriSocialDMInner() {
                             return (
                                 <button key={c._id} onClick={async () => {
                                     setActiveId(c._id)
-                                    // If in share mode, send the shared post/story link as a message
                                     if (shareMode) {
                                         const shareUrl = sharePostId
                                             ? `${window.location.origin}/agrisocial/post/${sharePostId}`
@@ -306,7 +299,6 @@ function AgriSocialDMInner() {
                                         <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6, flexDirection: isMine ? 'row-reverse' : 'row' }}>
                                             {!isMine && !prevSame ? <Avatar name={senderName} size={28} /> : <div style={{ width: 28 }} />}
                                             <div onDoubleClick={() => {
-                                                // Double-click to react with ❤️ (Instagram-style)
                                                 setMessageReactions(prev => ({ ...prev, [m._id]: prev[m._id] === '❤️' ? '' : '❤️' }))
                                             }} style={{ position: 'relative', maxWidth: '70%', background: isMine ? SOCIAL.gradient : SOCIAL.white, color: isMine ? '#fff' : SOCIAL.text, padding: '8px 14px', borderRadius: isMine ? '18px 18px 4px 18px' : '18px 18px 18px 4px', border: isMine ? 'none' : `1px solid ${SOCIAL.border}`, fontSize: '0.86rem', boxShadow: SHARED.shadow, cursor: 'pointer' }}>
                                                 {m.mediaUrl && m.mediaType === 'image' && (
@@ -349,7 +341,6 @@ function AgriSocialDMInner() {
                                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
                                         const file = e.target.files?.[0]
                                         if (!file || !activeId) return
-                                        // Compress + upload to Cloudinary
                                         try {
                                             const img = new Image()
                                             const url = URL.createObjectURL(file)
@@ -374,7 +365,6 @@ function AgriSocialDMInner() {
                                             const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
                                             const cld = await cldRes.json()
                                             if (cldRes.ok && cld.secure_url) {
-                                                // Send as a message with media
                                                 await authFetch('/api/social/dm/messages', {
                                                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                                                     body: JSON.stringify({ conversationId: activeId, text: '', mediaUrl: cld.secure_url, mediaType: 'image' }),

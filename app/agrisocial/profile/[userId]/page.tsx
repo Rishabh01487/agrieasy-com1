@@ -19,7 +19,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [tab, setTab] = useState<'posts' | 'clips' | 'saved'>('posts')
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [following, setFollowing] = useState(false)
-    // Edit profile modal state
     const [showEditModal, setShowEditModal] = useState(false)
     const [editBio, setEditBio] = useState('')
     const [editPic, setEditPic] = useState('')
@@ -27,7 +26,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [uploading, setUploading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [editError, setEditError] = useState('')
-    // Followers/following list modal state
     const [listModal, setListModal] = useState<'followers' | 'following' | null>(null)
     const [listUsers, setListUsers] = useState<any[]>([])
     const [listLoading, setListLoading] = useState(false)
@@ -44,7 +42,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 setFollowing(d.isFollowing)
             }
             setLoading(false)
-            // Fetch highlights
             try {
                 const hRes = await authFetch(`/api/social/highlights?userId=${profileId}`)
                 if (hRes.ok) {

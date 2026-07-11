@@ -7,12 +7,6 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-/**
- * PWA bootstrap component — registers the service worker and shows an
- * "Install App" banner when the browser fires beforeinstallprompt (Chrome/
- * Edge/Android) or when an iOS user is on Safari (we show tap-to-install
- * instructions instead, since iOS doesn't support beforeinstallprompt).
- */
 export default function PWABootstrap() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstall, setShowInstall] = useState(false)
@@ -20,7 +14,6 @@ export default function PWABootstrap() {
   const [installed, setInstalled] = useState(false)
 
   useEffect(() => {
-    // Already installed? Don't show the prompt.
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
       setInstalled(true)
       return
@@ -33,7 +26,6 @@ export default function PWABootstrap() {
       })
     }
 
-    // Capture the beforeinstallprompt event (Chrome/Edge/Android)
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
@@ -41,11 +33,9 @@ export default function PWABootstrap() {
     }
     window.addEventListener('beforeinstallprompt', handler)
 
-    // Detect iOS Safari (no beforeinstallprompt support — show instructions)
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
     const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent)
     if (isIOS && isSafari) {
-      // Wait 3s before showing so it doesn't fight with the page load
       const t = setTimeout(() => setShowIOSHint(true), 3000)
       return () => {
         clearTimeout(t)

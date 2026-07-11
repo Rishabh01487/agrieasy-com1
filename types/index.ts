@@ -1,7 +1,3 @@
-/**
- * Shared TypeScript interfaces used across the application.
- * These define the shape of Mongoose documents for use in API routes.
- */
 
 import { Types } from 'mongoose'
 

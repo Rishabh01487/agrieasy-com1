@@ -1,15 +1,3 @@
-/**
- * Middleware: security headers, CORS, request ID, request logging.
- *
- * Runs on every request.  Order matters:
- * 1. Inject X-Request-Id (or forward from upstream)
- * 2. Log request
- * 3. Apply CORS
- * 4. Apply security headers (HSTS, CSP, etc.)
- * 5. Let the request continue
- *
- * NOTE: Runs in Edge Runtime — no Node.js modules (crypto, fs, etc.)
- */
 
 import { NextRequest, NextResponse } from 'next/server'
 
@@ -38,7 +26,6 @@ function applyCors(request: NextRequest, response: NextResponse) {
   const corsRaw = process.env.CORS_ORIGINS || ''
   const allowedOrigins = corsRaw ? corsRaw.split(',').map(s => s.trim()).filter(Boolean) : []
 
-  // In development, allow all origins
   const isAllowed = isDev || allowedOrigins.length === 0 || allowedOrigins.includes(origin)
 
   if (isAllowed && origin) {
@@ -54,59 +41,4 @@ function applyCors(request: NextRequest, response: NextResponse) {
   }
 
   return response
-}
-
-/** Generate a pseudo-unique request ID without Node.js crypto (Edge-compatible) */
-function generateRequestId(): string {
-  const timestamp = Date.now().toString(36)
-  const random = Math.random().toString(36).substring(2, 10)
-  return `${timestamp}-${random}`
-}
-
-export function middleware(request: NextRequest) {
-  const start = performance.now()
-  const requestId = request.headers.get('x-request-id') || generateRequestId()
-  const url = request.nextUrl
-
-  const response = NextResponse.next()
-
-  // ── Request ID ──────────────────────────────────────────────────
-  response.headers.set('X-Request-Id', requestId)
-
-  // ── Security headers ────────────────────────────────────────────
-  for (const [key, value] of Object.entries(SECURITY_HEADERS)) {
-    response.headers.set(key, value)
-  }
-
-  // ── CORS ────────────────────────────────────────────────────────
-  applyCors(request, response)
-
-  // ── Request logging (non-static routes only) ───────────────────
-  const isStatic = url.pathname.startsWith('/_next') ||
-    url.pathname.startsWith('/icons/') ||
-    url.pathname === '/favicon.ico'
-
-  if (!isStatic) {
-    const duration = performance.now() - start
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        msg: 'request',
-        method: request.method,
-        path: url.pathname,
-        requestId,
-        userAgent: request.headers.get('user-agent') || '',
-        ip: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || 'unknown',
-        duration: `${duration.toFixed(2)}ms`,
-      })
-    )
-  }
-
-  return response
-}
-
-// Next.js requires this exact export name for middleware matcher config
-// eslint-disable-next-line no-redeclare
-export const config = {
-  matcher: ['/((?!_next/static|_next/image|icons/|favicon.ico).*)'],
 }

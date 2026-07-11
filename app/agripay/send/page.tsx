@@ -12,8 +12,6 @@ function SendMoneyContent() {
     const toParam = searchParams.get('to') || ''
 
     // Two completely separate flows:
-    // 'agripay' = wallet/paylater (needs AgriEasy user)
-    // 'upi' = direct UPI (anyone with a UPI ID)
     const [mode, setMode] = useState<'agripay' | 'upi'>('agripay')
 
     // AgriPay flow state
@@ -25,7 +23,6 @@ function SendMoneyContent() {
     const [error, setError] = useState('')
     const [paymentMethod, setPaymentMethod] = useState('wallet')
 
-    // UPI flow state — completely separate
     const [upiStep, setUpiStep] = useState<'enter' | 'pay' | 'success'>('enter')
     const [upiIdToPay, setUpiIdToPay] = useState('')
     const [upiRecipientName, setUpiRecipientName] = useState('')
@@ -38,7 +35,6 @@ function SendMoneyContent() {
         { key: 'paylater', label: 'PayLater', icon: '💰', desc: 'Borrowed credit • Repay later', color: '#059669' },
     ]
 
-    // ── AgriPay wallet/paylater transfer ──
     const handleAgripaySend = async () => {
         const amt = parseFloat(amount)
         if (!amt || amt < 1) { setError('Min ₹1'); return }
@@ -55,7 +51,6 @@ function SendMoneyContent() {
         } catch { setError('Network error') } finally { setLoading(false) }
     }
 
-    // ── UPI deep link generation ──
     const upiDeepLink = upiIdToPay && upiIdToPay.includes('@')
         ? `upi://pay?pa=${encodeURIComponent(upiIdToPay)}&pn=${encodeURIComponent(upiRecipientName || 'Recipient')}&am=${upiAmount}&tn=${encodeURIComponent(upiNote || 'AgriEasy Transfer')}&cu=INR`
         : ''
@@ -64,7 +59,6 @@ function SendMoneyContent() {
         ? `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiDeepLink)}`
         : ''
 
-    // ── Record UPI payment after user pays ──
     const handleUpiPaid = async () => {
         setLoading(true); setError('')
         try {

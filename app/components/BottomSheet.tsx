@@ -8,27 +8,12 @@ interface BottomSheetProps {
   onClose: () => void
   title?: string
   children: ReactNode
-  /** Height of the sheet: 'auto' fits content, 'tall' = 70vh, 'full' = 90vh */
   height?: 'auto' | 'tall' | 'full'
 }
 
-/**
- * Bottom sheet — slides up from the bottom of the screen. The standard
- * iOS/Android pattern for contextual actions (picking a payment method,
- * choosing a commodity, confirming a delete, etc.).
- *
- * Features:
- * - Drag handle bar at the top (visual indicator)
- * - Backdrop dim that closes on tap
- * - Escape key closes
- * - Body scroll lock while open
- * - Smooth slide-up animation
- * - Safe-area aware (sits above iPhone home indicator)
- */
 export default function BottomSheet({ open, onClose, title, children, height = 'auto' }: BottomSheetProps) {
   const [render, setRender] = useState(open)
 
-  // Keep mounted during the close animation
   useEffect(() => {
     if (open) setRender(true)
     else {

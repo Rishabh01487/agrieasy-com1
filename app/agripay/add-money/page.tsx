@@ -15,7 +15,6 @@ export default function AddMoney() {
     const [success, setSuccess] = useState(false)
     const [error, setError] = useState('')
 
-    // Load Razorpay checkout.js script once
     useEffect(() => {
         if (document.getElementById('razorpay-checkout-script')) return
         const script = document.createElement('script')
@@ -29,7 +28,6 @@ export default function AddMoney() {
         const amt = parseFloat(amount)
         if (!amt || amt < 1) { setError('Enter a valid amount (min ₹1)'); return }
 
-        // Check if Razorpay script loaded
         if (typeof window === 'undefined' || !(window as any).Razorpay) {
             setError('Payment gateway is loading. Please wait a moment and try again.')
             return
@@ -39,7 +37,6 @@ export default function AddMoney() {
         setError('')
 
         try {
-            // Step 1: Create a Razorpay order via our backend
             const orderRes = await authFetch('/api/agripay/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -55,7 +52,6 @@ export default function AddMoney() {
 
             const { orderId, razorpayKey, currency } = await orderRes.json()
 
-            // Step 2: Open Razorpay checkout modal
             const options = {
                 key: razorpayKey,
                 amount: Math.round(amt * 100), // Razorpay expects paise
@@ -64,7 +60,6 @@ export default function AddMoney() {
                 description: 'AgriPay Wallet Top-up',
                 order_id: orderId,
                 handler: async function (response: { razorpay_payment_id: string; razorpay_order_id: string; razorpay_signature: string }) {
-                    // Step 3: Verify payment on backend and credit wallet
                     try {
                         const verifyRes = await authFetch('/api/agripay/topup', {
                             method: 'POST',

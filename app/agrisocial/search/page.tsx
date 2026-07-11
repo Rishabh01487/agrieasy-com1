@@ -37,7 +37,6 @@ function AgriSocialSearchInner() {
     const runSearch = useCallback(async (q: string) => {
         if (!q.trim()) { setUsers([]); setHashtags([]); return }
         setLoading(true)
-        // Save to recent searches in localStorage
         try {
             const recents = JSON.parse(localStorage.getItem('agrisocial_recents') || '[]')
             const updated = [q, ...recents.filter((r: string) => r !== q)].slice(0, 8)

@@ -43,8 +43,6 @@ function timeAgo(iso: string) {
     return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-// Build an Instagram-style @handle from a name.
-// "Rishabh Gupta" → "@rishabhgupta"
 function makeHandle(name: string): string {
     return '@' + (name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')
 }
@@ -84,7 +82,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const authorId = isDeletedUser ? '' : post.userId._id
     const isOwner = viewerId && viewerId === authorId
 
-    // Carousel images: prefer mediaUrls (array); fallback to single mediaUrl
     const carouselImages = (post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls : (post.mediaUrl ? [post.mediaUrl] : []))
         .filter(u => u && (u.startsWith('http') || u.startsWith('/')))
 
@@ -97,7 +94,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         try { await authFetch('/api/social/like', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) }) } catch {}
     }
 
-    // Double-tap to like (Instagram signature interaction)
     const handleImageDoubleTap = () => {
         if (!viewerId) return
         if (!liked) {
@@ -344,7 +340,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
 function StoryTray({ stories, viewerId }: { stories: StoryGroup[]; viewerId: string }) {
     const router = useRouter()
 
-    // Find the viewer's own story group (if any)
     const ownStory = stories.find(s => s.userId === viewerId)
     const otherStories = stories.filter(s => s.userId !== viewerId)
 
@@ -531,7 +526,6 @@ export default function AgriSocialFeed() {
         fetchUnreadCounts()
     }, [fetchPosts, fetchStories, fetchSuggested, fetchUnreadCounts, userId, category, feed])
 
-    // Infinite scroll: load more posts when sentinel is visible
     const loadMore = useCallback(() => {
         if (loadingMore || !hasMore) return
         fetchPosts(userId, category, feed, pageRef.current + 1, true)
@@ -548,7 +542,6 @@ export default function AgriSocialFeed() {
         return () => observer.disconnect()
     }, [hasMore, loadingMore, loadMore])
 
-    // Refresh stories every 60s (they expire)
     useEffect(() => {
         const i = setInterval(() => { fetchStories(); fetchUnreadCounts() }, 60_000)
         return () => clearInterval(i)

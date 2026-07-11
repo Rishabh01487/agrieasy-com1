@@ -52,7 +52,6 @@ export default function AgriSocialNotifications() {
             if (res.ok) {
                 const d = await res.json()
                 setNotifications(d.data?.notifications || [])
-                // Don't auto-mark-read — let the user do it manually with the button
             }
         } catch {}
         setLoading(false)
@@ -61,7 +60,6 @@ export default function AgriSocialNotifications() {
     useEffect(() => { fetchNotifications() }, [fetchNotifications])
 
     const markAllRead = async () => {
-        // Optimistic: mark all as read locally
         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
         try {
             await authFetch('/api/social/notifications/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
@@ -76,7 +74,6 @@ export default function AgriSocialNotifications() {
         return true
     })
 
-    // Group like notifications by postId (Instagram-style: "X and N others liked your post")
     const groupedLikes: Record<string, { actors: Notification[]; latest: Notification }> = {}
     const standalone: Notification[] = []
     for (const n of filtered) {
@@ -94,7 +91,6 @@ export default function AgriSocialNotifications() {
             standalone.push(n)
         }
     }
-    // Merge grouped likes back as "virtual" notifications with a count
     const mergedNotifications = [
         ...Object.values(groupedLikes).map(g => ({
             ...g.latest,
