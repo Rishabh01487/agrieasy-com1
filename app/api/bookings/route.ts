@@ -4,21 +4,11 @@ import Booking from '@/lib/models/Booking'
 import Listing from '@/lib/models/Listing'
 import Vehicle from '@/lib/models/Vehicle'
 import BuyerVehicle from '@/lib/models/BuyerVehicle'
-import User from '@/lib/models/User'
-import Notification from '@/lib/models/Notification'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { parsePagination, paginationMeta, validationError, apiSuccess } from '@/lib/api-response'
 import { validateBody, createBookingSchema } from '@/lib/validation'
-
-async function notify(userId: string, actorId: string, type: 'booking_request' | 'booking_status', bookingId: string, text: string) {
-  try {
-    await Notification.create({ userId, actorId, type, bookingId, text, isRead: false })
-  } catch (err) {
-    console.warn('Notification creation failed (non-blocking):', err)
-  }
-}
 
 export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
@@ -34,11 +24,15 @@ export async function POST(request: NextRequest) {
 
     // Two flavors of booking:
     //  (a) legacy single-commodity  — must pass listingId + vehicleId + pickupLocation + quantity
+    //  (b) new multi-commodity      — must pass commodities[] + (vehicleId OR buyerVehicleId) +
+    //                                  pickupLocation + deliveryLocation + pickupDateTime
     const hasMultiCommodity = Array.isArray(body.commodities) && body.commodities.length > 0
     const buyerVehicleId = body.buyerVehicleId
     const vehicleId = body.vehicleId
 
     if (!hasMultiCommodity) {
+      // Legacy path — validate using the original createBookingSchema (which
+      // expects listingId + quantity + deliveryAddress)
       const v = validateBody(createBookingSchema, body)
       if (!v.success) return validationError('Validation failed', v.errors)
       const data = v.data
@@ -81,6 +75,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve the buyerId from the first commodity's listing (all commodities
+    // in a single booking must belong to the same buyer — the farmer is going
+    // to ONE buyer's shop, not many).
     const firstListingId = body.commodities[0].listingId
     let buyerId: string | undefined
     let primaryListingId: string | undefined
@@ -93,6 +89,7 @@ export async function POST(request: NextRequest) {
       buyerId = body.buyerId
     }
 
+    // Make sure all commodities belong to the same buyer (when they have listings)
     for (const c of body.commodities) {
       if (c.listingId) {
         const l = await Listing.findById(c.listingId).lean()
@@ -104,6 +101,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Compute total quantity + freight
     const commodities = body.commodities.map((c: any) => ({
       listingId: c.listingId || undefined,
       name: String(c.name || '').slice(0, 100),
@@ -111,6 +109,8 @@ export async function POST(request: NextRequest) {
       numberOfBags: Number(c.numberOfBags) || 0,
       pricePerUnit: Number(c.pricePerUnit) || 0,
     }))
+    // Guard: if any commodity is missing a name or has zero quantity, return
+    // a clear validation error instead of letting Mongoose throw a cryptic one.
     const missingName = commodities.find((c: any) => !c.name || c.name.trim() === '')
     if (missingName) {
       return validationError('Each commodity needs a name', [{ field: 'commodities', message: 'Commodity name is missing' }])
@@ -165,46 +165,6 @@ export async function POST(request: NextRequest) {
       request,
     })
 
-    if (buyerId) {
-      const farmer = await User.findById(auth.user.userId).lean()
-      const farmerName = farmer?.farmerName || farmer?.email || 'A farmer'
-      const commoditySummary = commodities.length === 1
-        ? `${commodities[0].name} (${commodities[0].quantity} kg)`
-        : `${commodities.length} commodities (${totalQuantity} kg total)`
-      await notify(
-        buyerId,
-        auth.user.userId,
-        'booking_request',
-        booking._id.toString(),
-        `${farmerName} wants to sell ${commoditySummary} to your shop. Pickup ${new Date(body.pickupDateTime || Date.now()).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}.`,
-      )
-
-      if (buyerVehicleId) {
-        await notify(
-          buyerId,
-          auth.user.userId,
-          'booking_request',
-          booking._id.toString(),
-          `🚚 ${farmerName} booked YOUR vehicle for this trip. Dispatch your driver to the pickup location at the scheduled time.`,
-        )
-      }
-    }
-
-    if (vehicleId) {
-      const v = await Vehicle.findById(vehicleId).lean()
-      if (v?.transporterId) {
-        const farmer = await User.findById(auth.user.userId).lean()
-        const farmerName = farmer?.farmerName || farmer?.email || 'A farmer'
-        await notify(
-          v.transporterId.toString(),
-          auth.user.userId,
-          'booking_request',
-          booking._id.toString(),
-          `🚚 ${farmerName} booked your ${v.vehicleType} (${v.registrationNumber}) for ${totalQuantity} kg. Pickup at ${body.pickupLocation}. Dispatch your driver ${v.driverName || ''} ${v.driverPhone ? `(${v.driverPhone})` : ''}.`,
-        )
-      }
-    }
-
     return apiSuccess({ booking }, undefined, 201)
   } catch (error: unknown) {
     console.error('Create booking error:', error)
@@ -223,38 +183,23 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const role = searchParams.get('role')
-    const status = searchParams.get('status')
 
-    // Build the query based on role:
-    //  - farmer       → bookings I created
-    let query: Record<string, unknown> = {}
-
-    if (role === 'buyer') {
-      query.buyerId = auth.user.userId
-    } else if (role === 'transporter') {
-      const myVehicles = await Vehicle.find({ transporterId: auth.user.userId }).lean().select('_id')
-      const myVehicleIds = myVehicles.map(v => v._id)
-      query = { vehicleId: { $in: myVehicleIds } }
-    } else {
-      query.farmerId = auth.user.userId
-    }
-
-    if (status) {
-      query.status = status
-    }
+    const query: { farmerId?: string; buyerId?: string } = {}
+    if (role === 'farmer') query.farmerId = auth.user.userId
+    else if (role === 'buyer') query.buyerId = auth.user.userId
+    else query.farmerId = auth.user.userId // default to farmer
 
     const { page, limit, skip } = parsePagination(searchParams, 100, 20)
     const total = await Booking.countDocuments(query)
     const bookings = await Booking.find(query)
-      .populate('farmerId', 'phone address farmerName email')
-      .populate('buyerId', 'firmName phone address')
+      .populate('farmerId', 'phone address farmerName')
+      .populate('buyerId', 'firmName phone')
       .populate('listingId')
       .populate('vehicleId')
       .populate('buyerVehicleId')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean()
 
     return NextResponse.json({ success: true, data: { bookings }, meta: paginationMeta(page, limit, total) })
   } catch (error) {
