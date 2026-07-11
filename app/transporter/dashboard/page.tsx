@@ -44,7 +44,6 @@ export default function TransporterDashboard() {
       setLoading(true)
       setError('')
       try {
-        // Fetch vehicles + pending + in-transit bookings in parallel
         const [vehiclesRes, pendingRes, inTransitRes] = await Promise.all([
           authFetch(`/api/vehicles?transporterId=${userId}`),
           authFetch('/api/bookings?role=transporter&status=pending&limit=100').catch(() => null),

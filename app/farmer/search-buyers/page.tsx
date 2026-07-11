@@ -69,7 +69,6 @@ export default function SearchBuyers() {
   const inp = inputStyle(FARMER)
   const lbl = labelStyle(FARMER)
 
-  // Fetch farmer profile first (we need his lat/lng)
   useEffect(() => {
     void (async () => {
       try {
@@ -115,8 +114,6 @@ export default function SearchBuyers() {
   }, [commodity, minPrice, maxPrice, quality, paymentConditions, sortBy, profile, radiusKm])
 
   useEffect(() => {
-    // Only fetch once we know whether the farmer has a location (so the first
-    // query includes the radius filter)
     if (profile === null) return
     void fetchListings()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -126,7 +123,6 @@ export default function SearchBuyers() {
   const handleClear = () => {
     setCommodity(''); setMinPrice(''); setMaxPrice('')
     setQuality(''); setPaymentConditions(''); setRadiusKm('50'); setSortBy('distance')
-    // refetch with cleared filters
     setTimeout(() => void fetchListings(), 0)
   }
 

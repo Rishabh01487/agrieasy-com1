@@ -79,7 +79,6 @@ export default function FarmerDashboard() {
     }
 
     const init = async () => {
-      // First — check if the farmer has set their location.
       try {
         const profileRes = await authFetch('/api/farmer/profile')
         if (profileRes.ok) {
@@ -88,7 +87,6 @@ export default function FarmerDashboard() {
           if (p) {
             setProfile(p)
             if (!p.hasSetupLocation || !p.location?.latitude) {
-              // First-time onboarding — send them to setup-location
               router.replace('/farmer/setup-location')
               return
             }
@@ -97,7 +95,6 @@ export default function FarmerDashboard() {
       } catch { /* ignore — proceed without profile */ }
       setCheckingLocation(false)
 
-      // Load listings near the farmer (50 km default radius)
       try {
         const p = profile
         const params = new URLSearchParams()
@@ -129,7 +126,6 @@ export default function FarmerDashboard() {
   const totalDemand = listings.reduce((s, l) => s + (l.quantity || 0), 0)
   const topPrice = listings.length > 0 ? Math.max(...listings.map(l => l.pricePerUnit)) : 0
 
-  // Group listings by commodity
   const byCommodity = listings.reduce<Record<string, { count: number; maxPrice: number }>>((acc, l) => {
     const c = l.commodity
     if (!acc[c]) acc[c] = { count: 0, maxPrice: 0 }

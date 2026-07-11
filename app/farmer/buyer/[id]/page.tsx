@@ -65,8 +65,6 @@ export default function BuyerListingDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Fetch all listings for this specific buyer (so the farmer can see
-  // everything the buyer buys and pick multiple commodities to sell)
   useEffect(() => {
     if (!buyerId) return
     const fetchAll = async () => {
@@ -79,7 +77,6 @@ export default function BuyerListingDetail() {
         const data = await res.json()
         const ls: Listing[] = data?.data?.listings || data?.listings || []
         setListings(ls)
-        // Pre-select the listing the farmer came from (if any)
         const initial = ls.map(l => ({
           listingId: l._id,
           name: l.commodity,
@@ -90,7 +87,6 @@ export default function BuyerListingDetail() {
           selected: initialListingId ? l._id === initialListingId : false,
         }))
         setSellItems(initial)
-        // Use the first listing to surface buyer info (firmName, address, etc.)
         if (ls.length > 0 && ls[0].buyerId) {
           setBuyer(ls[0].buyerId as unknown as Buyer)
         }
@@ -126,13 +122,11 @@ export default function BuyerListingDetail() {
       setError('Please select at least one commodity to sell.')
       return
     }
-    // Validate quantities
     const missing = selectedItems.find(i => !i.quantity || parseFloat(i.quantity) <= 0)
     if (missing) {
       setError(`Please enter quantity for ${missing.name}.`)
       return
     }
-    // Encode the selected commodities + buyer info into the URL and pass to book-vehicle
     const payload = {
       buyerId,
       buyerName: buyer?.firmName || '',
@@ -147,7 +141,6 @@ export default function BuyerListingDetail() {
       })),
       totalQuantityKg,
     }
-    // Use base64-encoded JSON in a single query param to keep URL short-ish
     const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
     router.push(`/farmer/book-vehicle?payload=${encoded}`)
   }

@@ -106,7 +106,6 @@ export default function FarmerSetupLocation() {
   const [usingGps, setUsingGps] = useState(false)
   const [gpsStatus, setGpsStatus] = useState('')
 
-  // Pre-fill if the farmer already has a saved location (so they can edit it later)
   useEffect(() => {
     const { userId } = getUserInfo()
     if (!userId) return
@@ -139,7 +138,6 @@ export default function FarmerSetupLocation() {
         setLat(latitude)
         setLng(longitude)
         setGpsStatus('Location captured! Reversing to address…')
-        // Reverse-geocode so the farmer sees a readable address too
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=en`,

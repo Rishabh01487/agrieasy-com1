@@ -78,8 +78,6 @@ function freightLabel(v: BuyerVehicle, distanceKm: number): { cost: number; labe
   return { cost, label: `₹${v.freightAmount}/km × ${distanceKm}km` }
 }
 
-// Returns a human-readable label for when a vehicle becomes available again.
-// Returns null if the vehicle is available immediately.
 function availableFromLabel(availableFrom?: string | null): { label: string; badge: string } | null {
   if (!availableFrom) return null
   const d = new Date(availableFrom)
@@ -120,7 +118,6 @@ function BookVehicleContent() {
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null)  // transporter vehicle
   const [selectedBuyerVehicleId, setSelectedBuyerVehicleId] = useState<string | null>(null)  // buyer vehicle
 
-  // Decode payload from URL
   useEffect(() => {
     const encoded = searchParams.get('payload')
     if (!encoded) {
@@ -138,7 +135,6 @@ function BookVehicleContent() {
     }
   }, [searchParams])
 
-  // Fetch farmer profile (for pickup location)
   useEffect(() => {
     void (async () => {
       try {
@@ -155,12 +151,10 @@ function BookVehicleContent() {
     })()
   }, [])
 
-  // Fetch both transporter vehicles and buyer's own vehicles in parallel
   useEffect(() => {
     if (!payload) return
     const fetchAll = async () => {
       try {
-        // Transporter vehicles — filter by capacity (total kg the farmer needs)
         const minCap = Math.ceil(payload.totalQuantityKg)
         const tvRes = await fetch(`/api/vehicles?minCapacity=${minCap}`)
         let tvs: Vehicle[] = []
@@ -193,7 +187,6 @@ function BookVehicleContent() {
   const totalValue = payload?.commodities.reduce((s, c) => s + (c.quantity * c.pricePerUnit), 0) || 0
   const distanceNum = parseFloat(estimatedDistance) || 0
 
-  // Compute freight cost for the selected vehicle
   const selectedVehicle = transporterVehicles.find(v => v._id === selectedVehicleId)
   const selectedBuyerVehicle = buyerVehicles.find(v => v._id === selectedBuyerVehicleId)
   const freightCost = useMemo(() => {

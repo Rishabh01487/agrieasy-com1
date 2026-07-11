@@ -59,7 +59,6 @@ export default function TransporterBookings() {
   const [filter, setFilter] = useState<string>('all')
   const [acting, setActing] = useState<string | null>(null)
   const [dispatchNote, setDispatchNote] = useState<Record<string, string>>({})
-  // Counter-offer state: per-booking date+time inputs
   const [counterOfferTime, setCounterOfferTime] = useState<Record<string, { date: string; time: string; note: string }>>({})
   const [showCounterOffer, setShowCounterOffer] = useState<string | null>(null)
 
@@ -318,7 +317,6 @@ export default function TransporterBookings() {
                             if (showCounterOffer === b._id) {
                               setShowCounterOffer(null)
                             } else {
-                              // Default counter-offer to 1 hour after the farmer's requested pickup
                               const baseTime = b.estimatedArrivalTime ? new Date(b.estimatedArrivalTime) : new Date()
                               baseTime.setHours(baseTime.getHours() + 1)
                               setCounterOfferTime(prev => ({

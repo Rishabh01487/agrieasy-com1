@@ -43,8 +43,6 @@ export default function AddVehicle() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok) {
-        // API returns { success: false, error: { code, message, details } }
-        // OR a flat { error: 'string' } for older routes. Handle both.
         const errObj = json?.error
         let msg = 'Failed to add vehicle'
         if (typeof errObj === 'string') {
@@ -59,8 +57,6 @@ export default function AddVehicle() {
         setLoading(false)
         return
       }
-      // Success — redirect to dashboard. The dashboard will re-fetch and
-      // show the newly added vehicle.
       router.push('/transporter/dashboard')
     } catch (err) {
       console.error('Error:', err)
@@ -117,7 +113,6 @@ export default function AddVehicle() {
                   {...register('registrationNumber', {
                     required: 'Registration number is required',
                     validate: v => {
-                      // Strip spaces/dashes and check length — same logic as server
                       const clean = v.toUpperCase().replace(/[\s-]/g, '')
                       if (!/^[A-Z0-9]{5,12}$/.test(clean)) {
                         return 'Enter a valid vehicle number (e.g. MH12AB1234, KA05ABC1234, BH22A1234)'
