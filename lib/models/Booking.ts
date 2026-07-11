@@ -39,6 +39,37 @@ const BookingSchema = new mongoose.Schema({
   driverNote: { type: String, maxlength: 500, default: '' },
   estimatedArrivalTime: { type: Date },
   actualArrivalTime: { type: Date },
+
+  // ── Driver counter-offer ─────────────────────────────────────────
+  // When the transporter/driver cannot make the farmer's requested pickup
+  // time, they can counter-offer an alternative. The farmer can accept or
+  // reject the counter-offer.
+  driverResponse: {
+    type: String,
+    enum: ['pending', 'accepted', 'counter-offered', 'rejected'],
+    default: 'pending',
+  },
+  driverOfferedTime: { type: Date },  // the alternative pickup time proposed by driver
+
+  // ── Payment on delivery ──────────────────────────────────────────
+  // After the commodity is weighed at the buyer's shop, the buyer enters
+  // the final bill (may differ from the agreed estimate). Then the buyer
+  // pays via AgriPay wallet / AgriPay UPI / direct UPI / netbanking / cash.
+  paymentStatus: {
+    type: String,
+    enum: ['unpaid', 'billed', 'pending', 'paid', 'failed'],
+    default: 'unpaid',
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['wallet', 'agripay-upi', 'direct-upi', 'netbanking', 'cash'],
+  },
+  billAmount: { type: Number, default: 0 },        // final amount entered by buyer after weighing
+  billNote: { type: String, maxlength: 500, default: '' },  // e.g. "Actual weight 495 kg"
+  paymentAmount: { type: Number, default: 0 },     // amount actually paid (may differ if partial)
+  paidAt: { type: Date },
+  paymentRef: { type: String, default: '' },       // wallet txn id / UPI ref / etc.
+
   // Live driver location for real-time tracking
   driverLocation: {
     latitude: Number,
