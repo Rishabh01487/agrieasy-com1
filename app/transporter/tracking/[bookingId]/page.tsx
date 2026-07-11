@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
 import { TRANSPORTER, SHARED, cardStyle, navStyle } from '@/lib/styles'
 
+// Load Leaflet CSS dynamically (avoids SSR issues)
 function loadLeafletCSS() {
   if (typeof document !== 'undefined' && !document.getElementById('leaflet-css')) {
     const link = document.createElement('link')
@@ -102,6 +103,7 @@ export default function TransporterTrackingPage() {
     setLoading(false)
   }
 
+  // Initialize/update map when booking data changes
   useEffect(() => {
     if (!booking || !leafletRef.current || !mapContainerRef.current) return
     const L = leafletRef.current
@@ -116,6 +118,7 @@ export default function TransporterTrackingPage() {
       setMap(m)
     }
 
+    // Clear existing markers + route line
     markers.forEach(mk => m.removeLayer(mk))
     if (routeLine) m.removeLayer(routeLine)
     const newMarkers: any[] = []
@@ -128,6 +131,7 @@ export default function TransporterTrackingPage() {
         iconAnchor: [20, 20],
       })
 
+    // Farmer location (pickup) — green
     if (booking.farmer?.location?.latitude) {
       const mk = L.marker(
         [booking.farmer.location.latitude, booking.farmer.location.longitude],
@@ -136,6 +140,7 @@ export default function TransporterTrackingPage() {
       newMarkers.push(mk)
     }
 
+    // Buyer location (delivery) — orange
     if (booking.buyer?.location?.latitude) {
       const mk = L.marker(
         [booking.buyer.location.latitude, booking.buyer.location.longitude],
@@ -144,35 +149,41 @@ export default function TransporterTrackingPage() {
       newMarkers.push(mk)
     }
 
+    // Driver/transporter LIVE location — blue
     if (booking.driverLocation?.latitude) {
       const mk = L.marker(
         [booking.driverLocation.latitude, booking.driverLocation.longitude],
-        { icon: makeIcon('🚛', '#31372B', 'YOU') }
+        { icon: makeIcon('🚛', '#2563eb', 'YOU') }
       ).addTo(m).bindPopup(`<b>Your vehicle (Live)</b><br/>Last update: ${new Date(booking.driverLocation.updatedAt).toLocaleTimeString('en-IN')}`)
       newMarkers.push(mk)
 
+      // Draw a polyline from current driver position → delivery location
       if (booking.buyer?.location?.latitude) {
         const line = L.polyline(
           [
             [booking.driverLocation.latitude, booking.driverLocation.longitude],
             [booking.buyer.location.latitude, booking.buyer.location.longitude],
           ],
-          { color: '#31372B', weight: 3, opacity: 0.6, dashArray: '8, 8' }
+          { color: '#2563eb', weight: 3, opacity: 0.6, dashArray: '8, 8' }
         ).addTo(m)
         setRouteLine(line)
       }
     }
 
+    // Also draw the tracking history as a faint trail
     if (Array.isArray(booking.trackingUpdates) && booking.trackingUpdates.length > 1) {
       const trail = L.polyline(
         booking.trackingUpdates.map((t: any) => [t.location.latitude, t.location.longitude]),
-        { color: '#31372B', weight: 2, opacity: 0.3 }
+        { color: '#3b82f6', weight: 2, opacity: 0.3 }
       ).addTo(m)
+      // Don't store as routeLine (it would be removed on next refresh);
+      // just let it accumulate — capped at 20 entries server-side.
       void trail
     }
 
     setMarkers(newMarkers)
 
+    // Fit bounds to show all markers
     if (newMarkers.length > 0) {
       const group = L.featureGroup(newMarkers)
       m.fitBounds(group.getBounds(), { padding: [50, 50] })
@@ -180,6 +191,7 @@ export default function TransporterTrackingPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking])
 
+  // Transporter: share their live location every 15s (when sharing is on)
   useEffect(() => {
     if (!sharing || !bookingId) return
 
@@ -202,6 +214,7 @@ export default function TransporterTrackingPage() {
               }),
             })
             setLastShared(new Date())
+            // Immediately refetch so the map updates
             void fetchBooking()
           } catch (err) {
             console.warn('Location update failed:', err)
