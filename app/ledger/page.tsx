@@ -59,7 +59,6 @@ export default function LedgerPage() {
     const [showAddModal, setShowAddModal] = useState(false)
     const [userRole, setUserRole] = useState('')
 
-    // Add entry form state
     const [entryType, setEntryType] = useState<'bill' | 'invoice' | 'earning' | 'expense'>('bill')
     const [counterpartyName, setCounterpartyName] = useState('')
     const [amount, setAmount] = useState('')

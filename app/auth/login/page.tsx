@@ -49,15 +49,12 @@ export default function Login() {
       })
       const json = await res.json()
       if (!res.ok) {
-        // API returns { success: false, error: { code, message } } — extract message
         const apiMsg = json?.error?.message || json?.error || json?.message
         setError(typeof apiMsg === 'string' ? apiMsg : 'Login failed. Please check your credentials.')
         setIsLoading(false)
         return
       }
       // API returns { success: true, data: { token, user: { id, email, phone, role } } }
-      // (apiSuccess wraps the payload in .data). Some legacy responses may not
-      // have the .data wrapper, so handle both shapes.
       const payload = json.data || json
       const user = payload.user
       const token = payload.token
@@ -66,15 +63,12 @@ export default function Login() {
         setIsLoading(false)
         return
       }
-      // Save user info to localStorage for API calls
       localStorage.setItem('userId', user.id)
       localStorage.setItem('userEmail', user.email)
       localStorage.setItem('userRole', user.role)
       localStorage.setItem('token', token)
       // Role-aware redirect — only farmer/buyer/transporter have a /dashboard
       // route. Admin goes to /admin. Driver goes to the transporter dashboard
-      // (drivers are managed by their transporter). Anything else falls back
-      // to home to avoid a 404.
       const dashboardPath =
         user.role === 'admin' ? '/admin' :
         user.role === 'farmer' ? '/farmer/dashboard' :

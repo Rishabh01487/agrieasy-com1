@@ -6,7 +6,6 @@ import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 
-// Load Leaflet CSS dynamically (avoids SSR issues)
 function loadLeafletCSS() {
     if (typeof document !== 'undefined' && !document.getElementById('leaflet-css')) {
         const link = document.createElement('link')
@@ -87,12 +86,10 @@ function TrackingInner() {
         setLoading(false)
     }
 
-    // Initialize/update map when booking data changes
     useEffect(() => {
         if (!booking || !leafletRef.current || !mapContainerRef.current) return
         const L = leafletRef.current
 
-        // Initialize map if not done yet
         let m = map
         if (!m) {
             m = L.map(mapContainerRef.current).setView([20.5937, 78.9629], 5) // India center
@@ -150,14 +147,12 @@ function TrackingInner() {
 
         setMarkers(newMarkers)
 
-        // Fit bounds to show all markers
         if (newMarkers.length > 0) {
             const group = L.featureGroup(newMarkers)
             m.fitBounds(group.getBounds(), { padding: [50, 50] })
         }
     }, [booking, map])
 
-    // Transporter: update their location every 15s
     useEffect(() => {
         if (userRole !== 'transporter' && userRole !== 'driver') return
         if (!bookingId) return

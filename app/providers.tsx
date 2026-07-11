@@ -6,8 +6,6 @@ import { Component, ReactNode } from 'react'
 // Wrap SessionProvider in an error boundary so that if next-auth ever
 // throws during render (e.g. misconfigured env vars, network error
 // fetching /api/auth/session), it doesn't take down the entire app —
-// we just render the children without a session context, and the
-// phone+password auth flow still works fine.
 class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
     constructor(props: { children: ReactNode }) {
         super(props)
@@ -21,8 +19,6 @@ class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasEr
     }
     render() {
         if (this.state.hasError) {
-            // Render children WITHOUT the SessionProvider wrapper — Google
-            // OAuth won't work, but the rest of the app will.
             return this.props.children
         }
         return <SessionProvider>{this.props.children}</SessionProvider>

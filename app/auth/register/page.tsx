@@ -50,7 +50,6 @@ function AddressAutocomplete({ value, onChange, placeholder }: { value: string; 
         { headers: { 'Accept-Language': 'en' } }
       )
       const data: NominatimResult[] = await res.json()
-      // Build short clean label: city/town/village, district, state, India
       const enriched = data.map(item => {
         const a = item.address || {}
         const parts = [
@@ -123,12 +122,9 @@ export default function Register() {
       })
       const json = await res.json()
       if (!res.ok) {
-        // API returns { success: false, error: { code, message, details } }
-        // details is an array of {field, message} for validation errors
         const apiMsg = json?.error?.message || json?.error || json?.message
         const details = json?.error?.details
         let errMsg = typeof apiMsg === 'string' ? apiMsg : 'Registration failed. Please try again.'
-        // If there are field-level validation details, show them
         if (Array.isArray(details) && details.length > 0) {
           errMsg = details.map((d: any) => `${d.field}: ${d.message}`).join(' • ')
         }
@@ -144,7 +140,6 @@ export default function Register() {
     }
   }
 
-  // Keep react-hook-form address in sync
   useEffect(() => { setValue('address', address) }, [address, setValue])
 
   const lbl = labelStyle({ text: AUTH.text, muted: AUTH.muted })

@@ -34,7 +34,6 @@ export const metadata: Metadata = {
   }
 };
 
-// Modern viewport config — enables proper mobile rendering + PWA install
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
