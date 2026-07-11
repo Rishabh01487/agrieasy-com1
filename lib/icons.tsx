@@ -2,15 +2,6 @@
 
 import React from 'react'
 
-/**
- * Sleek SVG icon set for AgriSocial — line-style, 24x24 viewBox, currentColor.
- * Inspired by Instagram/Lucide icon aesthetics: thin strokes, rounded caps,
- * minimal fill. No emojis.
- *
- * Usage:
- *   <Icon name="heart" size={24} color="#0f172a" />
- *   <Icon name="heart" size={24} color="#ef4444" filled />   // solid heart
- */
 
 export type IconName =
   | 'heart' | 'heart-filled'
@@ -55,7 +46,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Comment (speech bubble) ─────────────────────────────
     case 'comment':
       return (
         <svg {...common}>
@@ -63,7 +53,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Send / DM (paper plane) ─────────────────────────────
     case 'send':
       return (
         <svg {...common}>
@@ -72,7 +61,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Bookmark / Save ─────────────────────────────────────
     case 'bookmark':
     case 'bookmark-filled':
       return (
@@ -81,7 +69,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Share (outbound arrow) ───────────────────────────────
     case 'share':
       return (
         <svg {...common}>
@@ -91,7 +78,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Link (copy link) ────────────────────────────────────
     case 'link':
       return (
         <svg {...common}>
@@ -111,7 +97,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── More (three dots horizontal) ────────────────────────
     case 'more':
       return (
         <svg {...common}>
@@ -139,7 +124,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Explore (compass) ───────────────────────────────────
     case 'explore':
       return (
         <svg {...common}>
@@ -148,7 +132,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Reels (clapperboard) ────────────────────────────────
     case 'reels':
       return (
         <svg {...common}>
@@ -160,7 +143,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Heart nav (outline, for activity) ───────────────────
     case 'heart-nav':
       return (
         <svg {...common}>
@@ -168,7 +150,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── DM (paper plane, slightly different) ────────────────
     case 'dm':
       return (
         <svg {...common}>
@@ -177,7 +158,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Plus (create) ───────────────────────────────────────
     case 'plus':
       return (
         <svg {...common}>
@@ -215,7 +195,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Location pin ────────────────────────────────────────
     case 'location':
       return (
         <svg {...common}>
@@ -224,7 +203,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Chevron left ────────────────────────────────────────
     case 'chevron-left':
       return (
         <svg {...common}>
@@ -232,7 +210,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Chevron right ───────────────────────────────────────
     case 'chevron-right':
       return (
         <svg {...common}>
@@ -240,7 +217,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Close (X) ───────────────────────────────────────────
     case 'close':
       return (
         <svg {...common}>
@@ -257,7 +233,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
         </svg>
       )
 
-    // ── Eye (views) ─────────────────────────────────────────
     case 'eye':
       return (
         <svg {...common}>
@@ -279,10 +254,6 @@ export function Icon({ name, size = 24, color = 'currentColor', filled = false, 
   }
 }
 
-/**
- * IconButton — a sleek, minimalist action button wrapping an Icon.
- * Used for like, comment, share, save, delete in feed/post pages.
- */
 export function IconButton({
   name,
   size = 24,

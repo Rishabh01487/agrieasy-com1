@@ -1,13 +1,3 @@
-/**
- * Standardized API response helpers and global error handler.
- *
- * All API routes should use `apiSuccess()` / `apiError()` / `withErrorHandler()`
- * to ensure consistent response shape across the entire application.
- *
- * Envelope format:
- *   Success: { success: true, data: T, meta?: { page, limit, total, totalPages } }
- *   Error:   { success: false, error: { code: string, message: string, details?: any } }
- */
 
 import { NextRequest, NextResponse } from 'next/server'
 import { config } from '@/lib/config'
@@ -69,7 +59,6 @@ export function apiError(
   status?: number,
   requestId?: string,
 ): NextResponse {
-  // Map error codes to HTTP status
   const statusMap: Record<string, number> = {
     [ErrorCodes.AUTH_REQUIRED]: 401,
     [ErrorCodes.FORBIDDEN]: 403,
@@ -90,8 +79,6 @@ export function apiError(
     error: {
       code,
       // In production, sanitize the message to avoid leaking internal details
-      // (e.g. Mongoose duplicate-key text, file paths, stack snippets). The
-      // raw message is still logged server-side via withErrorHandler.
       message: config.isProd ? sanitizeErrorMessage(message) : message,
       ...(details && config.isDev ? { details } : {}),
       ...(requestId ? { requestId } : {}),
@@ -101,21 +88,12 @@ export function apiError(
   return NextResponse.json(body, { status: httpStatus })
 }
 
-/**
- * Strip obviously-sensitive substrings from error messages before showing
- * them to clients in production. We keep the human-readable part but remove
- * things like file paths, "at <stack>" frames, and DB connection strings.
- */
 function sanitizeErrorMessage(message: string): string {
   if (!message) return message
   return message
-    // Strip anything that looks like a file path
     .replace(/(?:\/[\w.-]+)+\/[\w.-]+:\d+:\d+/g, '[file]')
-    // Strip "at <function> (<file>)" stack frames
     .replace(/\bat [\w.]+ \([^)]*\)/g, '')
-    // Strip mongo connection strings
     .replace(/mongodb(\+srv)?:\/\/[^\s]+/g, '[mongo-uri]')
-    // Collapse whitespace left behind
     .replace(/\s{2,}/g, ' ')
     .trim()
     .slice(0, 300) // hard cap
@@ -137,8 +115,6 @@ export function notFound(resource = 'Resource', requestId?: string) {
 
 export function validationError(message: string, details?: unknown, requestId?: string) {
   // Validation error details (field names + messages) are safe to expose in
-  // all environments — they don't leak secrets, and the client needs them to
-  // show field-level errors to the user. Override the default isProd gating.
   const body: ApiErrorResponse = {
     success: false,
     error: {
@@ -159,12 +135,6 @@ export function rateLimited(message = 'Too many requests. Try again later.', req
   return apiError(ErrorCodes.RATE_LIMITED, message, undefined, undefined, requestId)
 }
 
-/**
- * Wraps an API route handler with standardized error catching.
- * Usage:
- *   export const GET = withErrorHandler(async (req) => { ... })
- *   export const POST = withErrorHandler(async (req) => { ... })
- */
 export function withErrorHandler(
   handler: (request: NextRequest) => Promise<NextResponse>,
 ) {
@@ -183,7 +153,6 @@ export function withErrorHandler(
         stack: error instanceof Error ? error.stack : undefined,
       }))
 
-      // Never leak stack traces or internal details in production
       if (config.isProd) {
         return apiError(
           ErrorCodes.INTERNAL_ERROR,
@@ -213,10 +182,6 @@ export interface PaginationParams {
   skip: number
 }
 
-/**
- * Parse and clamp pagination params from a URL search params or query object.
- * Ensures `page` ≥ 1, `limit` between 1 and `maxLimit`, and computes `skip`.
- */
 export function parsePagination(
   params: URLSearchParams | Record<string, string | undefined>,
   maxLimit = 100,
@@ -236,9 +201,6 @@ export function parsePagination(
   return { page, limit, skip: (page - 1) * limit }
 }
 
-/**
- * Build the pagination metadata object to include in API responses.
- */
 export function paginationMeta(page: number, limit: number, total: number): PaginationMeta {
   return {
     page,

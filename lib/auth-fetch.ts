@@ -1,8 +1,3 @@
-/**
- * Shared authenticated fetch helper.
- * Reads the JWT from localStorage and attaches it as a Bearer token header.
- * Also sends credentials (cookies) so httpOnly cookie auth also works.
- */
 export function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   const headers = new Headers(options.headers || {})
@@ -18,9 +13,6 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
   })
 }
 
-/**
- * Helper to get the current user info from localStorage.
- */
 export function getUserInfo(): { userId: string | null; userEmail: string | null; userRole: string | null } {
   if (typeof window === 'undefined') return { userId: null, userEmail: null, userRole: null }
   return {
@@ -30,9 +22,6 @@ export function getUserInfo(): { userId: string | null; userEmail: string | null
   }
 }
 
-/**
- * Proper logout: clear localStorage and call server to clear cookie.
- */
 export async function logout(): Promise<void> {
   if (typeof window === 'undefined') return
   try {
@@ -45,9 +34,6 @@ export async function logout(): Promise<void> {
   window.location.href = '/'
 }
 
-/**
- * Escape special regex characters in a string (prevents ReDoS).
- */
 export function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

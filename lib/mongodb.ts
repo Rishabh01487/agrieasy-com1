@@ -25,7 +25,6 @@ async function dbConnect() {
 
   if (!cached) throw new Error('Cache not initialized')
 
-  // Re-apply Google DNS every call to ensure worker threads use it
   try {
     dns.setDefaultResultOrder('ipv4first')
     dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])

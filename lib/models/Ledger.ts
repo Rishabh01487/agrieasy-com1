@@ -13,10 +13,8 @@ import mongoose from 'mongoose'
 const LedgerSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },  // owner of this ledger entry
   type: { type: String, enum: ['bill', 'invoice', 'earning', 'expense', 'commission'], required: true },
-  // Counterparty — the other party in this transaction
   counterpartyId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   counterpartyName: { type: String, default: '' },
-  // Listing/booking this entry relates to (optional)
   listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Listing' },
   bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
   // Financial details
@@ -25,15 +23,12 @@ const LedgerSchema = new mongoose.Schema({
   unit: { type: String, default: 'kg' },
   pricePerUnit: { type: Number, default: 0 },
   commodity: { type: String, default: '' },
-  // Bill photo (for 'bill' type — buyer uploads weighing slip photo)
   billPhoto: { type: String, default: '' },       // Cloudinary URL
   // Status
   status: { type: String, enum: ['pending', 'paid', 'overdue', 'cancelled'], default: 'pending' },
   // Description / notes
   description: { type: String, maxlength: 1000, default: '' },
-  // Payment due date (for pending bills/invoices)
   dueDate: { type: Date },
-  // When the payment was settled
   paidAt: { type: Date },
   // Metadata
   role: { type: String, enum: ['farmer', 'buyer', 'transporter'], required: true },  // role of the userId owner

@@ -43,7 +43,6 @@ PostSchema.index({ hashtags: 1 })
 PostSchema.index({ category: 1 })
 PostSchema.index({ rankScore: -1 })
 
-// Auto-update rankScore before save. Instagram-like ranking: recency + engagement.
 PostSchema.pre('save', function (this: any) {
     if (this.isModified('likesCount') || this.isModified('commentsCount') || this.isModified('savedCount') || this.isModified('sharedCount') || this.isModified('createdAt')) {
         const ageHours = (Date.now() - (this.createdAt?.getTime?.() || Date.now())) / 3_600_000

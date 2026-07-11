@@ -8,8 +8,6 @@ const BookingSchema = new mongoose.Schema({
   vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle' },  // transporter vehicle (optional)
   buyerVehicleId: { type: mongoose.Schema.Types.ObjectId, ref: 'BuyerVehicle' },  // buyer's own vehicle (optional)
 
-  // Multi-commodity support — each item represents one commodity the farmer
-  // is selling to this buyer in this trip.
   commodities: [
     {
       listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Listing' },
@@ -19,7 +17,6 @@ const BookingSchema = new mongoose.Schema({
       pricePerUnit: { type: Number, default: 0 },     // agreed price at booking time
     },
   ],
-  // Aggregated quantity across all commodities (denormalized for easy queries)
   totalQuantity: { type: Number, default: 0 },
 
   commodity: { type: String, default: '' },  // legacy — kept for backward compat with single-commodity bookings
@@ -29,13 +26,10 @@ const BookingSchema = new mongoose.Schema({
   deliveryLocation: { type: String, required: true },
   estimatedDistance: { type: Number },
 
-  // Freight charged for this booking (computed from vehicle's freight type +
-  // distance, or 0 for free buyer vehicles).
   freightAmount: { type: Number, default: 0 },
   freightType: { type: String, enum: ['free', 'flat', 'per_km', 'transporter'], default: 'transporter' },
 
   status: { type: String, enum: ['pending', 'confirmed', 'in-transit', 'delivered', 'cancelled'], default: 'pending' },
-  // Free-text note from transporter/driver — e.g. "Leaving in 30 min, ETA 4pm"
   driverNote: { type: String, maxlength: 500, default: '' },
   estimatedArrivalTime: { type: Date },
   actualArrivalTime: { type: Date },
@@ -53,8 +47,6 @@ const BookingSchema = new mongoose.Schema({
 
   // ── Payment on delivery ──────────────────────────────────────────
   // After the commodity is weighed at the buyer's shop, the buyer enters
-  // the final bill (may differ from the agreed estimate). Then the buyer
-  // pays via AgriPay wallet / AgriPay UPI / direct UPI / netbanking / cash.
   paymentStatus: {
     type: String,
     enum: ['unpaid', 'billed', 'pending', 'paid', 'failed'],
@@ -70,7 +62,6 @@ const BookingSchema = new mongoose.Schema({
   paidAt: { type: Date },
   paymentRef: { type: String, default: '' },       // wallet txn id / UPI ref / etc.
 
-  // Live driver location for real-time tracking
   driverLocation: {
     latitude: Number,
     longitude: Number,

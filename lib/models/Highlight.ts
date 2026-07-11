@@ -1,7 +1,5 @@
 import mongoose from 'mongoose'
 
-// Story highlights — saved stories that persist on the profile after the
-// 24h story expires. Instagram-style highlights with a name + cover image.
 const HighlightSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true, maxlength: 50 },

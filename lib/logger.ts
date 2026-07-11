@@ -1,10 +1,3 @@
-/**
- * Structured JSON logger powered by Pino.
- *
- * - In development: human-readable via pino-pretty
- * - In production: compact JSON for log aggregators
- * - Every log entry includes `requestId` when available (set via middleware)
- */
 
 import pino from 'pino'
 
@@ -24,7 +17,6 @@ const logger = pino({
         },
       }
     : {
-        // Production: compact JSON, redact sensitive fields
         redact: ['req.headers.authorization', 'req.headers.cookie'],
       }),
 })

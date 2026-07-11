@@ -1,6 +1,5 @@
 import mongoose from 'mongoose'
 
-// Collection — a named group of saved posts (Instagram-style saved collections)
 const CollectionSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   name: { type: String, required: true, maxlength: 100 },

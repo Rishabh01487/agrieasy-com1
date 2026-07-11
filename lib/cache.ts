@@ -39,10 +39,6 @@ export interface CacheOptions {
 const DEFAULT_TTL = 300 // 5 minutes
 const CACHE_PREFIX = 'agrieasy'
 
-/**
- * Get a value from cache, or compute and cache it.
- * Returns null if Redis is not configured (falls through to fetcher).
- */
 export async function get<T>(
   key: string,
   fetcher: () => Promise<T>,
@@ -62,7 +58,6 @@ export async function get<T>(
     console.error(JSON.stringify({ level: 'warn', msg: 'cache_get_error', key, err: String(e) }))
   }
 
-  // Cache miss — call fetcher
   const data = await fetcher()
 
   try {
@@ -74,9 +69,6 @@ export async function get<T>(
   return data
 }
 
-/**
- * Invalidate a specific cache key.
- */
 export async function invalidate(key: string, prefix = 'cache'): Promise<void> {
   const redis = await getRedis()
   if (!redis) return
@@ -88,10 +80,6 @@ export async function invalidate(key: string, prefix = 'cache'): Promise<void> {
   }
 }
 
-/**
- * Invalidate all cache entries matching a prefix pattern.
- * Use sparingly — scans keys.
- */
 export async function invalidateByPrefix(prefix: string): Promise<void> {
   const redis = await getRedis()
   if (!redis) return

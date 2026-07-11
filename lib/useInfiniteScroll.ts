@@ -2,20 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-/**
- * useInfiniteScroll — reusable hook for paginated infinite scrolling.
- *
- * Usage:
- *   const { items, loading, hasMore, loadMore, reset } = useInfiniteScroll({
- *     fetcher: async (page: number) => { ... return { items, hasMore } },
- *     initialPage: 1,
- *     threshold: 200,  // px from bottom to trigger next load
- *   })
- *
- * The hook auto-loads the first page on mount, then loads subsequent pages
- * when the user scrolls within `threshold` pixels of the bottom of the
- * scroll container (or window).
- */
 export function useInfiniteScroll<T>({
     fetcher,
     initialPage = 1,
@@ -35,7 +21,6 @@ export function useInfiniteScroll<T>({
     const pageRef = useRef(initialPage)
     const sentinelRef = useRef<HTMLDivElement | null>(null)
 
-    // Load a specific page
     const loadPage = useCallback(async (pageNum: number, append: boolean) => {
         try {
             if (append) setLoadingMore(true)
@@ -54,7 +39,6 @@ export function useInfiniteScroll<T>({
         }
     }, [fetcher])
 
-    // Load first page on mount
     useEffect(() => {
         if (!enabled) return
         void loadPage(initialPage, false)
@@ -66,7 +50,6 @@ export function useInfiniteScroll<T>({
         void loadPage(pageRef.current + 1, true)
     }, [loadingMore, hasMore, loadPage])
 
-    // Reset (e.g., when filter changes)
     const reset = useCallback(() => {
         pageRef.current = initialPage
         setItems([])
@@ -74,7 +57,6 @@ export function useInfiniteScroll<T>({
         void loadPage(initialPage, false)
     }, [initialPage, loadPage])
 
-    // IntersectionObserver for auto-loading when sentinel is visible
     useEffect(() => {
         if (!sentinelRef.current || !enabled) return
         const observer = new IntersectionObserver(

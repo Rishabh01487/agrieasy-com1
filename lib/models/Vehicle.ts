@@ -24,8 +24,6 @@ const VehicleSchema = new mongoose.Schema({
   },
   // When this vehicle becomes available again. Set when the vehicle is
   // dispatched on a booking — null/undefined means available immediately.
-  // Farmers searching for vehicles will see "Available from HH:MM" if this
-  // is in the future, and can still book it for a later pickup time.
   availableFrom: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },

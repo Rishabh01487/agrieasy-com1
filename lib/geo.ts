@@ -1,11 +1,3 @@
-/**
- * Tiny Nominatim geocoder — used to convert a human-readable address string
- * (e.g. "APMC Market, Pune, Maharashtra") into lat/lng so we can compute
- * distance from the farmer to the buyer's listing.
- *
- * Free tier via OpenStreetMap — no API key required. We respect their
- * usage policy: max 1 request per second, identify with a Referer/User-Agent.
- */
 
 interface GeocodeResult {
   latitude: number
@@ -19,11 +11,9 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
     const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=in&limit=1&addressdetails=0`
     const res = await fetch(url, {
       headers: {
-        // Nominatim asks for a recognizable User-Agent
         'User-Agent': 'AgriEasy/1.0 (agrieasy.app)',
         'Accept-Language': 'en',
       },
-      // Don't hang the request forever — geocoding is best-effort
       signal: AbortSignal.timeout(5000),
     })
     if (!res.ok) return null
@@ -39,10 +29,6 @@ export async function geocodeAddress(address: string): Promise<GeocodeResult | n
   }
 }
 
-/**
- * Haversine distance between two lat/lng points, in kilometres.
- * Used to find buyers within a given radius of the farmer.
- */
 export function haversineKm(
   a: { latitude: number; longitude: number },
   b: { latitude: number; longitude: number },

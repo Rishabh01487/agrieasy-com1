@@ -21,7 +21,6 @@ const envSchema = z.object({
   // crash every API request. The User model already has a try/catch fallback
   // that stores plaintext with a console.warn when ENCRYPTION_KEY is absent,
   // so the app keeps working — just without encryption until the operator
-  // sets the env var. We log a loud warning at config init.
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY should be ≥32 chars').optional(),
 
   // Auth
@@ -36,7 +35,6 @@ const envSchema = z.object({
   RAZORPAY_ACCOUNT_TYPE: z.enum(['test', 'live']).optional().default('test'),
 
   // SMS — accept any string but normalize unknown values to undefined so
-  // an accidentally-set 'none' or '' doesn't crash the whole app.
   SMS_PROVIDER: z.enum(['twilio', 'fast2sms']).optional().or(
     z.string().transform(() => undefined as undefined)
   ),
@@ -117,19 +115,16 @@ export const PASSWORD_POLICY = {
 let _env: Env | null = null
 
 export const config = {
-  /** Parse and validate all env vars. Call once at startup. */
   init() {
     if (_env) return _env
     _env = envSchema.parse(process.env)
     if (!_env.ENCRYPTION_KEY) {
       // Don't crash — the User/Wallet models have plaintext fallbacks — but
-      // warn loudly so the operator knows PII isn't being encrypted at rest.
       console.warn('⚠️  ENCRYPTION_KEY is not set — PII (aadhar, license) will be stored in plaintext. Generate one with: openssl rand -hex 32')
     }
     return _env
   },
 
-  /** Lazy getter — parses on first access if not already initialized. */
   get env(): Env {
     if (!_env) this.init()
     return _env!

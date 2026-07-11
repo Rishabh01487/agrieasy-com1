@@ -43,8 +43,6 @@ const UserSchema = new mongoose.Schema({
   firmName: { type: String },
   gstin: { type: String },
   commoditiesInterested: [{ type: String }],
-  // Buyer profile photos — visiting card (business card) and shop front
-  // Both optional Cloudinary URLs the buyer can add/edit from their profile page.
   visitingCardPhoto: { type: String, default: '' },
   shopPhoto: { type: String, default: '' },
 

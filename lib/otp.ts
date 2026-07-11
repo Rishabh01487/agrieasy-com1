@@ -1,16 +1,7 @@
-/**
- * OTP storage with Upstash Redis primary + in-memory fallback.
- *
- * When UPSTASH_REDIS_REST_URL is set, OTPs are stored in Upstash (works
- * across Vercel serverless instances).  Otherwise it falls back to a
- * local Map — correct for single-process dev, but NOT for production
- * serverless deployment.
- */
 
 import { randomInt } from 'crypto'
 import { Redis } from '@upstash/redis'
 
-// ── Redis client (lazy, created once) ──────────────────────────────
 let _redis: Redis | null | undefined // undefined = not checked yet
 
 async function getRedis(): Promise<Redis | null> {
@@ -29,7 +20,6 @@ async function getRedis(): Promise<Redis | null> {
   return _redis
 }
 
-// ── In-memory fallback ─────────────────────────────────────────────
 const fallback = new Map<string, { otp: string; expiresAt: number }>()
 
 const KEY_TTL = 5 * 60 // 5 minutes
