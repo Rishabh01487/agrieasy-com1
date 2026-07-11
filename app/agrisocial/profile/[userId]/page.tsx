@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { useIsMobile } from '@/lib/use-is-mobile'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[] }
@@ -29,8 +30,8 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [listModal, setListModal] = useState<'followers' | 'following' | null>(null)
     const [listUsers, setListUsers] = useState<any[]>([])
     const [listLoading, setListLoading] = useState(false)
-    // Highlights state
     const [highlights, setHighlights] = useState<any[]>([])
+    const isMobile = useIsMobile()
 
     useEffect(() => {
         const load = async () => {
@@ -89,54 +90,107 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 <span style={{ fontWeight: 700, color: SOCIAL.text }}>{name}</span>
             </nav>
 
-            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 80px' }}>
-                {/* Header */}
-                <div className="ig-profile-header" style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-                    <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                        onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
-                        {user.profilePic ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={user.profilePic} alt={name} style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
+            <div style={{ maxWidth: isMobile ? '100%' : '960px', margin: '0 auto', padding: isMobile ? '12px 12px 80px' : '20px 16px 80px' }}>
+                {/* Header — Instagram mobile: pic+stats in row, name/bio below, buttons full width */}
+                {isMobile ? (
+                    <>
+                        {/* Row 1: profile pic + stats */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+                            <div className="story-ring" style={{ width: 82, height: 82, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                                onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
+                                {user.profilePic ? (
+                                    <img src={user.profilePic} alt={name} style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: '3px solid #fff' }} />
+                                ) : (
+                                    <div style={{ width: 76, height: 76, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '2rem', border: '3px solid #fff' }}>
+                                        {name[0]?.toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+                                <button onClick={() => { }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                    <strong style={{ color: SOCIAL.text, fontSize: '1.1rem', display: 'block' }}>{s.postsCount || 0}</strong>
+                                    <span style={{ color: SOCIAL.muted, fontSize: '0.78rem' }}>posts</span>
+                                </button>
+                                <button onClick={() => { setListUsers([]); setListModal('followers') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                    <strong style={{ color: SOCIAL.text, fontSize: '1.1rem', display: 'block' }}>{s.followersCount || 0}</strong>
+                                    <span style={{ color: SOCIAL.muted, fontSize: '0.78rem' }}>followers</span>
+                                </button>
+                                <button onClick={() => { setListUsers([]); setListModal('following') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                                    <strong style={{ color: SOCIAL.text, fontSize: '1.1rem', display: 'block' }}>{s.followingCount || 0}</strong>
+                                    <span style={{ color: SOCIAL.muted, fontSize: '0.78rem' }}>following</span>
+                                </button>
+                            </div>
+                        </div>
+                        {/* Row 2: name + bio */}
+                        <div style={{ marginBottom: 12 }}>
+                            <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>{name}</p>
+                            <p style={{ color: SOCIAL.text, fontWeight: 600, fontSize: '0.82rem', margin: '2px 0 0' }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
+                            {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{user.bio}</p>}
+                            {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
+                            <p style={{ color: SOCIAL.primary, fontSize: '0.78rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} likes · 🎬 {s.clipsCount || 0} clips</p>
+                        </div>
+                        {/* Row 3: action buttons — full width */}
+                        {isOwn ? (
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                                <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowEditModal(true) }} style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, cursor: 'pointer' }}>Edit Profile</button>
+                                <Link href="/agrisocial/create" style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, textDecoration: 'none', textAlign: 'center' }}>+ New Post</Link>
+                                <Link href="/agrisocial/saved" style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, textDecoration: 'none', textAlign: 'center' }}>🔖 Saved</Link>
+                            </div>
                         ) : (
-                            <div style={{ width: 144, height: 144, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '3.5rem', border: '4px solid #fff' }}>
-                                {name[0]?.toUpperCase()}
+                            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+                                <button onClick={handleFollow} style={{ flex: 1, padding: '8px', background: following ? SOCIAL.bgSub : SOCIAL.primary, border: `1px solid ${following ? SOCIAL.border : SOCIAL.primary}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: following ? SOCIAL.text : '#fff', cursor: 'pointer' }}>
+                                    {following ? 'Following' : 'Follow'}
+                                </button>
+                                <button onClick={handleMessage} style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, cursor: 'pointer' }}>Message</button>
                             </div>
                         )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 280 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                            <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>{name}</h1>
-                            {isOwn ? (
-                                <>
-                                    <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
-                                    <Link href="/agrisocial/create" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>+ New Post</Link>
-                                    <Link href="/agrisocial/saved" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>🔖 Saved</Link>
-                                </>
+                    </>
+                ) : (
+                    /* Desktop layout — original */
+                    <div style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
+                        <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                            onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
+                            {user.profilePic ? (
+                                <img src={user.profilePic} alt={name} style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
                             ) : (
-                                <>
-                                    <button onClick={handleFollow} style={{ padding: '7px 22px', background: following ? SOCIAL.white : SOCIAL.primary, border: `1.5px solid ${following ? SOCIAL.border : SOCIAL.primary}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: following ? SOCIAL.text : '#fff', cursor: 'pointer' }}>
-                                        {following ? '✓ Following' : '+ Follow'}
-                                    </button>
-                                    <button onClick={handleMessage} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✈️ Message</button>
-                                </>
+                                <div style={{ width: 144, height: 144, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '3.5rem', border: '4px solid #fff' }}>
+                                    {name[0]?.toUpperCase()}
+                                </div>
                             )}
                         </div>
-                        {/* Stats — clickable (Instagram-style) */}
-                        <div className="ig-profile-stats" style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
-                            <div style={{ cursor: 'pointer' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
-                            <button onClick={() => { setListUsers([]); setListModal('followers') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></button>
-                            <button onClick={() => { setListUsers([]); setListModal('following') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></button>
-                        </div>
-                        {/* Bio */}
-                        <div>
-                            <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
-                            {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.86rem', margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{user.bio}</p>}
-                            {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.84rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
-                            {user.createdAt && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>}
-                            <p style={{ color: SOCIAL.primary, fontSize: '0.84rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} total likes · 🎬 {s.clipsCount || 0} KrishiClips</p>
+                        <div style={{ flex: 1, minWidth: 280 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
+                                <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>{name}</h1>
+                                {isOwn ? (
+                                    <>
+                                        <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
+                                        <Link href="/agrisocial/create" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>+ New Post</Link>
+                                        <Link href="/agrisocial/saved" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>🔖 Saved</Link>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button onClick={handleFollow} style={{ padding: '7px 22px', background: following ? SOCIAL.white : SOCIAL.primary, border: `1.5px solid ${following ? SOCIAL.border : SOCIAL.primary}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: following ? SOCIAL.text : '#fff', cursor: 'pointer' }}>
+                                            {following ? '✓ Following' : '+ Follow'}
+                                        </button>
+                                        <button onClick={handleMessage} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✈️ Message</button>
+                                    </>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 24, marginBottom: 16 }}>
+                                <div style={{ cursor: 'pointer' }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.postsCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>posts</span></div>
+                                <button onClick={() => { setListUsers([]); setListModal('followers') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followersCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>followers</span></button>
+                                <button onClick={() => { setListUsers([]); setListModal('following') }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><strong style={{ color: SOCIAL.text, fontSize: '1.05rem' }}>{s.followingCount || 0}</strong> <span style={{ color: SOCIAL.muted, fontSize: '0.86rem' }}>following</span></button>
+                            </div>
+                            <div>
+                                <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
+                                {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.86rem', margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{user.bio}</p>}
+                                {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.84rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
+                                {user.createdAt && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>Joined {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</p>}
+                                <p style={{ color: SOCIAL.primary, fontSize: '0.84rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} total likes · 🎬 {s.clipsCount || 0} KrishiClips</p>
+                            </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Highlights (real story highlights from the API) */}
                 <div style={{ display: 'flex', gap: 16, padding: '12px 0 20px', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 4, overflowX: 'auto' }} className="no-scrollbar">
@@ -180,7 +234,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         {isOwn && tab !== 'saved' && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 12, fontSize: '0.86rem' }}>+ Create</Link>}
                     </div>
                 ) : (
-                    <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 2 : 4 }}>
                         {displayPosts.map(p => (
                             <Link key={p._id} href={`/agrisocial/post/${p._id}`}
                                 style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 2, overflow: 'hidden', textDecoration: 'none' }}>
