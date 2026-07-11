@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon } from '@/lib/icons'
+import { shareContent } from '@/lib/share'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -75,15 +76,17 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         const newSaved = !saved
         setSaved(newSaved)
         try {
+            let res: Response
             if (newSaved) {
-                await authFetch(`/api/social/save`, {
+                res = await authFetch(`/api/social/save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ userId: viewerId, postId: clip._id }),
+                    body: JSON.stringify({ postId: clip._id }),
                 })
             } else {
-                await authFetch(`/api/social/save?postId=${clip._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+                res = await authFetch(`/api/social/save?postId=${clip._id}`, { method: 'DELETE' })
             }
+            if (!res.ok) setSaved(prevSaved)
         } catch { setSaved(prevSaved) }
     }
 
@@ -94,13 +97,12 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             }).catch(() => null)
         } catch {}
         const url = typeof window !== 'undefined' ? `${window.location.origin}/agrisocial/post/${clip._id}` : ''
-        try {
-            if (navigator.clipboard && url) {
-                await navigator.clipboard.writeText(url)
-                setShareCopied(true)
-                setTimeout(() => setShareCopied(false), 1800)
-            }
-        } catch {}
+        if (!url) return
+        const result = await shareContent(url, 'KrishiClip', clip.caption)
+        if (result === 'copied' || result === 'shared') {
+            setShareCopied(true)
+            setTimeout(() => setShareCopied(false), 1800)
+        }
     }
 
     const handleDelete = async () => {

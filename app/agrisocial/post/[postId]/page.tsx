@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
+import { shareContent } from '@/lib/share'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -74,26 +75,29 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
 
     const handleSave = async () => {
         if (!viewerId || !post) return
+        const prevSaved = saved
         const newSaved = !saved
         setSaved(newSaved)
         try {
+            let res: Response
             if (newSaved) {
-                await authFetch(`/api/social/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id }) })
+                res = await authFetch(`/api/social/save`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ postId: post._id }) })
             } else {
-                await authFetch(`/api/social/save?postId=${post._id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' } })
+                res = await authFetch(`/api/social/save?postId=${post._id}`, { method: 'DELETE' })
             }
-        } catch {}
+            if (!res.ok) setSaved(prevSaved)
+        } catch { setSaved(prevSaved) }
     }
 
     const handleShare = async () => {
         if (!post) return
         try { await authFetch(`/api/social/posts/${post._id}/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }) } catch {}
         const url = `${window.location.origin}/agrisocial/post/${post._id}`
-        try {
-            await navigator.clipboard.writeText(url)
+        const result = await shareContent(url, 'AgriEasy Post', post.caption)
+        if (result === 'copied' || result === 'shared') {
             setShareCopied(true)
             setTimeout(() => setShareCopied(false), 1800)
-        } catch { window.open(url, '_blank') }
+        }
     }
 
     const handleDelete = async () => {
