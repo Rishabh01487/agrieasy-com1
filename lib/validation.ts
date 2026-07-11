@@ -151,13 +151,26 @@ export const farmerProfileSchema = z.object({
 
 // ── Listing schemas ────────────────────────────────────────────────
 
+// Per-commodity entry used by the multi-commodity create-listing flow.
+// Each selected commodity gets its own price + unit.
+export const commodityEntrySchema = z.object({
+  name: sanitizedString(z.string().min(2, 'Commodity name too short').max(100)),
+  pricePerUnit: positiveAmountSchema,
+  unit: z.enum(['kg', 'quintal', 'ton', 'bags']).optional().default('kg'),
+})
+
 export const createListingSchema = z.object({
-  commodity: sanitizedString(z.string().min(2).max(100)),
+  // Single-commodity fields (legacy / backward-compat)
+  commodity: sanitizedString(z.string().min(2).max(100)).optional(),
+  pricePerUnit: positiveAmountSchema.optional(),
+  // Multi-commodity fields — when present, the API creates one listing per entry.
+  // Each entry has its own name + pricePerUnit + unit. The shared fields below
+  // (date, photo, quality, payment, location, quantity) apply to every listing.
+  commodities: z.array(commodityEntrySchema).max(50, 'Maximum 50 commodities per request').optional(),
   variety: optSanitizedString(z.string().max(100)),
   // Quantity optional — buyers can post a commodity with just price + date.
   quantity: z.number().min(0).max(100_000).optional().default(0),
   unit: z.enum(['kg', 'quintal', 'ton', 'bags']).optional().default('kg'),
-  pricePerUnit: positiveAmountSchema,
   // ISO date string — the date this price applies to. Optional, defaults to now.
   priceDate: z.string().optional(),
   // Optional Cloudinary URL of the commodity photo.
@@ -165,7 +178,10 @@ export const createListingSchema = z.object({
   description: optSanitizedString(z.string().max(2000)),
   location: sanitizedString(z.string().min(2).max(200)),
   images: z.array(z.string().url()).max(10, 'Maximum 10 images allowed').optional().default([]),
-})
+}).refine(
+  (data) => (Array.isArray(data.commodities) && data.commodities.length > 0) || (data.commodity && data.pricePerUnit != null),
+  "Either 'commodities' array (with at least one entry) or 'commodity'+'pricePerUnit' is required",
+)
 
 // ── Booking schemas ────────────────────────────────────────────────
 

@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import dns from 'dns'
 import dbConnect from '@/lib/mongodb'
 import Listing from '@/lib/models/Listing'
-import '@/lib/models/User'
+import User from '@/lib/models/User'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
-import { parsePagination, paginationMeta, validationError } from '@/lib/api-response'
+import { parsePagination, paginationMeta, validationError, apiSuccess } from '@/lib/api-response'
 import { validateBody, createListingSchema } from '@/lib/validation'
 import { LISTING } from '@/lib/config'
 import { get as cacheGet, invalidateByPrefix } from '@/lib/cache'
@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 
+  // One rate-limit check per request — covers all commodities in this batch.
   const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many listing requests.' })
   if (rl) return rl
 
@@ -146,41 +147,74 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Validation failed', v.errors)
     const data = v.data
 
-    const listing = await Listing.create({
+    // Build the list of (commodity, pricePerUnit, unit) tuples to create.
+    // Two paths:
+    //   (a) Multi-commodity  — `data.commodities` array
+    //   (b) Single (legacy)  — `data.commodity` + `data.pricePerUnit`
+    type Entry = { name: string; pricePerUnit: number; unit: string }
+    let entries: Entry[]
+    if (Array.isArray(data.commodities) && data.commodities.length > 0) {
+      entries = data.commodities.map(c => ({ name: c.name, pricePerUnit: c.pricePerUnit, unit: c.unit || 'kg' }))
+    } else if (data.commodity && data.pricePerUnit != null) {
+      entries = [{ name: data.commodity, pricePerUnit: data.pricePerUnit, unit: data.unit || 'kg' }]
+    } else {
+      // Schema refinement should have caught this — but guard anyway
+      return validationError('No commodities provided', [{ field: 'commodities', message: 'At least one commodity is required' }])
+    }
+
+    // Geocode ONCE for the whole batch (Nominatim rate-limits at 1 req/sec,
+    // so per-listing geocoding was causing failures when buyers added multiple
+    // commodities at once). If geocoding fails, fall back to the buyer's
+    // saved profile location — and if that's missing too, leave geoLocation empty.
+    let geoLocation: { latitude?: number; longitude?: number } = {}
+    const g = await geocodeAddress(data.location)
+    if (g) {
+      geoLocation = { latitude: g.latitude, longitude: g.longitude }
+    } else {
+      const buyerUser = await User.findById(auth.user.userId).lean()
+      if (buyerUser?.location?.latitude || buyerUser?.location?.longitude) {
+        geoLocation = { latitude: buyerUser.location.latitude, longitude: buyerUser.location.longitude }
+      }
+    }
+
+    // Shared fields applied to every listing in this batch
+    const sharedFields = {
       buyerId: auth.user.userId,
-      commodity: data.commodity,
       variety: data.variety,
       quantity: data.quantity ?? 0,
-      unit: data.unit || 'kg',
-      pricePerUnit: data.pricePerUnit,
       priceDate: data.priceDate ? new Date(data.priceDate) : new Date(),
       commodityPhoto: body.commodityPhoto || data.commodityPhoto || '',
       description: data.description,
       location: data.location,
-      // Geocode the location so we can compute distance from farmers later.
-      // Best-effort — if Nominatim is unavailable, geoLocation stays empty
-      // and the listing will fall back to the buyer's profile location.
-      geoLocation: await (async () => {
-        const g = await geocodeAddress(data.location)
-        if (g) return { latitude: g.latitude, longitude: g.longitude }
-        // Fall back to buyer's saved location if available
-        const buyerUser = await (await import('@/lib/models/User')).default.findById(auth.user.userId).lean()
-        return buyerUser?.location || { latitude: undefined, longitude: undefined }
-      })(),
+      geoLocation,
       images: data.images,
-      shopPhoto: body.shopPhoto || '',  // Cloudinary URL of the buyer's shop (optional)
+      shopPhoto: body.shopPhoto || '',
       quality: body.quality || '',
       paymentConditions: body.paymentConditions || '',
       isActive: true,
-    })
+    }
 
-    await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Listing', resourceId: listing._id.toString(), details: { commodity: data.commodity, quantity: data.quantity, pricePerUnit: data.pricePerUnit }, request })
+    // Create all listings in one bulk insert — single DB round-trip.
+    const docs = entries.map(e => ({ ...sharedFields, commodity: e.name, pricePerUnit: e.pricePerUnit, unit: e.unit }))
+    const created = await Listing.insertMany(docs)
+
+    await logAudit({
+      userId: auth.user.userId,
+      action: 'CREATE',
+      resource: 'Listing',
+      resourceId: created[0]._id.toString(),
+      details: { count: created.length, commodities: entries.map(e => e.name) },
+      request,
+    })
 
     await invalidateByPrefix('listings')
 
-    return NextResponse.json({ success: true, listing }, { status: 201 })
+    // Return shape: always `listings` array (single-element for legacy path).
+    // Backward-compat: also expose `listing` for callers expecting one object.
+    return apiSuccess({ listings: created, listing: created[0] }, undefined, 201)
   } catch (error) {
     console.error('Create listing error:', error)
-    return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 })
+    const msg = error instanceof Error ? error.message : 'Failed to create listing'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
