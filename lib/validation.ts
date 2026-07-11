@@ -220,10 +220,14 @@ export const createVehicleSchema = z.object({
   vehicleType: z.enum(['mini-truck', 'pickup-van', 'truck', 'tractor-trolley', 'tempo']),
   registrationNumber: vehicleRegTransform,
   capacity: z.number().positive().max(50_000, 'Capacity too large'),
-  capacityUnit: z.enum(['kg', 'ton']),
-  baseRatePerKm: z.number().min(0).max(1000),
-  availability: z.enum(['available', 'unavailable', 'on_trip']),
-})
+  // Defaults so the form doesn't have to send these explicitly.
+  capacityUnit: z.enum(['kg', 'ton']).optional().default('kg'),
+  // Accept either `baseRatePerKm` (canonical) or `pricePerKm` (what the
+  // transporter add-vehicle form sends). Both are validated as non-negative.
+  baseRatePerKm: z.number().min(0).max(1000).optional(),
+  pricePerKm: z.number().min(0).max(1000).optional(),
+  availability: z.enum(['available', 'unavailable', 'on_trip']).optional().default('available'),
+}).passthrough()
 
 // ── Social schemas ─────────────────────────────────────────────────
 //

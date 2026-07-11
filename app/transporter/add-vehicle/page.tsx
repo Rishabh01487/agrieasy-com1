@@ -41,8 +41,26 @@ export default function AddVehicle() {
           pricePerKm: parseFloat(data.pricePerKm.toString()),
         }),
       })
-      const json = await res.json()
-      if (!res.ok) { setError(json.error || 'Failed to add vehicle'); setLoading(false); return }
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // API returns { success: false, error: { code, message, details } }
+        // OR a flat { error: 'string' } for older routes. Handle both.
+        const errObj = json?.error
+        let msg = 'Failed to add vehicle'
+        if (typeof errObj === 'string') {
+          msg = errObj
+        } else if (errObj && typeof errObj === 'object') {
+          msg = errObj.message || 'Validation failed'
+          if (Array.isArray(errObj.details) && errObj.details.length > 0) {
+            msg = errObj.details.map((d: any) => `${d.field}: ${d.message}`).join(' • ')
+          }
+        }
+        setError(msg)
+        setLoading(false)
+        return
+      }
+      // Success — redirect to dashboard. The dashboard will re-fetch and
+      // show the newly added vehicle.
       router.push('/transporter/dashboard')
     } catch (err) {
       console.error('Error:', err)

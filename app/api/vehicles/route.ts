@@ -71,12 +71,14 @@ export async function POST(request: NextRequest) {
       vehicleType: data.vehicleType,
       registrationNumber: data.registrationNumber.toUpperCase(),
       capacity: data.capacity,
-      capacityUnit: data.capacityUnit,
-      pricePerKm: data.baseRatePerKm,
+      capacityUnit: data.capacityUnit || 'kg',
+      // Form sends `pricePerKm`; canonical schema field is `baseRatePerKm`.
+      // Accept either.
+      pricePerKm: data.baseRatePerKm ?? data.pricePerKm ?? 0,
       driverName,
       driverPhone,
       driverLicense,
-      availability: data.availability,
+      availability: data.availability === 'on_trip' ? false : (data.availability !== 'unavailable'),
     })
 
     await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Vehicle', resourceId: vehicle._id.toString(), details: { vehicleType: data.vehicleType, registrationNumber: data.registrationNumber }, request })
@@ -84,10 +86,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, vehicle }, { status: 201 })
   } catch (error: unknown) {
     console.error('Create vehicle error:', error)
-    const msg = error instanceof Error && error.message.includes('duplicate key')
-      ? 'Vehicle with this registration number already exists'
-      : 'Failed to create vehicle'
-    return NextResponse.json({ error: msg }, { status: 500 })
+    const e = error as Error & { code?: number; keyValue?: Record<string, unknown> }
+    // Duplicate key on registrationNumber
+    if (e.code === 11000 || (e.message && e.message.includes('duplicate key'))) {
+      const dup = e.keyValue?.registrationNumber ? ` (${e.keyValue.registrationNumber})` : ''
+      return NextResponse.json({ error: `Vehicle with this registration number already exists${dup}` }, { status: 409 })
+    }
+    // Mongoose validation error (e.g. driverName required at model level)
+    if (e.name === 'ValidationError') {
+      return NextResponse.json({ error: e.message || 'Validation failed' }, { status: 400 })
+    }
+    return NextResponse.json({ error: e.message || 'Failed to create vehicle' }, { status: 500 })
   }
 }
 
