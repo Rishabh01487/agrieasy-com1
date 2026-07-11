@@ -1,3 +1,11 @@
+const inflightRequests = new Map<string, Promise<Response>>()
+
+function getRequestKey(url: string, options: RequestInit = {}): string {
+  const method = (options.method || 'GET').toUpperCase()
+  if (method === 'GET') return `GET:${url}`
+  return '' // Only deduplicate GET requests
+}
+
 export function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   const headers = new Headers(options.headers || {})
@@ -6,11 +14,23 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
     headers.set('Authorization', `Bearer ${token}`)
   }
 
-  return fetch(url, {
+  const key = getRequestKey(url, options)
+  if (key && inflightRequests.has(key)) {
+    return inflightRequests.get(key)!
+  }
+
+  const promise = fetch(url, {
     ...options,
     headers,
     credentials: 'include',
   })
+
+  if (key) {
+    inflightRequests.set(key, promise)
+    promise.finally(() => inflightRequests.delete(key))
+  }
+
+  return promise
 }
 
 export function getUserInfo(): { userId: string | null; userEmail: string | null; userRole: string | null } {
