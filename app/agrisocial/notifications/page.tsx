@@ -12,7 +12,7 @@ interface Notification {
     _id: string
     userId: string
     actorId: User
-    type: 'like' | 'comment' | 'follow' | 'mention' | 'message' | 'comment_like' | 'story'
+    type: 'like' | 'comment' | 'follow' | 'mention' | 'message' | 'comment_like' | 'story' | 'booking_request' | 'booking_status'
     postId?: Post
     commentId?: string
     conversationId?: string
@@ -64,17 +64,23 @@ export default function AgriSocialNotifications() {
     const unreadCount = notifications.filter(n => !n.isRead).length
 
     useEffect(() => {
-        if (notifications.length > 0 && unreadCount > 0) {
-            const timer = setTimeout(() => {
-                setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
-                authFetch('/api/social/notifications/read', {
+        if (notifications.length === 0 || unreadCount === 0) return
+
+        const markRead = async () => {
+            try {
+                const res = await authFetch('/api/social/notifications/read', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: '{}',
-                }).catch(() => {})
-            }, 1500)
-            return () => clearTimeout(timer)
+                })
+                if (res.ok) {
+                    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })))
+                }
+            } catch {}
         }
+
+        const timer = setTimeout(markRead, 2000)
+        return () => clearTimeout(timer)
     }, [notifications.length, unreadCount])
 
     const markAllRead = async () => {
