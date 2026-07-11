@@ -195,9 +195,30 @@ export const createBookingSchema = z.object({
 
 // ── Vehicle schemas ────────────────────────────────────────────────
 
+/**
+ * Accept ALL valid Indian vehicle registration formats by stripping
+ * spaces/dashes first, then matching a permissive pattern.
+ *
+ * Valid examples we accept:
+ *   MH12AB1234         (standard 2L+2D+2L+4D)
+ *   MH 12 AB 1234      (with spaces — most users type this)
+ *   MH-12-AB-1234      (with dashes)
+ *   UP01A1234          (single-letter series — older registrations)
+ *   KA05ABC1234        (three-letter series — newer registrations)
+ *   BH22A1234          (BH series — single letter)
+ *   BH22AA1234         (BH series — double letter)
+ *   01A123456          (defense — leading digits)
+ *   DL9CAB1234         (Delhi special single-digit district)
+ *
+ * After stripping spaces/dashes, accept 5-12 chars alphanumeric.
+ */
+const vehicleRegTransform = z.string()
+  .transform(s => s.toUpperCase().replace(/[\s-]/g, ''))
+  .refine(s => /^[A-Z0-9]{5,12}$/.test(s), 'Enter a valid vehicle number (e.g. MH12AB1234, KA05ABC1234, BH22A1234)')
+
 export const createVehicleSchema = z.object({
   vehicleType: z.enum(['mini-truck', 'pickup-van', 'truck', 'tractor-trolley', 'tempo']),
-  registrationNumber: z.string().regex(/^[A-Z]{2}\d{2}[A-Z]{1,2}\d{4}$/, 'Invalid registration number (e.g. MH12AB1234)'),
+  registrationNumber: vehicleRegTransform,
   capacity: z.number().positive().max(50_000, 'Capacity too large'),
   capacityUnit: z.enum(['kg', 'ton']),
   baseRatePerKm: z.number().min(0).max(1000),

@@ -41,22 +41,8 @@ export default function AddVehicle() {
           pricePerKm: parseFloat(data.pricePerKm.toString()),
         }),
       })
-      const json = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        const errObj = json?.error
-        let msg = 'Failed to add vehicle'
-        if (typeof errObj === 'string') {
-          msg = errObj
-        } else if (errObj && typeof errObj === 'object') {
-          msg = errObj.message || 'Validation failed'
-          if (Array.isArray(errObj.details) && errObj.details.length > 0) {
-            msg = errObj.details.map((d: any) => `${d.field}: ${d.message}`).join(' • ')
-          }
-        }
-        setError(msg)
-        setLoading(false)
-        return
-      }
+      const json = await res.json()
+      if (!res.ok) { setError(json.error || 'Failed to add vehicle'); setLoading(false); return }
       router.push('/transporter/dashboard')
     } catch (err) {
       console.error('Error:', err)
@@ -113,6 +99,7 @@ export default function AddVehicle() {
                   {...register('registrationNumber', {
                     required: 'Registration number is required',
                     validate: v => {
+                      // Strip spaces/dashes and check length — same logic as server
                       const clean = v.toUpperCase().replace(/[\s-]/g, '')
                       if (!/^[A-Z0-9]{5,12}$/.test(clean)) {
                         return 'Enter a valid vehicle number (e.g. MH12AB1234, KA05ABC1234, BH22A1234)'
