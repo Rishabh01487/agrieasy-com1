@@ -92,7 +92,8 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
             <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 80px' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-                    <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
                         {user.profilePic ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={user.profilePic} alt={name} style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
@@ -179,7 +180,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         {isOwn && tab !== 'saved' && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 12, fontSize: '0.86rem' }}>+ Create</Link>}
                     </div>
                 ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+                    <div className="ig-profile-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                         {displayPosts.map(p => (
                             <Link key={p._id} href={`/agrisocial/post/${p._id}`}
                                 style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 6, overflow: 'hidden', textDecoration: 'none' }}>

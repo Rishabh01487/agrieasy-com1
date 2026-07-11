@@ -109,6 +109,27 @@ input[type="file"] { display: none; }
   }
 }
 
+/* ── Instagram profile grid — always 3 columns even on mobile ── */
+.ig-profile-grid {
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 4px !important;
+}
+
+/* ── Instagram post layout — stack media + comments on mobile ── */
+@media (max-width: 768px) {
+  .ig-post-layout {
+    grid-template-columns: 1fr !important;
+  }
+  .ig-post-layout > div:first-child {
+    min-height: 300px !important;
+  }
+  .ig-post-layout > div:last-child {
+    max-height: none !important;
+    border-left: none !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+}
+
 /* ── Mobile-first responsive overrides for the whole app ───────────
  *
  * Most pages use inline styles with fixed pixel widths and multi-column

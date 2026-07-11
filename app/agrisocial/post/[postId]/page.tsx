@@ -162,7 +162,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                 <span style={{ fontWeight: 700, color: SOCIAL.text }}>{post.type === 'krishiclip' ? '🎬 KrishiClip' : '📷 Post'}</span>
             </nav>
 
-            <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 60px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 0, background: SOCIAL.white, borderRadius: 12, boxShadow: SHARED.shadowMd, overflow: 'hidden' }}>
+            <div className="ig-post-layout" style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 60px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 0, background: SOCIAL.white, borderRadius: 12, boxShadow: SHARED.shadowMd, overflow: 'hidden' }}>
                 {/* Media */}
                 <div style={{ background: '#000', position: 'relative', minHeight: 400 }}>
                     {ytId ? (
