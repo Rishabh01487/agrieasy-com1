@@ -5,7 +5,6 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { validationError } from '@/lib/api-response'
 import { objectIdSchema } from '@/lib/validation'
 
-// POST /api/social/stories/[id]/like — toggle like on a story
 export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },

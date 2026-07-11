@@ -7,8 +7,6 @@ export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 
-  // Rate limit: signature generation is a precursor to uploads — prevent
-  // spamming Cloudinary signature generation.
   const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 30, message: 'Too many upload requests. Slow down.' })
   if (rl) return rl
 
@@ -26,7 +24,6 @@ export async function GET(request: NextRequest) {
     const timestamp = Math.round(Date.now() / 1000)
     const folder = 'agrieasy'
 
-    // CRITICAL: The signature must be computed over EXACTLY the parameters
     // that the browser will send in the upload form — no more, no less.
     // Cloudinary validates that every signed parameter is present in the
     // upload AND that every upload parameter (except file, api_key, signature,
@@ -35,8 +32,6 @@ export async function GET(request: NextRequest) {
     // string that was signed.
     //
     // The create page sends: api_key, timestamp, signature, folder
-    // (api_key, signature, and resource_type are excluded from signing by
-    //  Cloudinary's spec — only timestamp and folder need to be signed here)
     const paramsToSign = {
       timestamp,
       folder,

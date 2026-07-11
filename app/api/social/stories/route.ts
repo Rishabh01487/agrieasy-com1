@@ -10,8 +10,6 @@ import { validationError } from '@/lib/api-response'
 import { validateBody, createStorySchema } from '@/lib/validation'
 
 // GET /api/social/stories
-//   Returns all active stories grouped by user, with viewer's viewed-state.
-//   The viewer sees: their own stories + stories from people they follow.
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -21,13 +19,10 @@ export async function GET(req: NextRequest) {
         const now = new Date()
         const cutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000) // 24h ago
 
-        // Find who the viewer follows
         const followDocs = await Follow.find({ followerId: auth.user.userId }).select('followingId').lean()
         const followingIds = followDocs.map(f => f.followingId)
-        // Always include the viewer themselves
         followingIds.push(auth.user.userId as any)
 
-        // Get all stories from these users in the last 24h
         const stories = await Story.find({
             userId: { $in: followingIds },
             createdAt: { $gte: cutoff },
@@ -70,7 +65,6 @@ export async function GET(req: NextRequest) {
             user: userMap.get(g.userId.toString()),
         }))
 
-        // Put the viewer first, then unviewed-first
         grouped.sort((a, b) => {
             if (a.userId.toString() === auth.user.userId) return -1
             if (b.userId.toString() === auth.user.userId) return 1
@@ -85,7 +79,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/stories — create a new story (expires in 24h)
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)

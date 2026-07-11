@@ -17,7 +17,6 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ success: true, message: 'PayLater already enabled', wallet })
         }
 
-        // FIX: Require bank verification before enabling PayLater
         if (!wallet.bankVerified) {
             return NextResponse.json({ error: 'Please verify your bank account first before enabling PayLater.' }, { status: 400 })
         }

@@ -8,8 +8,6 @@ import { validationError } from '@/lib/api-response'
 
 // POST /api/location — update the authenticated user's live location
 // Body: { latitude, longitude, bookingId? }
-//   - If bookingId is provided, also store the location on the booking
-//     (so the farmer/buyer can track the transporter for that specific booking)
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -28,7 +26,6 @@ export async function POST(req: NextRequest) {
             return validationError('Invalid coordinates')
         }
 
-        // Update the user's location
         await User.findByIdAndUpdate(auth.user.userId, {
             $set: {
                 'location.latitude': body.latitude,
@@ -40,8 +37,6 @@ export async function POST(req: NextRequest) {
         // If a bookingId is provided, also update the booking's live tracking.
         // The driver is either:
         //   - the transporter (when booking.transporterId matches), OR
-        //   - the buyer's own driver (when booking.buyerVehicleId is set and
-        //     the buyer owns that vehicle)
         if (body.bookingId) {
             const booking = await Booking.findById(body.bookingId)
             if (booking) {
@@ -60,7 +55,6 @@ export async function POST(req: NextRequest) {
                         longitude: body.longitude,
                         updatedAt: new Date(),
                     }
-                    // Also push to tracking history
                     if (!Array.isArray(booking.trackingUpdates)) {
                         ;(booking as any).trackingUpdates = []
                     }
@@ -69,7 +63,6 @@ export async function POST(req: NextRequest) {
                         location: { latitude: body.latitude, longitude: body.longitude },
                         status: booking.status,
                     })
-                    // Cap history at 100 entries to avoid unbounded growth
                     if (booking.trackingUpdates.length > 100) {
                         booking.trackingUpdates = booking.trackingUpdates.slice(-100)
                     }
@@ -86,8 +79,6 @@ export async function POST(req: NextRequest) {
 }
 
 // GET /api/location?userId= or ?bookingId=
-//   - ?userId=  → returns that user's last known location
-//   - ?bookingId= → returns the booking's driver location + farmer + buyer locations
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -99,7 +90,6 @@ export async function GET(req: NextRequest) {
         const bookingId = searchParams.get('bookingId')
 
         if (bookingId) {
-            // Return all 3 parties' locations for a booking
             const booking = await Booking.findById(bookingId)
                 .populate('farmerId', 'farmerName firmName role location phone')
                 .populate('buyerId', 'farmerName firmName role location phone')
@@ -110,8 +100,6 @@ export async function GET(req: NextRequest) {
 
             if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
 
-            // Build a commodity summary that works for both new multi-commodity
-            // bookings and legacy single-commodity ones.
             let commoditySummary = booking.commodity || ''
             let totalQty = booking.quantity || 0
             if (Array.isArray(booking.commodities) && booking.commodities.length > 0) {

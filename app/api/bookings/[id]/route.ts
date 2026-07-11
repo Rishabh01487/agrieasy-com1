@@ -9,27 +9,6 @@ import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { apiSuccess, apiError, validationError, ErrorCodes, notFound } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 
-/**
- * PATCH /api/bookings/[id]
- *
- * Body variants:
- *   { status: 'confirmed'|'in-transit'|'delivered'|'cancelled', driverNote? }
- *   { driverOfferedTime: <ISO date>, driverResponse: 'counter-offered' }
- *   { acceptDriverOffer: true }   // farmer accepts counter-offer
- *   { rejectDriverOffer: true }   // farmer rejects counter-offer
- *
- * Authorization:
- *   - farmer       → cancel own pending booking; accept/reject driver counter-offer
- *   - buyer        → confirm / cancel / deliver bookings to his shop
- *   - transporter  → confirm / dispatch / deliver / cancel bookings on his vehicles; counter-offer time
- *   - buyer-as-vehicle-owner → same as transporter for his own vehicles
- *
- * Side effects:
- *   - When status becomes 'in-transit', set vehicle.availableFrom = estimatedArrivalTime + 2h
- *     (default trip duration). Other farmers can still book the vehicle for a later pickup.
- *   - When status becomes 'delivered' or 'cancelled', clear vehicle.availableFrom so it's
- *     immediately available again.
- */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -47,7 +26,6 @@ export async function PATCH(
     const booking = await Booking.findById(id)
     if (!booking) return notFound('Booking')
 
-    // ── Branch 1: Farmer accepting/rejecting a driver counter-offer ──
     if (body.acceptDriverOffer === true || body.rejectDriverOffer === true) {
       if (role !== 'farmer' || booking.farmerId?.toString() !== actorId) {
         return forbidden('Only the farmer who created this booking can respond to the counter-offer')
@@ -58,7 +36,6 @@ export async function PATCH(
       if (body.acceptDriverOffer) {
         booking.driverResponse = 'accepted'
         if (booking.driverOfferedTime) booking.estimatedArrivalTime = booking.driverOfferedTime
-        // Notify driver + buyer
         const farmer = await User.findById(actorId).lean()
         const farmerName = farmer?.farmerName || farmer?.email || 'Farmer'
         await safeNotify(booking.transporterId || booking.buyerId, actorId, 'booking_status', booking._id.toString(), `${farmerName} accepted your counter-offer. New pickup time: ${booking.driverOfferedTime ? new Date(booking.driverOfferedTime).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : 'TBD'}.`)
@@ -73,9 +50,7 @@ export async function PATCH(
       return apiSuccess({ booking: await populatedBooking(id) })
     }
 
-    // ── Branch 2: Driver counter-offering a pickup time ──
     if (body.driverOfferedTime && body.driverResponse === 'counter-offered') {
-      // Only transporter (or buyer-as-vehicle-owner) can counter-offer
       let canCounterOffer = false
       if (role === 'transporter' && booking.vehicleId) {
         const v = await Vehicle.findById(booking.vehicleId).lean()
@@ -105,14 +80,12 @@ export async function PATCH(
       return apiSuccess({ booking: await populatedBooking(id) })
     }
 
-    // ── Branch 3: Standard status change ──
     const newStatus = body.status as string | undefined
     const driverNote = body.driverNote as string | undefined
     if (!newStatus || !['confirmed', 'in-transit', 'delivered', 'cancelled'].includes(newStatus)) {
       return validationError('Invalid request', [{ field: 'status', message: 'Must provide status, driverOfferedTime, acceptDriverOffer, or rejectDriverOffer' }])
     }
 
-    // ── Authorization: figure out who can act on this booking ──
     let canAct = false
     let actorLabel = 'User'
 
@@ -148,8 +121,6 @@ export async function PATCH(
     await booking.save()
 
     // ── Update vehicle availability cycle ──
-    // On dispatch (in-transit), mark the vehicle busy until the estimated
-    // delivery time + 2 hour buffer. On delivery or cancellation, free it.
     if (newStatus === 'in-transit') {
       const tripBufferMs = 2 * 60 * 60 * 1000  // 2 hours
       const availableFrom = booking.estimatedArrivalTime
@@ -179,7 +150,6 @@ export async function PATCH(
       request,
     })
 
-    // ── Notify the farmer about the status change ──
     const actor = await User.findById(actorId).lean()
     const actorName = actor?.firmName || actor?.farmerName || actor?.transporterCompanyName || actor?.email || 'Someone'
     const statusText: Record<string, string> = {
@@ -196,12 +166,10 @@ export async function PATCH(
       `${actorName} ${statusText[newStatus] || `updated your booking to ${newStatus}`}.`,
     )
 
-    // Also notify the buyer when transporter dispatches
     if (role === 'transporter' && newStatus === 'in-transit' && booking.buyerId && booking.buyerId.toString() !== actorId) {
       await safeNotify(booking.buyerId, actorId, 'booking_status', booking._id.toString(), `🚚 ${actorName} dispatched the vehicle. Commodity is on its way to your shop.`)
     }
 
-    // When delivered, prompt buyer to enter the bill & pay
     if (newStatus === 'delivered' && booking.buyerId) {
       await safeNotify(
         booking.buyerId,

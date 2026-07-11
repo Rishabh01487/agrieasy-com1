@@ -7,7 +7,6 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError } from '@/lib/api-response'
 import { sanitize } from '@/lib/validation'
 
-// GET /api/social/highlights?userId=X — list highlights for a user
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url)
@@ -23,8 +22,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/highlights — create a highlight from active stories
-// Body: { name, storyIds: [storyId1, storyId2, ...] }
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -43,7 +40,6 @@ export async function POST(req: NextRequest) {
             return validationError('At least one story is required')
         }
 
-        // Fetch the stories to embed in the highlight
         const stories = await Story.find({ _id: { $in: body.storyIds }, userId: auth.user.userId })
             .select('mediaUrl mediaType caption createdAt')
             .lean()

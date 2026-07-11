@@ -9,8 +9,6 @@ import { validationError, apiSuccess } from '@/lib/api-response'
 import { sanitize } from '@/lib/validation'
 
 // GET /api/ledger?type=&status=&page=
-//   Returns the authenticated user's ledger entries + a summary
-//   (total earnings, total expenses, pending receivables, pending payables)
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -37,7 +35,6 @@ export async function GET(req: NextRequest) {
             Ledger.countDocuments(query),
         ])
 
-        // Summary: total earnings, total expenses, pending receivables, pending payables
         const allEntries = await Ledger.find({ userId: auth.user.userId }).lean()
         const summary = {
             totalEarnings: allEntries.filter(e => e.type === 'earning' && e.status === 'paid').reduce((s, e) => s + e.amount, 0),
@@ -55,8 +52,6 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/ledger — create a new ledger entry
-// Body: { type, counterpartyId?, counterpartyName?, amount, quantity?, unit?,
-//          pricePerUnit?, commodity?, billPhoto?, description?, dueDate?, listingId? }
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -76,7 +71,6 @@ export async function POST(req: NextRequest) {
             return validationError('Amount must be a positive number')
         }
 
-        // Look up the user's role
         const user = await User.findById(auth.user.userId).select('role farmerName firmName')
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -98,8 +92,6 @@ export async function POST(req: NextRequest) {
             dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
         })
 
-        // If this is a bill or invoice, also create the mirror entry for the counterparty
-        // (so both parties see the transaction in their ledger)
         if (body.counterpartyId && (body.type === 'bill' || body.type === 'invoice')) {
             const mirrorType = body.type === 'bill' ? 'expense' : 'expense'
             const counterpartyName = user.farmerName || user.firmName || 'User'
@@ -134,8 +126,6 @@ export async function POST(req: NextRequest) {
     }
 }
 
-// PATCH /api/ledger — mark an entry as paid (or update status)
-// Body: { id, status, paidAt? }
 export async function PATCH(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)

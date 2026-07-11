@@ -5,7 +5,6 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { validationError } from '@/lib/api-response'
 import { objectIdSchema } from '@/lib/validation'
 
-// POST /api/social/stories/[id]/view — mark a story as viewed by the current user
 export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ id: string }> },
@@ -22,7 +21,6 @@ export async function POST(
         const story = await Story.findById(v.data)
         if (!story) return NextResponse.json({ error: 'Story not found' }, { status: 404 })
 
-        // Avoid pushing duplicate viewers
         const alreadyViewed = story.viewedBy.some((vid: any) => vid.toString() === auth.user.userId)
         if (!alreadyViewed) {
             story.viewedBy.push(auth.user.userId as any)

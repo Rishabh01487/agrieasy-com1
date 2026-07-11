@@ -12,10 +12,6 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { parsePagination, paginationMeta, validationError, apiSuccess } from '@/lib/api-response'
 import { validateBody, createBookingSchema } from '@/lib/validation'
 
-/**
- * Send a notification to a user about a booking event.
- * Silently fails — notifications are best-effort, never block the booking.
- */
 async function notify(userId: string, actorId: string, type: 'booking_request' | 'booking_status', bookingId: string, text: string) {
   try {
     await Notification.create({ userId, actorId, type, bookingId, text, isRead: false })
@@ -38,15 +34,11 @@ export async function POST(request: NextRequest) {
 
     // Two flavors of booking:
     //  (a) legacy single-commodity  — must pass listingId + vehicleId + pickupLocation + quantity
-    //  (b) new multi-commodity      — must pass commodities[] + (vehicleId OR buyerVehicleId) +
-    //                                  pickupLocation + deliveryLocation + pickupDateTime
     const hasMultiCommodity = Array.isArray(body.commodities) && body.commodities.length > 0
     const buyerVehicleId = body.buyerVehicleId
     const vehicleId = body.vehicleId
 
     if (!hasMultiCommodity) {
-      // Legacy path — validate using the original createBookingSchema (which
-      // expects listingId + quantity + deliveryAddress)
       const v = validateBody(createBookingSchema, body)
       if (!v.success) return validationError('Validation failed', v.errors)
       const data = v.data
@@ -89,8 +81,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Resolve the buyerId from the first commodity's listing (all commodities
-    // in a single booking must belong to the same buyer — the farmer is going
-    // to ONE buyer's shop, not many).
     const firstListingId = body.commodities[0].listingId
     let buyerId: string | undefined
     let primaryListingId: string | undefined
@@ -103,7 +93,6 @@ export async function POST(request: NextRequest) {
       buyerId = body.buyerId
     }
 
-    // Make sure all commodities belong to the same buyer (when they have listings)
     for (const c of body.commodities) {
       if (c.listingId) {
         const l = await Listing.findById(c.listingId).lean()
@@ -115,7 +104,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Compute total quantity + freight
     const commodities = body.commodities.map((c: any) => ({
       listingId: c.listingId || undefined,
       name: String(c.name || '').slice(0, 100),
@@ -123,8 +111,6 @@ export async function POST(request: NextRequest) {
       numberOfBags: Number(c.numberOfBags) || 0,
       pricePerUnit: Number(c.pricePerUnit) || 0,
     }))
-    // Guard: if any commodity is missing a name or has zero quantity, return
-    // a clear validation error instead of letting Mongoose throw a cryptic one.
     const missingName = commodities.find((c: any) => !c.name || c.name.trim() === '')
     if (missingName) {
       return validationError('Each commodity needs a name', [{ field: 'commodities', message: 'Commodity name is missing' }])
@@ -179,7 +165,6 @@ export async function POST(request: NextRequest) {
       request,
     })
 
-    // ── Notify the buyer (so they know a farmer is selling to their shop) ──
     if (buyerId) {
       const farmer = await User.findById(auth.user.userId).lean()
       const farmerName = farmer?.farmerName || farmer?.email || 'A farmer'
@@ -194,8 +179,6 @@ export async function POST(request: NextRequest) {
         `${farmerName} wants to sell ${commoditySummary} to your shop. Pickup ${new Date(body.pickupDateTime || Date.now()).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}.`,
       )
 
-      // If the farmer selected the BUYER'S OWN vehicle, also flag that —
-      // the buyer needs to dispatch the driver themselves.
       if (buyerVehicleId) {
         await notify(
           buyerId,
@@ -207,7 +190,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ── Notify the transporter (so they can dispatch a driver) ──
     if (vehicleId) {
       const v = await Vehicle.findById(vehicleId).lean()
       if (v?.transporterId) {
@@ -245,19 +227,15 @@ export async function GET(request: NextRequest) {
 
     // Build the query based on role:
     //  - farmer       → bookings I created
-    //  - buyer        → bookings made to my shop (buyerId = me)
-    //  - transporter  → bookings using vehicles I own (need to look up my vehicle IDs first)
     let query: Record<string, unknown> = {}
 
     if (role === 'buyer') {
       query.buyerId = auth.user.userId
     } else if (role === 'transporter') {
-      // Find all vehicles owned by this transporter, then match bookings on those vehicles.
       const myVehicles = await Vehicle.find({ transporterId: auth.user.userId }).lean().select('_id')
       const myVehicleIds = myVehicles.map(v => v._id)
       query = { vehicleId: { $in: myVehicleIds } }
     } else {
-      // Default: farmer — bookings I created
       query.farmerId = auth.user.userId
     }
 

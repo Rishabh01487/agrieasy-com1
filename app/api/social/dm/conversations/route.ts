@@ -4,7 +4,6 @@ import Conversation from '@/lib/models/Conversation'
 import User from '@/lib/models/User'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 
-// GET /api/social/dm/conversations — list all DM conversations for the viewer
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -17,7 +16,6 @@ export async function GET(req: NextRequest) {
             .populate('participants', 'farmerName firmName role')
             .lean()
 
-        // Build a preview for each conversation: the other participant + last message
         const data = conversations.map((c: any) => {
             const others = c.participants.filter((p: any) => p._id.toString() !== auth.user.userId)
             const other = others[0] || c.participants[0]
@@ -41,7 +39,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/dm/conversations — start (or get) a conversation with a user
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -55,7 +52,6 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid participantId' }, { status: 400 })
         }
 
-        // Find existing conversation between these two users
         const existing = await Conversation.findOne({
             participants: { $all: [auth.user.userId, participantId], $size: 2 },
         })

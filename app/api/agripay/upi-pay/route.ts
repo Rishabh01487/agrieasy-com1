@@ -9,8 +9,6 @@ import { sanitize } from '@/lib/validation'
 import { z } from 'zod/v4'
 
 // GET /api/agripay/upi-pay?toIdentifier=PHONE
-// Tries to find a registered user's UPI ID. Returns it if found.
-// If not found, returns success=false (client shows manual UPI ID input).
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -26,7 +24,6 @@ export async function GET(req: NextRequest) {
             const phonePart = toIdentifier.replace('@agripay', '').replace('+91', '').trim()
             query = phonePart.length === 10 ? { phone: phonePart } : { $or: [{ phone: toIdentifier }, { email: toIdentifier }] }
         } else if (toIdentifier.includes('@')) {
-            // Looks like a UPI ID already — return it directly
             return NextResponse.json({ success: true, upiId: toIdentifier, recipientName: toIdentifier.split('@')[0] })
         } else {
             query = { $or: [{ phone: toIdentifier }, { email: toIdentifier }] }
@@ -34,7 +31,6 @@ export async function GET(req: NextRequest) {
 
         const toUser = await User.findOne(query).select('farmerName firmName role upiId phone').lean()
         if (!toUser) {
-            // Recipient not found — that's OK for UPI. Client will show manual UPI ID input.
             return NextResponse.json({
                 success: false,
                 notFound: true,
@@ -43,7 +39,6 @@ export async function GET(req: NextRequest) {
         }
 
         if (!toUser.upiId) {
-            // Recipient found but no UPI ID set — client will show manual input
             return NextResponse.json({
                 success: false,
                 notFound: false,
@@ -65,8 +60,6 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/agripay/upi-pay — record the UPI transaction
-// Works with OR without a registered recipient
-// Body: { toIdentifier?, upiId, amount, note?, upiRefId? }
 const recordUpiPaymentSchema = z.object({
     toIdentifier: z.string().max(200).optional(),  // phone/email/name (optional)
     upiId: z.string().min(3, 'UPI ID required').max(100),  // the actual UPI ID paid to
@@ -89,7 +82,6 @@ export async function POST(req: NextRequest) {
         if (!result.success) return validationError('Invalid data', result.error.issues.map(i => ({ field: String(i.path.join('.')), message: i.message })))
         const { toIdentifier, upiId, amount, note, upiRefId } = result.data
 
-        // Try to find the recipient (optional — works even if not found)
         let toUserId: string | null = null
         let recipientLabel = upiId
 
@@ -110,7 +102,6 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // Create the sender's transaction record
         await Transaction.create({
             fromUserId: auth.user.userId,
             toUserId: toUserId || undefined,  // may be null if recipient not registered
@@ -124,7 +115,6 @@ export async function POST(req: NextRequest) {
             referenceId: upiRefId || upiId,
         })
 
-        // Create the recipient's transaction record (only if registered)
         if (toUserId) {
             await Transaction.create({
                 fromUserId: auth.user.userId,

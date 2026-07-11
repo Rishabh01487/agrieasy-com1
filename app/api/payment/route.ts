@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
       receipt: billingId.toString(),
     })
 
-    // FIX: Use correct Transaction model fields
     const transaction = await Transaction.create({
       fromUserId: auth.user.userId,
       toUserId: farmerId,

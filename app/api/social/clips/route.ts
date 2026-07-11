@@ -5,7 +5,6 @@ import { parsePagination, paginationMeta } from '@/lib/api-response'
 import { SOCIAL } from '@/lib/config'
 import { get as cacheGet } from '@/lib/cache'
 
-// GET /api/social/clips?page=&category=
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
@@ -22,8 +21,6 @@ export async function GET(req: NextRequest) {
             const total = await Post.countDocuments(query)
             // Instagram Reels uses an algorithmic feed (engagement-weighted),
             // not just chronological. Sort by rankScore (likes*5 + comments*8
-            // + saves*6 + shares*10 + recency) descending, then createdAt as
-            // a tiebreaker. This surfaces popular clips first.
             const clips = await Post.find(query)
                 .sort({ rankScore: -1, createdAt: -1 })
                 .skip(skip)
@@ -37,7 +34,6 @@ export async function GET(req: NextRequest) {
         const cached = await cacheGet(cacheKey, fetchClips, { ttl: 120, prefix: 'clips' })
         const { clips, total } = cached ?? await fetchClips()
 
-        // Increment views for returned clips (side-effect — never cached)
         const ids = clips.map(c => c._id)
         if (ids.length > 0) {
             await Post.updateMany({ _id: { $in: ids } }, { $inc: { views: 1 } })

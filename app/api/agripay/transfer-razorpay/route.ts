@@ -11,13 +11,11 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { verifyPaymentSignature } from '@/lib/razorpay'
 import { z } from 'zod/v4'
 
-// Schema for creating a Razorpay transfer order
 const createTransferOrderSchema = z.object({
     toIdentifier: z.string().min(1, 'Recipient identifier required'),
     amount: z.number().positive('Amount must be positive').max(100_000, 'Max transfer is ₹1,00,000'),
 })
 
-// Schema for verifying + completing the transfer
 const verifyTransferSchema = z.object({
     toIdentifier: z.string().min(1, 'Recipient identifier required'),
     amount: z.number().positive('Amount must be positive').max(100_000, 'Max transfer is ₹1,00,000'),
@@ -28,7 +26,6 @@ const verifyTransferSchema = z.object({
     paymentMethod: z.enum(['upi', 'netbanking']).default('upi'),
 })
 
-// Helper: find recipient user by phone/email/agripayId
 async function findRecipient(identifier: string) {
     let query: Record<string, unknown>
     if (identifier.includes('@agripay')) {
@@ -41,8 +38,6 @@ async function findRecipient(identifier: string) {
 }
 
 // POST /api/agripay/transfer-razorpay
-// action=create → Creates a Razorpay order for the transfer
-// action=verify → Verifies the payment + credits the recipient's wallet
 export async function POST(request: NextRequest) {
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
@@ -55,7 +50,6 @@ export async function POST(request: NextRequest) {
         const body = await request.json()
         const action = body.action || 'create'
 
-        // ── STEP 1: Create Razorpay Order ───────────────────────────
         if (action === 'create') {
             const v = validateBody(createTransferOrderSchema, body)
             if (!v.success) return validationError('Invalid data', v.errors)
@@ -99,7 +93,6 @@ export async function POST(request: NextRequest) {
             })
         }
 
-        // ── STEP 2: Verify Payment + Credit Recipient ──────────────
         if (action === 'verify') {
             const v = validateBody(verifyTransferSchema, body)
             if (!v.success) return validationError('Invalid verification data', v.errors)

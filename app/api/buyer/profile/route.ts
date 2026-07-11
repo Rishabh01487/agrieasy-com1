@@ -9,29 +9,20 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { z } from 'zod/v4'
 import { sanitize } from '@/lib/validation'
 
-// Force Node.js runtime so DNS + MongoDB work properly.
 export const runtime = 'nodejs'
 dns.setDefaultResultOrder('ipv4first')
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])
 
-// Whitelisted fields a buyer is allowed to update on their profile.
 const profileUpdateSchema = z.object({
   firmName: z.string().min(2).max(200).optional(),
   gstin: z.string().regex(/^[0-9A-Z]{0,15}$/).optional(),
   bio: z.string().max(500).optional(),
   // Cloudinary URLs (or empty string to clear). We accept empty string so the
-  // user can remove an existing photo. We accept only URLs to prevent
-  // arbitrary string blobs from being saved.
   visitingCardPhoto: z.string().url().or(z.literal('')).optional(),
   shopPhoto: z.string().url().or(z.literal('')).optional(),
-  // Optional list of commodities the buyer is interested in (free-text chips).
   commoditiesInterested: z.array(z.string().max(60)).max(50).optional(),
 })
 
-/**
- * GET /api/buyer/profile
- * Returns the authenticated buyer's profile (firm name, photos, contact).
- */
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
@@ -42,7 +33,6 @@ export async function GET(request: NextRequest) {
     if (!user) return apiError(ErrorCodes.NOT_FOUND, 'User not found')
     if (user.role !== 'buyer') return forbidden('Only buyer accounts can access this endpoint')
 
-    // Strip sensitive fields — never expose password, aadhar, license, etc.
     const profile = {
       _id: user._id.toString(),
       name: user.farmerName || user.driverName || user.email,
@@ -66,10 +56,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/buyer/profile
- * Updates the buyer's editable profile fields (firm name, GSTIN, photos, etc.).
- */
 export async function PATCH(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
@@ -93,7 +79,6 @@ export async function PATCH(request: NextRequest) {
     }
     const data = parsed.data
 
-    // Apply only provided fields. Sanitize free-text strings.
     if (data.firmName !== undefined) user.firmName = sanitize(data.firmName)
     if (data.gstin !== undefined) user.gstin = data.gstin.toUpperCase()
     if (data.bio !== undefined) user.bio = sanitize(data.bio)

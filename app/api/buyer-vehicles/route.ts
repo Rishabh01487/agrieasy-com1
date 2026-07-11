@@ -8,12 +8,6 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { validateBody, createBuyerVehicleSchema } from '@/lib/validation'
 import { parsePagination, paginationMeta } from '@/lib/api-response'
 
-/**
- * GET /api/buyer-vehicles
- *   No query params  → returns the authenticated buyer's own vehicles
- *   ?buyerId=<id>     → public: returns only `available` vehicles for that buyer
- *                       (used by farmers when picking a vehicle for booking)
- */
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
@@ -23,7 +17,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const requestedBuyerId = searchParams.get('buyerId')
 
-    // Public-ish lookup: a farmer fetching a specific buyer's available vehicles
     if (requestedBuyerId) {
       const { page, limit, skip } = parsePagination(searchParams, 100, 50)
       const query = { buyerId: requestedBuyerId, availability: 'available' }
@@ -36,8 +29,6 @@ export async function GET(request: NextRequest) {
       return apiSuccess({ vehicles }, paginationMeta(page, limit, total))
     }
 
-    // Otherwise: return the authenticated buyer's own vehicles (all of them,
-    // available or not — they need to manage their fleet)
     const { page, limit, skip } = parsePagination(searchParams, 100, 50)
     const query = { buyerId: auth.user.userId }
     const total = await BuyerVehicle.countDocuments(query)
@@ -53,10 +44,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/buyer-vehicles
- * Only buyers can create vehicles for their own profile.
- */
 export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()

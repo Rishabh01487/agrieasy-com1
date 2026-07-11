@@ -3,8 +3,6 @@ import dbConnect from '@/lib/mongodb'
 import Notification from '@/lib/models/Notification'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 
-// POST /api/social/notifications/read — mark all (or specific) notifications as read
-//   body: { id?: string }   // if omitted, marks ALL as read
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)

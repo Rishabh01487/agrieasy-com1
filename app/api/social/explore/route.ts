@@ -6,8 +6,6 @@ import { SOCIAL } from '@/lib/config'
 import { get as cacheGet } from '@/lib/cache'
 import { escapeRegex } from '@/lib/auth-fetch'
 
-// GET /api/social/explore?category=&type=&page=
-//   Optional ?tag= to filter by hashtag.
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
@@ -24,7 +22,6 @@ export async function GET(req: NextRequest) {
             if (category && category !== 'all') query.category = category
             if (type && type !== 'all') query.type = type
             if (tag) {
-                // Hashtag filter (case-insensitive, with or without leading #)
                 const cleanTag = tag.replace(/^#/, '').trim()
                 if (cleanTag) {
                     const safe = escapeRegex(cleanTag)
@@ -43,7 +40,6 @@ export async function GET(req: NextRequest) {
             return { success: true, data: { posts }, meta: paginationMeta(page, limit, total) }
         }
 
-        // Skip cache when filtering by tag (more dynamic)
         if (tag) {
             const result = await fetchExplore()
             return NextResponse.json(result)

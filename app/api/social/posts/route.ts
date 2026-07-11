@@ -14,8 +14,6 @@ import { validateBody, createPostSchema } from '@/lib/validation'
 //
 // Instagram-style feed:
 //   - feed=following  → posts from people the viewer follows, ranked, then latest
-//   - feed=ranked     → ranked across the whole platform (Explore-style top posts mixed in)
-//   - feed=latest     → chronological (default for backward compat)
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
@@ -26,8 +24,6 @@ export async function GET(req: NextRequest) {
         const userIdParam = searchParams.get('userId')
         // includeClips=true (default) mixes krishiclips into the feed so users
         // see their own clips + others' clips alongside regular posts. The
-        // dedicated /agrisocial/clips page still exists for the vertical
-        // video experience. Pass ?includeClips=false to get posts only.
         const includeClips = searchParams.get('includeClips') !== 'false'
 
         const query: Record<string, unknown> = { isActive: true }
@@ -41,15 +37,12 @@ export async function GET(req: NextRequest) {
         let posts: any[] = []
 
         if (feedParam === 'following' && userIdParam) {
-            // Following feed: pull the list of followee IDs and query their posts
             const followDocs = await Follow.find({ followerId: userIdParam }).select('followingId').lean()
             const followingIds = followDocs.map(f => f.followingId)
-            // Always include the viewer's own posts
             followingIds.push(userIdParam as any)
 
             query.userId = { $in: followingIds }
 
-            // Mix: top 60% ranked, 40% latest (so the feed feels fresh AND surfaces hits)
             const rankedCount = Math.ceil(limit * 0.6)
             const latestCount = limit - rankedCount
 
@@ -59,7 +52,6 @@ export async function GET(req: NextRequest) {
                 Post.find(query).sort({ createdAt: -1 }).skip(skip + rankedCount).limit(latestCount)
                     .populate('userId', 'farmerName firmName role profilePic').lean(),
             ])
-            // Interleave so the feed alternates ranked / fresh
             const merged: any[] = []
             for (let i = 0; i < Math.max(ranked.length, latest.length); i++) {
                 if (ranked[i]) merged.push(ranked[i])
@@ -86,7 +78,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/posts — create a new post (single image, carousel, video, or YouTube)
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -101,7 +92,6 @@ export async function POST(req: NextRequest) {
         if (!v.success) return validationError('Validation failed', v.errors)
         const data = v.data
 
-        // Detect YouTube URL → store as youtube media type
         const firstUrl = data.mediaUrls?.[0] || ''
         const ytMatch = firstUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
         const mediaType: 'image' | 'video' | 'youtube' | 'text' =
@@ -128,7 +118,6 @@ export async function POST(req: NextRequest) {
             request: req,
         })
 
-        // Notify followers that the user posted (skip krishiclips — they go to the clips tab)
         if (post.type === 'post') {
             const followers = await Follow.find({ followingId: auth.user.userId }).select('followerId').lean()
             if (followers.length > 0 && Notification) {

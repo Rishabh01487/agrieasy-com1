@@ -12,10 +12,8 @@ import { LISTING } from '@/lib/config'
 import { get as cacheGet, invalidateByPrefix } from '@/lib/cache'
 import { geocodeAddress, haversineKm } from '@/lib/geo'
 
-// Force Node.js runtime (not Edge) so DNS and MongoDB work
 export const runtime = 'nodejs'
 
-// Apply Google DNS before any MongoDB call
 dns.setDefaultResultOrder('ipv4first')
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])
 
@@ -25,7 +23,6 @@ function escapeRegex(str: string): string {
 
 export async function GET(request: NextRequest) {
   try {
-    // Re-apply DNS in handler context
     dns.setDefaultResultOrder('ipv4first')
     dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])
     await dbConnect()
@@ -40,8 +37,6 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'recent'  // recent | price-high | price-low | distance
 
     // Distance filter — if farmer's lat/lng is provided, only return listings
-    // within `radiusKm` (default 50). When radiusKm = 0 or omitted, no
-    // distance filter is applied (returns everything nationwide).
     const farmerLat = searchParams.get('farmerLat')
     const farmerLng = searchParams.get('farmerLng')
     const radiusKm = searchParams.get('radiusKm')
@@ -73,13 +68,10 @@ export async function GET(request: NextRequest) {
         .limit(limit)
         .lean()
 
-      // Compute distance from farmer for each listing (when his location is
-      // known) and apply radius filter + distance sort.
       let distanceFiltered = listings
       if (hasFarmerLocation) {
         distanceFiltered = listings
           .map(l => {
-            // Prefer the listing's own geoLocation; fall back to buyer's User.location.
             const geo = (l.geoLocation && (l.geoLocation.latitude || l.geoLocation.longitude))
               ? l.geoLocation
               : ((l.buyerId as any)?.location)
@@ -104,7 +96,6 @@ export async function GET(request: NextRequest) {
 
       // Sort
       if (sortBy === 'distance' && hasFarmerLocation) {
-        // null distances (un-geocoded) sink to the bottom
         distanceFiltered.sort((a, b) => {
           if (a.distanceKm === null && b.distanceKm === null) return 0
           if (a.distanceKm === null) return 1
@@ -135,7 +126,6 @@ export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 
-  // One rate-limit check per request — covers all commodities in this batch.
   const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many listing requests.' })
   if (rl) return rl
 
@@ -149,8 +139,6 @@ export async function POST(request: NextRequest) {
 
     // Build the list of (commodity, pricePerUnit, unit) tuples to create.
     // Two paths:
-    //   (a) Multi-commodity  — `data.commodities` array
-    //   (b) Single (legacy)  — `data.commodity` + `data.pricePerUnit`
     type Entry = { name: string; pricePerUnit: number; unit: string }
     let entries: Entry[]
     if (Array.isArray(data.commodities) && data.commodities.length > 0) {
@@ -158,14 +146,11 @@ export async function POST(request: NextRequest) {
     } else if (data.commodity && data.pricePerUnit != null) {
       entries = [{ name: data.commodity, pricePerUnit: data.pricePerUnit, unit: data.unit || 'kg' }]
     } else {
-      // Schema refinement should have caught this — but guard anyway
       return validationError('No commodities provided', [{ field: 'commodities', message: 'At least one commodity is required' }])
     }
 
     // Geocode ONCE for the whole batch (Nominatim rate-limits at 1 req/sec,
     // so per-listing geocoding was causing failures when buyers added multiple
-    // commodities at once). If geocoding fails, fall back to the buyer's
-    // saved profile location — and if that's missing too, leave geoLocation empty.
     let geoLocation: { latitude?: number; longitude?: number } = {}
     const g = await geocodeAddress(data.location)
     if (g) {
@@ -177,7 +162,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Shared fields applied to every listing in this batch
     const sharedFields = {
       buyerId: auth.user.userId,
       variety: data.variety,
@@ -194,7 +178,6 @@ export async function POST(request: NextRequest) {
       isActive: true,
     }
 
-    // Create all listings in one bulk insert — single DB round-trip.
     const docs = entries.map(e => ({ ...sharedFields, commodity: e.name, pricePerUnit: e.pricePerUnit, unit: e.unit }))
     const created = await Listing.insertMany(docs)
 
@@ -209,13 +192,9 @@ export async function POST(request: NextRequest) {
 
     await invalidateByPrefix('listings')
 
-    // Return shape: always `listings` array (single-element for legacy path).
-    // Backward-compat: also expose `listing` for callers expecting one object.
     return apiSuccess({ listings: created, listing: created[0] }, undefined, 201)
   } catch (error: unknown) {
     console.error('Create listing error:', error)
-    // Never leak raw Zod / Mongoose internals to the client — they end up
-    // as a JSON blob in the red error banner, which is confusing.
     let userMessage = 'Failed to create listing. Please try again.'
     if (error instanceof Error) {
       // Common, safe-to-show cases:

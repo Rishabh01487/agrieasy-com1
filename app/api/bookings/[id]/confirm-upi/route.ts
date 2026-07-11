@@ -7,16 +7,6 @@ import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { apiSuccess, apiError, validationError, ErrorCodes, notFound } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 
-/**
- * POST /api/bookings/[id]/confirm-upi
- *
- * After the buyer completes a direct-UPI payment in their UPI app (GPay /
- * PhonePe / Paytm), they return to the app and confirm. We mark the booking
- * as paid. (In a future iteration, a UPI webhook could automate this — for
- * now we trust the buyer's confirmation since the farmer can dispute.)
- *
- * Body: { paymentRef?: string }  // optional UPI ref no. from the receipt
- */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

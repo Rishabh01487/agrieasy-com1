@@ -11,17 +11,8 @@ import { z } from 'zod/v4'
 const billSchema = z.object({
   billAmount: z.number().positive('Bill amount must be positive').max(10_000_000),
   billNote: z.string().max(500).optional(),
-  // Optional: actual weight per commodity (after weighing) — stored as a note
-  // for now. Future enhancement: structured per-commodity actual weights.
 })
 
-/**
- * POST /api/bookings/[id]/bill
- * Buyer enters the final bill amount after weighing the commodity at his shop.
- * Sets booking.paymentStatus = 'billed' and notifies the farmer.
- *
- * Authorization: only the buyer of this booking can set the bill.
- */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

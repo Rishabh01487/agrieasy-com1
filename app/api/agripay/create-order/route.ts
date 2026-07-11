@@ -4,14 +4,6 @@ import { validateBody, createOrderSchema } from '@/lib/validation'
 import { validationError } from '@/lib/api-response'
 import { rateLimitByUser } from '@/lib/rate-limit'
 
-/**
- * Creates a Razorpay order for wallet top-up.
- *
- * The frontend (add-money/page.tsx) calls this to get an order_id,
- * then opens the Razorpay checkout modal.  After the user pays,
- * Razorpay calls the `handler` callback with payment details,
- * which the frontend sends to /api/agripay/topup for verification.
- */
 export async function POST(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()

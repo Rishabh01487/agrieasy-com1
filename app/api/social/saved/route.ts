@@ -4,7 +4,6 @@ import Post from '@/lib/models/Post'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { parsePagination, paginationMeta } from '@/lib/api-response'
 
-// GET /api/social/saved — list posts the viewer has saved
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)

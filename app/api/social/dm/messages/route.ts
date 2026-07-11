@@ -8,7 +8,6 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError } from '@/lib/api-response'
 import { validateBody, sendMessageSchema } from '@/lib/validation'
 
-// GET /api/social/dm/messages?conversationId=
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -25,7 +24,6 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
         }
 
-        // Mark all messages from the other participant as read by the viewer
         let dirty = false
         for (const m of conv.messages) {
             if (m.senderId.toString() !== auth.user.userId && !m.readBy.some((r: any) => r.toString() === auth.user.userId)) {
@@ -43,7 +41,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/dm/messages — send a message
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -60,7 +57,6 @@ export async function POST(req: NextRequest) {
         let conversationId = v.data.conversationId
         const recipientId = v.data.recipientId
 
-        // If no conversationId, find or create one with the recipient
         if (!conversationId) {
             if (!recipientId) return NextResponse.json({ error: 'conversationId or recipientId required' }, { status: 400 })
             let conv = await Conversation.findOne({
@@ -97,7 +93,6 @@ export async function POST(req: NextRequest) {
             resourceId: conversationId, request: req,
         })
 
-        // Notify all other participants
         const otherIds = conv.participants.filter((p: any) => p.toString() !== auth.user.userId)
         if (Notification && otherIds.length > 0) {
             await Notification.insertMany(otherIds.map((uid: any) => ({

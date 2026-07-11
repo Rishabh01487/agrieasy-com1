@@ -1,15 +1,6 @@
 import { NextResponse } from 'next/server'
 import { config } from '@/lib/config'
 
-/**
- * Health check endpoint for load balancers and monitoring.
- *
- * - Liveness: 200 if the server process is running
- * - Readiness: checks all dependencies (MongoDB, Redis, Razorpay config)
- *
- * GET /api/health        → basic liveness
- * GET /api/health?deep=1 → full readiness with dependency checks
- */
 
 export async function GET(request: Request) {
   const url = new URL(request.url)
@@ -26,8 +17,6 @@ export async function GET(request: Request) {
       await mongoose.connection.db?.admin().ping()
       checks.mongodb = { status: 'up', latencyMs: Math.round(performance.now() - start) }
     } catch (e) {
-      // Sanitize: don't leak raw DB error strings (may contain connection
-      // strings, hostnames, or auth details) to unauthenticated callers.
       const detail = e instanceof Error ? e.message : 'Connection failed'
       checks.mongodb = {
         status: 'down',
@@ -40,7 +29,6 @@ export async function GET(request: Request) {
     checks.mongodb = { status: 'up' } // Assume up if not deep-checking
   }
 
-  // ── Redis (Upstash) ─────────────────────────────────────────────
   if (deep) {
     try {
       const start = performance.now()
@@ -75,7 +63,6 @@ export async function GET(request: Request) {
     ? { status: 'up' }
     : { status: 'degraded', detail: 'No SMS provider configured' }
 
-  // ── Overall status ──────────────────────────────────────────────
   const allStatuses = Object.values(checks).map(c => c.status)
   const hasDown = allStatuses.includes('down')
   const overall = hasDown ? 'unhealthy' : allStatuses.includes('degraded') ? 'degraded' : 'healthy'

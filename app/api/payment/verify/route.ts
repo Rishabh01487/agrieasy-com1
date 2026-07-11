@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     }
 
     const expected = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET).update(`${razorpayOrderId}|${razorpayPaymentId}`).digest('hex')
-    // Use timingSafeEqual to prevent timing attacks on the signature comparison.
     const sigBuf = Buffer.from(razorpaySignature, 'hex')
     const expBuf = Buffer.from(expected, 'hex')
     if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
@@ -45,8 +44,6 @@ export async function POST(request: NextRequest) {
     // SECURITY: fetch (don't update yet) and verify the authenticated user
     // actually owns this transaction AND that the transaction's razorpayOrderId
     // matches the one in the request body. Without this check, an attacker
-    // could replay their own valid Razorpay signature against ANY victim's
-    // pending transactionId and mark it as 'success' (financial IDOR).
     const transaction = await Transaction.findById(transactionId)
     if (!transaction) {
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
@@ -58,7 +55,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Transaction ID does not match the provided order' }, { status: 400 })
     }
     if (transaction.status === 'success') {
-      // Idempotent: already verified — return without re-auditing
       return NextResponse.json({ success: true, message: 'Payment already verified', transaction })
     }
 

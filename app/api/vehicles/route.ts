@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  // FIX: Restrict to transporter role only
   const auth = authenticateRequest(request, ['transporter'])
   if (!auth) return unauthorized()
   if (!auth.roleMatch) return forbidden()
@@ -63,7 +62,6 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Validation failed', v.errors)
     const data = v.data
 
-    // Extra fields not in schema (backward compat)
     const { driverName, driverPhone, driverLicense } = body
 
     const vehicle = await Vehicle.create({
@@ -87,12 +85,10 @@ export async function POST(request: NextRequest) {
   } catch (error: unknown) {
     console.error('Create vehicle error:', error)
     const e = error as Error & { code?: number; keyValue?: Record<string, unknown> }
-    // Duplicate key on registrationNumber
     if (e.code === 11000 || (e.message && e.message.includes('duplicate key'))) {
       const dup = e.keyValue?.registrationNumber ? ` (${e.keyValue.registrationNumber})` : ''
       return NextResponse.json({ error: `Vehicle with this registration number already exists${dup}` }, { status: 409 })
     }
-    // Mongoose validation error (e.g. driverName required at model level)
     if (e.name === 'ValidationError') {
       return NextResponse.json({ error: e.message || 'Validation failed' }, { status: 400 })
     }
@@ -113,7 +109,6 @@ export async function PATCH(request: NextRequest) {
     const { vehicleId, availability } = await request.json()
     if (!vehicleId) return NextResponse.json({ error: 'vehicleId required' }, { status: 400 })
 
-    // FIX: Verify ownership before updating (IDOR prevention)
     const existing = await Vehicle.findById(vehicleId)
     if (!existing) return NextResponse.json({ error: 'Vehicle not found' }, { status: 404 })
     if (existing.transporterId.toString() !== auth.user.userId) return forbidden('You do not own this vehicle')

@@ -6,7 +6,6 @@ import { logAudit } from '@/lib/audit'
 import { validationError } from '@/lib/api-response'
 import { objectIdSchema } from '@/lib/validation'
 
-// POST /api/social/posts/[postId]/share — track a share (Instagram-style "share to DM / copy link")
 export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ postId: string }> },
@@ -23,7 +22,6 @@ export async function POST(
         const post = await Post.findById(v.data)
         if (!post) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
 
-        // Avoid double-counting shares from the same user in a row
         if (!post.sharedBy.some((id: any) => id.toString() === auth.user.userId)) {
             post.sharedBy.push(auth.user.userId as any)
             post.sharedCount = (post.sharedCount || 0) + 1

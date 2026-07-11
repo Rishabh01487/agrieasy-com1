@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
             await Follow.create({ followerId: auth.user.userId, followingId })
             await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Follow', resourceId: followingId, details: { followed: true }, request: req })
 
-            // Notify the followed user
             if (Notification) {
                 await Notification.create({
                     userId: followingId,
@@ -58,7 +57,6 @@ export async function GET(req: NextRequest) {
         const targetId = searchParams.get('targetId')
         const list = searchParams.get('list') // 'followers' | 'following'
 
-        // List mode: return the actual users (for profile stats click)
         if (list && userId) {
             if (list === 'followers') {
                 const follows = await Follow.find({ followingId: userId }).select('followerId').lean()
@@ -73,7 +71,6 @@ export async function GET(req: NextRequest) {
             }
         }
 
-        // Check mode: is userId following targetId?
         if (!userId || !targetId) return NextResponse.json({ following: false })
         const exists = await Follow.findOne({ followerId: userId, followingId: targetId })
         const followers = await Follow.countDocuments({ followingId: targetId })

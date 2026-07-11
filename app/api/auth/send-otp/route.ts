@@ -32,8 +32,6 @@ export async function POST(request: NextRequest) {
       // Only expose the OTP in the response during local development AND when
       // SMS is not configured. In production we NEVER return the OTP — it must
       // be delivered out-of-band via SMS, otherwise any caller could request
-      // an OTP for a victim's phone and immediately read it from the response
-      // to bypass authentication entirely.
       ...(isDev && !smsConfigured ? { devOtp: otp } : {}),
     })
   } catch (error) {

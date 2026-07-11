@@ -8,8 +8,6 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 // GET /api/social/suggested
 //   Returns users the viewer is NOT following yet, ranked by:
 //   - mutual follower count (most-shared followers first)
-//   - posting activity (active users > dormant users)
-//   Excludes the viewer themselves.
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -17,12 +15,10 @@ export async function GET(req: NextRequest) {
 
         await dbConnect()
 
-        // People the viewer already follows
         const followedDocs = await Follow.find({ followerId: auth.user.userId }).select('followingId').lean()
         const alreadyFollowing = new Set(followedDocs.map(f => f.followingId.toString()))
         alreadyFollowing.add(auth.user.userId)
 
-        // People followed by the viewer's followings (mutuals)
         const mutualFollows = await Follow.aggregate([
             { $match: { followerId: auth.user.userId } },
             { $lookup: { from: 'follows', localField: 'followingId', foreignField: 'followerId', as: 'mutuals' } },
@@ -36,7 +32,6 @@ export async function GET(req: NextRequest) {
         const mutualIds = mutualFollows.map((m: any) => m._id)
         const mutualCountMap = new Map(mutualFollows.map((m: any) => [m._id.toString(), m.mutualCount]))
 
-        // Top posters in the last 30 days (active users)
         const activePosters = await Post.aggregate([
             { $match: { createdAt: { $gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } } },
             { $group: { _id: '$userId', postCount: { $sum: 1 }, totalLikes: { $sum: '$likesCount' } } },
@@ -46,13 +41,11 @@ export async function GET(req: NextRequest) {
         const activeIds = activePosters.map((p: any) => p._id)
         const activeMap = new Map(activePosters.map((p: any) => [p._id.toString(), { postCount: p.postCount, totalLikes: p.totalLikes }]))
 
-        // Combine: prioritise mutuals, then active posters
         const candidateIds = Array.from(new Set([...mutualIds, ...activeIds]))
             .filter((id: any) => !alreadyFollowing.has(id.toString()))
             .slice(0, 12)
 
         if (candidateIds.length === 0) {
-            // Fallback: any users the viewer isn't following
             const fallback = await User.find({ _id: { $nin: Array.from(alreadyFollowing) } })
                 .select('farmerName firmName role')
                 .limit(10).lean()

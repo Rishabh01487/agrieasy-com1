@@ -6,8 +6,6 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { escapeRegex } from '@/lib/auth-fetch'
 
 // GET /api/social/search?q=boys&kind=users|hashtags|all
-//   - Users: search by farmerName / firmName / phone
-//   - Hashtags: aggregate distinct hashtags containing the query
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)

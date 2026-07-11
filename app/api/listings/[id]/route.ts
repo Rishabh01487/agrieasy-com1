@@ -5,7 +5,6 @@ import { z } from 'zod/v4'
 import { positiveAmountSchema } from '@/lib/validation'
 import { validationError } from '@/lib/api-response'
 
-// GET /api/listings/[id] — fetch a single listing
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,7 +25,6 @@ export async function GET(
   }
 }
 
-// PATCH /api/listings/[id] — update a listing (auth required)
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -48,7 +46,6 @@ export async function PATCH(
 
     const body = await request.json()
 
-    // Validate key numeric fields if provided
     if (body.quantity !== undefined) {
       const q = z.number().positive('Quantity must be positive').max(100_000).safeParse(body.quantity)
       if (!q.success) return validationError('Invalid quantity', q.error.issues.map(i => ({ field: 'quantity', message: i.message })))
@@ -65,7 +62,6 @@ export async function PATCH(
     for (const field of allowedFields) {
       if (body[field] !== undefined) updateData[field] = body[field]
     }
-    // Normalize priceDate if provided
     if (updateData.priceDate) {
       const d = new Date(updateData.priceDate as string)
       if (isNaN(d.getTime())) {
@@ -95,7 +91,6 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/listings/[id] — delete a listing (auth required)
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

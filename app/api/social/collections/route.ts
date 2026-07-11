@@ -7,7 +7,6 @@ import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError } from '@/lib/api-response'
 import { sanitize } from '@/lib/validation'
 
-// GET /api/social/collections — list all collections for the viewer
 export async function GET(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -18,7 +17,6 @@ export async function GET(req: NextRequest) {
             .sort({ updatedAt: -1 })
             .lean()
 
-        // Populate cover post for each collection
         const populated = await Promise.all(collections.map(async (c) => {
             const coverPost = c.coverPostId
                 ? await Post.findById(c.coverPostId).select('mediaUrl mediaType caption').lean()
@@ -35,8 +33,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// POST /api/social/collections — create a new collection
-// Body: { name, postId? }
 export async function POST(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)

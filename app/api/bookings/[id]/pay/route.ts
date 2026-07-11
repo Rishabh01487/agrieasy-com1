@@ -17,23 +17,8 @@ const paySchema = z.object({
   // For 'cash', we just record the payment without any wallet/UPI movement.
   // For 'direct-upi', we return a UPI deep link and the client confirms after
   //   the user completes the payment in their UPI app.
-  // For 'wallet' and 'agripay-upi', we perform an actual wallet transfer
-  //   from buyer's AgriPay wallet to farmer's AgriPay wallet.
 })
 
-/**
- * POST /api/bookings/[id]/pay
- *
- * Buyer pays the farmer for a delivered booking.
- *  - 'wallet'      → AgriPay wallet → wallet transfer (instant, atomic)
- *  - 'agripay-upi' → same as wallet (the buyer's AgriPay account is debited)
- *  - 'direct-upi'  → returns a UPI deep link; client opens it in the user's
- *                    UPI app. Payment is marked 'pending' until manually
- *                    confirmed by the buyer (no webhook integration yet).
- *  - 'cash'        → records cash payment, marks booking as paid.
- *
- * Authorization: only the buyer of this booking can pay.
- */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -66,8 +51,6 @@ export async function POST(
       return validationError('This booking is already paid', [{ field: 'paymentStatus', message: 'Already paid' }])
     }
 
-    // The amount to pay — prefer the bill amount (set by buyer after weighing),
-    // fall back to the agreed estimated value of the commodities.
     const amount = parsed.data.amount
       ?? booking.billAmount
       ?? (booking.commodities || []).reduce((s: number, c: any) => s + (c.quantity || 0) * (c.pricePerUnit || 0), 0)
@@ -82,7 +65,6 @@ export async function POST(
     const buyer = await User.findById(auth.user.userId).lean()
     const buyerName = buyer?.firmName || buyer?.email || 'Buyer'
 
-    // ── Method: direct-upi → return a UPI deep link ──
     if (method === 'direct-upi') {
       const farmerUpi = farmer.upiId || farmer.phone ? `${farmer.phone}@agripay` : null
       if (!farmer.upiId && !farmer.phone) {
@@ -94,7 +76,6 @@ export async function POST(
       const tn = encodeURIComponent(`AgriEasy booking ${booking._id.toString().slice(-6)}`)
       const upiLink = `upi://pay?pa=${pa}&pn=${pn}&am=${am}&tn=${tn}&cu=INR`
 
-      // Mark as pending — buyer confirms after completing in UPI app
       booking.paymentMethod = 'direct-upi'
       booking.paymentStatus = 'pending'
       booking.paymentAmount = amount
@@ -120,7 +101,6 @@ export async function POST(
       })
     }
 
-    // ── Method: cash → just record it ──
     if (method === 'cash') {
       booking.paymentMethod = 'cash'
       booking.paymentStatus = 'paid'
@@ -157,7 +137,6 @@ export async function POST(
       })
     }
 
-    // ── Method: wallet / agripay-upi → internal wallet transfer ──
     const fromWallet = await Wallet.findOne({ userId: auth.user.userId })
     if (!fromWallet) {
       return NextResponse.json({ error: 'Your AgriPay wallet is not set up. Open AgriPay first.' }, { status: 404 })

@@ -21,7 +21,6 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Invalid registration data', v.errors)
     const data = v.data
 
-    // Role-specific business logic checks
     if (data.role === 'farmer' && !data.aadhaarNumber) {
       return badRequest('Aadhar number required for farmers')
     }
@@ -38,8 +37,6 @@ export async function POST(request: NextRequest) {
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
     // Normalize address: the schema accepts either a string (from the
-    // autocomplete form) or an object {state, district, pinCode, fullAddress}.
-    // The User model expects a single string, so flatten objects accordingly.
     const addressStr = (() => {
       if (!data.address) return ''
       if (typeof data.address === 'string') return data.address

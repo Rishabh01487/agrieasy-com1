@@ -12,10 +12,6 @@ export const runtime = 'nodejs'
 dns.setDefaultResultOrder('ipv4first')
 dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1'])
 
-/**
- * GET /api/farmer/profile
- * Returns the authenticated farmer's profile including location.
- */
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
@@ -49,11 +45,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * PATCH /api/farmer/profile
- * Updates farmer's location (and optionally name/bio/upiId).
- * Sets hasSetupLocation = true so the dashboard stops prompting.
- */
 export async function PATCH(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()

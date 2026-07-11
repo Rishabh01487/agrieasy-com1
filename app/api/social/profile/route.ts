@@ -18,19 +18,14 @@ export async function GET(req: NextRequest) {
 
         // SECURITY: viewerId MUST come from the auth token, not from a query
         // param. Earlier code fell back to searchParams.get('viewerId'), which
-        // allowed an unauthenticated attacker to pass ?userId=X&viewerId=X
-        // and read any user's private saved posts.
         const auth = authenticateRequest(req)
         const viewerId = auth?.user.userId || null
 
-        // Public profile fields only — PII (phone, email, full address) is
-        // restricted to the user viewing their own profile.
         const user = await User.findById(userId)
             .select('farmerName firmName role profilePic bio upiId createdAt')
             .lean()
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-        // Only the profile owner may see their own saved posts.
         const isOwnProfile = !!viewerId && viewerId === userId
 
         const [posts, clips, savedPosts, followersCount, followingCount, isFollowing] = await Promise.all([
@@ -69,8 +64,6 @@ export async function GET(req: NextRequest) {
     }
 }
 
-// PATCH /api/social/profile — update the authenticated user's profile pic + bio
-// Body: { profilePic?: string, bio?: string }
 export async function PATCH(req: NextRequest) {
     try {
         const auth = authenticateRequest(req)
@@ -84,8 +77,6 @@ export async function PATCH(req: NextRequest) {
         const updates: Record<string, unknown> = {}
 
         if (typeof body.profilePic === 'string') {
-            // profilePic should be a Cloudinary URL (uploaded client-side via
-            // /api/social/upload-signature). Basic URL validation.
             if (body.profilePic && !body.profilePic.startsWith('http')) {
                 return NextResponse.json({ error: 'profilePic must be a valid URL' }, { status: 400 })
             }
@@ -95,7 +86,6 @@ export async function PATCH(req: NextRequest) {
             updates.bio = sanitize(body.bio).slice(0, 500)
         }
         if (typeof body.upiId === 'string') {
-            // Basic UPI ID validation: word chars + @ + word chars
             const upi = sanitize(body.upiId).trim().toLowerCase()
             if (upi && !/^[\w.\-]+@[\w]+$/.test(upi)) {
                 return NextResponse.json({ error: 'Invalid UPI ID format (e.g., yourname@paytm)' }, { status: 400 })

@@ -6,10 +6,6 @@ import { apiSuccess, apiError, validationError, ErrorCodes, notFound } from '@/l
 import { logAudit } from '@/lib/audit'
 import { validateBody, updateBuyerVehicleSchema } from '@/lib/validation'
 
-/**
- * PATCH /api/buyer-vehicles/[id]
- * Update a buyer's own vehicle (freight, availability, driver info, etc.)
- */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -32,7 +28,6 @@ export async function PATCH(
     if (!v.success) return validationError('Validation failed', v.errors)
     const data = v.data
 
-    // Apply only provided fields
     const updates: Record<string, unknown> = {}
     for (const key of [
       'vehicleType', 'vehicleDisplayName', 'registrationNumber', 'capacityKg',
@@ -43,7 +38,6 @@ export async function PATCH(
         updates[key] = data[key as keyof typeof data]
       }
     }
-    // Force freightAmount = 0 when freightType is 'free'
     if (updates.freightType === 'free') updates.freightAmount = 0
     if (updates.registrationNumber) updates.registrationNumber = (updates.registrationNumber as string).toUpperCase()
     updates.updatedAt = new Date()
@@ -64,9 +58,6 @@ export async function PATCH(
   }
 }
 
-/**
- * DELETE /api/buyer-vehicles/[id]
- */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },

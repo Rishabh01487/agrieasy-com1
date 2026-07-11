@@ -25,7 +25,6 @@ export async function POST(request: NextRequest) {
         const { toIdentifier, amount, note, paymentMethod } = data
         const method = paymentMethod
 
-        // FIX: Support AgriPay ID lookup (phone@agripay format)
         let query: Record<string, unknown>
         if (data.toIdentifier.includes('@agripay')) {
             const phonePart = data.toIdentifier.replace('@agripay', '').replace('+91', '').trim()

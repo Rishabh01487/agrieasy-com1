@@ -44,7 +44,6 @@ export async function POST(req: NextRequest) {
             request: req,
         })
 
-        // Notify the post owner (unless they liked their own post)
         const postOwnerId = post.userId.toString()
         if (!alreadyLiked && postOwnerId !== auth.user.userId && Notification) {
             await Notification.create({

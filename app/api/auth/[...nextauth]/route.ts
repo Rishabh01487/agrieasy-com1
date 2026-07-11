@@ -2,8 +2,6 @@ import NextAuth from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 
 // NextAuth configuration — Google OAuth is OPTIONAL. If the env vars aren't
-// set, we still export a working handler so /api/auth/session returns null
-// instead of crashing the SessionProvider on every page load.
 const hasGoogle = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET
 
 // Fall back to JWT_SECRET if NEXTAUTH_SECRET isn't explicitly set — they
@@ -22,8 +20,6 @@ const providers = hasGoogle
 
 const handler = NextAuth({
     // If no providers are configured, NextAuth still works — it just returns
-    // null sessions, which is fine because the app also supports phone+password
-    // auth via /api/auth/login (separate from NextAuth).
     providers,
     session: {
         strategy: 'jwt',
@@ -58,8 +54,6 @@ const handler = NextAuth({
                 if (!existingUser) {
                     const crypto = await import('crypto')
                     const randomPassword = crypto.randomBytes(32).toString('hex')
-                    // Generate a unique placeholder phone (Google doesn't always provide one)
-                    // Uses email prefix + random suffix to avoid duplicate-key errors
                     const emailPrefix = profile.email?.split('@')[0]?.slice(0, 6) || 'user'
                     const randomSuffix = Math.floor(100000 + Math.random() * 900000)
                     const phone = (profile as Record<string, unknown>).phone_number as string || `9${randomSuffix}${emailPrefix.length}`
