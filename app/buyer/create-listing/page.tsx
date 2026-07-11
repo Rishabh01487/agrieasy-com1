@@ -103,7 +103,6 @@ function AddressAutocomplete({ value, onChange, placeholder }: { value: string; 
   )
 }
 
-// Helper — compress + upload image to Cloudinary via the signed-URL route.
 async function uploadToCloudinary(file: File): Promise<string> {
   const img = new Image()
   const url = URL.createObjectURL(file)
@@ -131,7 +130,6 @@ async function uploadToCloudinary(file: File): Promise<string> {
   return cld.secure_url as string
 }
 
-// One row per selected commodity — buyer enters price + unit for each.
 interface CommodityRow {
   name: string
   icon: string
@@ -152,13 +150,11 @@ export default function CreateListing() {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  // Commodities selected + their per-row price + unit
   const [rows, setRows] = useState<CommodityRow[]>([])
 
   // Custom-add input
   const [customInput, setCustomInput] = useState('')
 
-  // Shared fields (applied to every commodity in this batch)
   const [priceDate, setPriceDate] = useState(new Date().toISOString().slice(0, 10))
   const [commodityPhoto, setCommodityPhoto] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -172,7 +168,6 @@ export default function CreateListing() {
 
   const addPreset = (name: string, icon: string) => {
     if (presetSelectedNames.has(name.toLowerCase())) {
-      // Remove if already selected
       setRows(prev => prev.filter(r => r.name.toLowerCase() !== name.toLowerCase()))
     } else {
       setRows(prev => [...prev, { name, icon, pricePerUnit: '', unit: 'kg', isCustom: false }])
@@ -182,7 +177,6 @@ export default function CreateListing() {
   const addCustom = () => {
     const v = customInput.trim()
     if (!v) return
-    // Prevent duplicates (case-insensitive)
     if (rows.some(r => r.name.toLowerCase() === v.toLowerCase())) {
       setCustomInput('')
       return
@@ -220,7 +214,6 @@ export default function CreateListing() {
       setError('Please select at least one commodity.')
       return
     }
-    // Validate each row has a price
     const missingPrice = rows.find(r => !r.pricePerUnit || parseFloat(r.pricePerUnit) <= 0)
     if (missingPrice) {
       setError(`Please enter a price for ${missingPrice.name}.`)
@@ -265,7 +258,6 @@ export default function CreateListing() {
         setLoading(false)
         return
       }
-      // Success — bounce to dashboard
       router.push('/buyer/dashboard')
     } catch (err) {
       console.error('Error:', err)

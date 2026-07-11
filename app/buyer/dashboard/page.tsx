@@ -65,7 +65,6 @@ function QuickAction({ icon, label, href, color }: { icon: string; label: string
   )
 }
 
-// Days since the price was last updated
 function daysSince(dateStr?: string): number | null {
   if (!dateStr) return null
   const d = new Date(dateStr)
@@ -100,7 +99,6 @@ export default function BuyerDashboard() {
     setUserEmail(userEmail || '')
     const fetchAll = async () => {
       try {
-        // Fetch listings + buyer profile + incoming bookings in parallel
         const [listingsRes, profileRes, bookingsRes] = await Promise.all([
           authFetch('/api/listings?buyerId=' + userId),
           authFetch('/api/buyer/profile').catch(() => null),

@@ -23,10 +23,7 @@ interface BuyerProfile {
   createdAt?: string
 }
 
-// Helper — compress + upload an image to Cloudinary via the signed-URL route.
-// Returns the secure_url on success, throws on failure.
 async function uploadToCloudinary(file: File): Promise<string> {
-  // Compress / resize client-side
   const img = new Image()
   const url = URL.createObjectURL(file)
   await new Promise<void>((resolve, reject) => {

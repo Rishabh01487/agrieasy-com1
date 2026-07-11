@@ -22,7 +22,6 @@ interface Listing {
   updatedAt?: string
 }
 
-// Helper — compress + upload image to Cloudinary via the signed-URL route.
 async function uploadToCloudinary(file: File): Promise<string> {
   const img = new Image()
   const url = URL.createObjectURL(file)
@@ -50,12 +49,10 @@ async function uploadToCloudinary(file: File): Promise<string> {
   return cld.secure_url as string
 }
 
-// Convert ISO date string to YYYY-MM-DD for the date input
 function toDateInputValue(d?: string): string {
   if (!d) return new Date().toISOString().slice(0, 10)
   const date = new Date(d)
   if (isNaN(date.getTime())) return new Date().toISOString().slice(0, 10)
-  // Use local date parts to avoid timezone shifts
   const y = date.getFullYear()
   const m = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')

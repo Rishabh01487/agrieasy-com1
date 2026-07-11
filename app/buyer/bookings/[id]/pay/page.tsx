@@ -67,7 +67,6 @@ export default function PayBookingPage() {
         if (b.billAmount) setBillAmount(String(b.billAmount))
         if (b.billNote) setBillNote(b.billNote)
 
-        // Fetch wallet balance (to show available funds)
         const wRes = await authFetch('/api/agripay/wallet').catch(() => null)
         if (wRes && wRes.ok) {
           const wd = await wRes.json()
@@ -133,10 +132,8 @@ export default function PayBookingPage() {
       const data = await res.json()
 
       if (method === 'direct-upi') {
-        // Show UPI link — buyer completes in their UPI app, then confirms
         setUpiLink(data?.data?.upiLink || data?.upiLink)
       } else {
-        // wallet / cash — payment complete, redirect
         setSuccess(data?.data?.message || data?.message || 'Payment successful!')
         setTimeout(() => router.push('/buyer/bookings'), 1500)
       }
