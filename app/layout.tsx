@@ -6,6 +6,7 @@ import PWABootstrap from "./components/PWABootstrap";
 import BottomTabBar from "./components/BottomTabBar";
 import CookieConsent from "./components/CookieConsent";
 import { ToastProvider } from "./components/Toast";
+import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,7 +42,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   themeColor: "#2563eb",
-  viewportFit: "cover",  // Safe-area aware (notches, etc.)
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -64,12 +65,14 @@ export default function RootLayout({
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          <ToastProvider>
-            {children}
-            <PWABootstrap />
-            <BottomTabBar />
-            <CookieConsent />
-          </ToastProvider>
+          <LanguageProvider>
+            <ToastProvider>
+              {children}
+              <PWABootstrap />
+              <BottomTabBar />
+              <CookieConsent />
+            </ToastProvider>
+          </LanguageProvider>
         </AuthProvider>
       </body>
     </html>
