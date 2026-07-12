@@ -37,21 +37,20 @@ export default function Home() {
         {/* Logo */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
           <div style={{
-            width: 80, height: 80, borderRadius: 22,
-            background: 'linear-gradient(135deg, rgba(255,255,255,0.8), rgba(240,253,244,0.6))',
-            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            border: '1px solid rgba(22,101,52,0.15)',
+            width: 88, height: 88, borderRadius: 24,
+            background: 'linear-gradient(135deg, #ffffff, #f7fee7)',
+            border: '2px solid rgba(234,179,8,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 12px 40px rgba(22,101,52,0.12), 0 0 50px rgba(234,179,8,0.1)',
+            boxShadow: '0 12px 40px rgba(22,101,52,0.15), 0 0 60px rgba(234,179,8,0.15), inset 0 1px 0 rgba(255,255,255,0.8)',
           }}>
-            <img src="/icons/icon-192.png" alt="AgriEasy" width={48} height={48} style={{ borderRadius: 12 }} />
+            <img src="/icons/icon-192.png" alt="AgriEasy" width={52} height={52} style={{ borderRadius: 13 }} />
           </div>
         </div>
 
         {/* Badge */}
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
-          background: 'rgba(255,255,255,0.7)',
+          background: 'rgba(255,255,255,0.8)',
           border: '1px solid rgba(22,101,52,0.12)',
           borderRadius: 100, padding: '6px 18px', marginBottom: 20,
         }}>
@@ -64,13 +63,25 @@ export default function Home() {
         {/* Title */}
         <h1 className="hero-title" style={{
           fontSize: 'clamp(2.5rem, 8vw, 4.5rem)',
-          fontWeight: 800, lineHeight: 1, letterSpacing: '-0.04em', margin: '0 0 14px',
-          background: 'linear-gradient(110deg, #15803d 18%, #22c55e 38%, #16a34a 50%, #22c55e 62%, #15803d 82%)',
-          backgroundSize: '200% auto', WebkitBackgroundClip: 'text', backgroundClip: 'text',
-          WebkitTextFillColor: 'transparent', color: 'transparent',
-          animation: 'shimmer 7s linear infinite',
+          fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em', margin: '0 0 14px',
+          display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '2px',
+          filter: 'drop-shadow(0 2px 12px rgba(34,197,94,0.15))',
         }}>
-          AgriEasy
+          <span style={{
+            background: 'linear-gradient(120deg, #14532d 0%, #166534 20%, #22c55e 50%, #16a34a 80%, #14532d 100%)',
+            backgroundSize: '200% auto', WebkitBackgroundClip: 'text', backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', color: 'transparent',
+            animation: 'shimmer 6s linear infinite',
+            fontWeight: 900,
+          }}>Agri</span>
+          <span style={{
+            background: 'linear-gradient(120deg, #ca8a04 0%, #eab308 20%, #facc15 50%, #eab308 80%, #ca8a04 100%)',
+            backgroundSize: '200% auto', WebkitBackgroundClip: 'text', backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', color: 'transparent',
+            animation: 'shimmer 6s linear infinite',
+            fontWeight: 300,
+            fontStyle: 'italic',
+          }}>Easy</span>
         </h1>
 
         {/* Taglines */}
@@ -87,7 +98,7 @@ export default function Home() {
             <span key={f} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '5px 12px', borderRadius: 100,
-              background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(22,101,52,0.1)',
+              background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(22,101,52,0.12)',
               color: '#374151', fontSize: '0.72rem', fontWeight: 600,
             }}>
               <span style={{ color: '#16a34a' }}>✓</span> {f}
@@ -101,7 +112,7 @@ export default function Home() {
             <Link key={c.title} href={c.href} className="home-card fade-up" style={{
               background: 'rgba(255,255,255,0.75)',
               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid rgba(22,101,52,0.1)',
+              border: '1px solid rgba(22,101,52,0.12)',
               borderRadius: 16, padding: '20px 10px', textAlign: 'center',
               textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
               transition: 'transform .3s, background .25s, border-color .25s',
@@ -112,6 +123,7 @@ export default function Home() {
                 width: 44, height: 44, borderRadius: 12, marginBottom: 8,
                 background: `${c.color}18`, border: `1px solid ${c.color}25`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem',
+                boxShadow: `0 4px 12px ${c.color}15`,
               }}>{c.emoji}</div>
               <p style={{ color: '#0f172a', fontWeight: 800, fontSize: '0.92rem', margin: 0 }}>{c.title}</p>
               <p style={{ color: '#64748b', fontSize: '0.7rem', margin: '3px 0 0' }}>{c.sub}</p>
@@ -162,11 +174,11 @@ export default function Home() {
         {/* CTA */}
         <Link href="/auth/register" className="home-cta fade-up" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 28px',
-          background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+          background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 50%, #15803d 100%)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           border: '1px solid rgba(34,197,94,0.3)', borderRadius: 100,
           textDecoration: 'none', color: '#fff', fontSize: '0.9rem', fontWeight: 600,
-          boxShadow: '0 6px 24px rgba(34,197,94,0.3)',
+          boxShadow: '0 8px 28px rgba(34,197,94,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
           transition: 'transform .3s, box-shadow .3s',
           animationDelay: '0.55s',
         }}>
@@ -190,25 +202,25 @@ export default function Home() {
 
         .home-card::after {
           content: ''; position: absolute; top: 0; left: 0; width: 50%; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(34,197,94,0.06), transparent);
+          background: linear-gradient(90deg, transparent, rgba(234,179,8,0.08), transparent);
           transform: translateX(-160%) skewX(-20deg); pointer-events: none;
         }
         .home-card:hover {
           transform: translateY(-5px);
-          background: rgba(255,255,255,0.95) !important;
-          border-color: rgba(34,197,94,0.3) !important;
-          box-shadow: 0 16px 40px rgba(22,101,52,0.12) !important;
+          background: rgba(255,255,255,1) !important;
+          border-color: rgba(234,179,8,0.35) !important;
+          box-shadow: 0 16px 44px rgba(22,101,52,0.12), 0 0 30px rgba(234,179,8,0.1) !important;
         }
         .home-card:hover::after { animation: shine 0.8s ease-out; }
 
         .home-card-sm:hover {
           transform: translateY(-3px);
-          background: rgba(255,255,255,0.8) !important;
+          background: rgba(255,255,255,0.95) !important;
         }
 
         .home-cta:hover {
           transform: translateY(-2px);
-          box-shadow: 0 12px 32px rgba(34,197,94,0.35) !important;
+          box-shadow: 0 14px 36px rgba(34,197,94,0.4), 0 0 20px rgba(234,179,8,0.1) !important;
         }
 
         @media (max-width: 480px) {
@@ -226,7 +238,7 @@ export default function Home() {
 
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
-  background: 'radial-gradient(ellipse 100% 60% at 50% 0%, rgba(34,197,94,0.15) 0%, transparent 60%), linear-gradient(160deg, #f0fdf4 0%, #ecfdf5 30%, #f7fee7 60%, #fefce8 100%)',
+  background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(34,197,94,0.12) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(234,179,8,0.08) 0%, transparent 60%), linear-gradient(165deg, #f7fee7 0%, #f0fdf4 25%, #ecfdf5 50%, #fefce8 75%, #fef9c3 100%)',
   fontFamily: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
   padding: '40px 16px', position: 'relative', overflow: 'hidden',
