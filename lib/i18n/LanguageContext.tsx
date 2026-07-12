@@ -1,13 +1,15 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
-import { type Language, type TranslationKey, getTranslation } from './translations'
+import { type Language, type TranslationKey, getTranslation, translateCommodity, translateVehicleType } from './translations'
 
 interface LanguageContextType {
   lang: Language
   t: (key: TranslationKey) => string
   setLang: (lang: Language) => void
   toggleLang: () => void
+  tc: (name: string) => string
+  tv: (type: string) => string
 }
 
 const LanguageContext = createContext<LanguageContextType>({
@@ -15,6 +17,8 @@ const LanguageContext = createContext<LanguageContextType>({
   t: (key) => key,
   setLang: () => {},
   toggleLang: () => {},
+  tc: (name) => name,
+  tv: (type) => type,
 })
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
@@ -42,8 +46,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return getTranslation(lang, key)
   }, [lang])
 
+  const tc = useCallback((name: string) => translateCommodity(lang, name), [lang])
+  const tv = useCallback((type: string) => translateVehicleType(lang, type), [lang])
+
   return (
-    <LanguageContext.Provider value={{ lang, t, setLang, toggleLang }}>
+    <LanguageContext.Provider value={{ lang, t, setLang, toggleLang, tc, tv }}>
       {children}
     </LanguageContext.Provider>
   )
