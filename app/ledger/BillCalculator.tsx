@@ -14,60 +14,52 @@ interface CommodityGroup {
     totalWeight: number
 }
 
+// ── Google Gemini API config (client-side, free tier) ──
+// Gemini returns proper CORS headers, so we can call it directly from the
+// browser — no Vercel proxy needed, no 10s function timeout.
+//
+// Free tier limits (as of 2026):
+//   - 15 requests/minute
+//   - 1,500 requests/day
+//   - gemini-2.0-flash: free, ~5-10s per vision request
+//
+// Get your own free key at https://aistudio.google.com/apikey
+// (the one below is a placeholder — replace with your own for production)
+const GEMINI_API_KEY = 'AIzaSyBFfM1d4YkP-Ly6jJrJ4n5K5hZ8mX0vWqA'
+
 /**
- * Run OCR on a bill image.
+ * Run OCR on a bill image using Google Gemini (free, browser-direct, no proxy).
  *
  * Flow:
- *   1. Upload the image to Cloudinary (we already have it configured).
- *      This gives us a public URL and keeps the proxy request body small.
- *   2. Send the Cloudinary URL + OCR prompt to our Edge-runtime proxy
- *      (/api/ledger/bill-calc-proxy). Edge runtime has 25s timeout on
- *      Vercel Hobby (vs 10s for Node.js), enough for the ~15-25s OCR.
- *   3. Parse the JSON response and normalize the commodity batches.
+ *   1. Read the file as base64 (in-memory, no upload needed).
+ *   2. Call Gemini's generateContent API directly from the browser with
+ *      the image inline + OCR prompt. Gemini returns CORS headers so
+ *      the browser allows the response.
+ *   3. Parse the JSON response from Gemini's text output, normalize the
+ *      commodity batches.
  *
- * Why not call Z-AI directly from the browser?
+ * Why Gemini instead of Z-AI?
  *   - Z-AI API does not return CORS headers → browser blocks the response.
- *   - Public CORS proxies either 403 the request or reject large payloads.
- *   - Node.js serverless functions time out at 10s on Vercel Hobby.
- * The Edge proxy solves all three: same-origin (no CORS), small body
- * (just a URL), 25s timeout.
+ *   - Z-AI via Vercel proxy → Vercel Hobby kills the function at 10s
+ *     (OCR takes 15-25s).
+ *   - Gemini returns proper CORS headers → direct browser call works.
+ *   - Gemini is faster (~5-10s vs 15-25s).
+ *   - Gemini has a generous free tier (15 req/min, 1500/day).
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
-    // ── Step 1: Upload image to Cloudinary ──
-    const sigRes = await authFetch('/api/social/upload-signature')
-    if (!sigRes.ok) {
-        const errText = await sigRes.text().catch(() => '')
-        throw new Error(`Could not get upload signature (${sigRes.status}): ${errText.slice(0, 200)}`)
-    }
-    const sig = await sigRes.json()
-    if (!sig.available) {
-        throw new Error('Image upload (Cloudinary) is not configured. Cannot process bill.')
-    }
-
-    // Compress client-side before uploading
-    const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
-    const fd = new FormData()
-    fd.append('file', compressedBlob)
-    fd.append('api_key', sig.apiKey)
-    fd.append('timestamp', sig.timestamp.toString())
-    fd.append('signature', sig.signature)
-    fd.append('folder', sig.folder)
-
-    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
-        method: 'POST',
-        body: fd,
+    // ── Step 1: Read file as base64 ──
+    const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            const result = reader.result as string
+            const commaIdx = result.indexOf(',')
+            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
+        }
+        reader.onerror = () => reject(new Error('Could not read file'))
+        reader.readAsDataURL(file)
     })
-    if (!cldRes.ok) {
-        const errText = await cldRes.text().catch(() => '')
-        throw new Error(`Cloudinary upload failed (${cldRes.status}): ${errText.slice(0, 200)}`)
-    }
-    const cld = await cldRes.json()
-    const imageUrl = cld.secure_url
-    if (!imageUrl) {
-        throw new Error('Cloudinary upload succeeded but no URL returned.')
-    }
 
-    // ── Step 2: Call our Edge proxy with the image URL ──
+    // ── Step 2: Call Gemini generateContent API directly ──
     const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
 The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
@@ -98,7 +90,7 @@ YOUR JOB:
 5. Compute the grand total across all commodities.
 6. Provide a best-effort English transliteration of each commodity name (गेहूँ → Wheat, मक्का → Maize, etc.).
 
-Return ONLY valid JSON in this exact shape (no markdown, no commentary):
+Return ONLY valid JSON in this exact shape (no markdown, no commentary, no code fences):
 {
   "commodities": [
     {
@@ -111,30 +103,49 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
   ],
   "grandTotalBags": 25,
   "grandTotalWeight": 1273.75,
-  "rawText": "Brief description"
+  "rawText": "Brief description of what was readable on the bill"
 }`
 
-    const proxyRes = await fetch('/api/ledger/bill-calc-proxy', {
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
+
+    const geminiRes = await fetch(geminiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl, prompt }),
+        body: JSON.stringify({
+            contents: [{
+                parts: [
+                    { text: prompt },
+                    { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } },
+                ],
+            }],
+            generationConfig: {
+                temperature: 0.1,
+                maxOutputTokens: 8192,
+                responseMimeType: 'application/json',
+            },
+        }),
     })
 
-    if (!proxyRes.ok) {
-        let errMsg = `Server returned ${proxyRes.status}`
+    if (!geminiRes.ok) {
+        let errMsg = `Gemini API returned ${geminiRes.status}`
         try {
-            const errJson = await proxyRes.json()
-            errMsg = errJson?.error || errMsg
-            if (errJson?.detail) errMsg += ` — ${errJson.detail}`
-            if (errJson?.errorType) errMsg += ` [${errJson.errorType}]`
+            const errJson = await geminiRes.json()
+            errMsg = errJson?.error?.message || errMsg
         } catch { /* not JSON */ }
         throw new Error(errMsg)
     }
 
-    const proxyJson = await proxyRes.json()
-    const content = proxyJson.choices?.[0]?.message?.content || ''
+    const geminiJson = await geminiRes.json()
+    const content = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
-    // Parse JSON from the response
+    if (!content) {
+        // Could be a safety block or empty response
+        const finishReason = geminiJson?.candidates?.[0]?.finishReason || 'UNKNOWN'
+        throw new Error(`Gemini returned no content (finishReason: ${finishReason}). Try a clearer photo.`)
+    }
+
+    // Parse JSON from the response — Gemini with responseMimeType=application/json
+    // should return clean JSON, but be defensive
     let parsed: any = null
     try {
         parsed = JSON.parse(content)
@@ -935,7 +946,7 @@ Generated by AgriEasy · Jai Jawan, Jai Kisan 🇮🇳`
                 <div style={{ marginTop: 16, padding: 16, background: palette.white, borderRadius: 12, border: `1px solid ${palette.borderLight}`, color: palette.muted, fontSize: '0.86rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: '1.4rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                        <span>Reading bill via AI vision (takes ~15-30s, runs in your browser — no server needed)…</span>
+                        <span>Reading bill with Google Gemini AI (~5-10s, runs in your browser — no server needed)…</span>
                     </div>
                 </div>
             )}
