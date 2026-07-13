@@ -3,6 +3,14 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { apiSuccess } from '@/lib/api-response'
 
+// Vercel serverless function timeout — the Z-AI vision API takes ~30s,
+// so we need to extend the default 10s (Hobby) / 15s (Pro) limit.
+// 60s is the max on Vercel Pro; on Hobby this gets capped to 10s but
+// we set it anyway in case the project is on Pro.
+export const maxDuration = 60
+// Force Node.js runtime (Edge can't do multipart form parsing well)
+export const runtime = 'nodejs'
+
 /**
  * Z-AI vision API configuration.
  *

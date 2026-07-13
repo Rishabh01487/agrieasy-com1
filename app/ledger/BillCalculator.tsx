@@ -64,17 +64,74 @@ export default function BillCalculator({ embedded = false, onSaved }: BillCalcul
 
     const palette = BUYER
 
-    const onPickFile = (f: File | null) => {
+    /**
+     * Compress an image file client-side before uploading.
+     * Vercel has a 4.5MB request body limit on serverless functions, and
+     * phone cameras often produce 3-5MB photos. We resize to max 1600px
+     * and re-encode as JPEG at 85% quality, which typically produces a
+     * 200-400KB file — well under the limit, and still clear enough for OCR.
+     */
+    const compressImage = async (f: File): Promise<File> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image()
+            const url = URL.createObjectURL(f)
+            img.onload = () => {
+                URL.revokeObjectURL(url)
+                let { width, height } = img
+                const maxDim = 1600
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round(height * maxDim / width)
+                        width = maxDim
+                    } else {
+                        width = Math.round(width * maxDim / height)
+                        height = maxDim
+                    }
+                }
+                const canvas = document.createElement('canvas')
+                canvas.width = width
+                canvas.height = height
+                const ctx = canvas.getContext('2d')
+                if (!ctx) { reject(new Error('Canvas not supported')); return }
+                // White background (in case the source has transparency —
+                // JPEG doesn't support alpha)
+                ctx.fillStyle = '#fff'
+                ctx.fillRect(0, 0, width, height)
+                ctx.drawImage(img, 0, 0, width, height)
+                canvas.toBlob(
+                    (blob) => {
+                        if (!blob) { reject(new Error('Compression failed')); return }
+                        const compressed = new File([blob], f.name.replace(/\.(png|heic|heif)$/i, '.jpg'), { type: 'image/jpeg', lastModified: Date.now() })
+                        resolve(compressed)
+                    },
+                    'image/jpeg',
+                    0.85,
+                )
+            }
+            img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')) }
+            img.src = url
+        })
+    }
+
+    const onPickFile = async (f: File | null) => {
         if (!f) return
         if (!f.type.startsWith('image/')) { setError('Please choose an image file (JPG, PNG, etc.)'); return }
         if (f.size > 8 * 1024 * 1024) { setError('Image must be under 8 MB'); return }
-        setFile(f)
-        setPreviewUrl(URL.createObjectURL(f))
         setError('')
         setResult(null)
         setRates({})
         setSaveMsg('')
         setBillPhotoUrl('')
+        try {
+            // Compress before storing — avoids Vercel 4.5MB body limit
+            const compressed = await compressImage(f)
+            setFile(compressed)
+            setPreviewUrl(URL.createObjectURL(compressed))
+        } catch {
+            // Fallback: use original file (may fail on Vercel if too large)
+            setFile(f)
+            setPreviewUrl(URL.createObjectURL(f))
+        }
     }
 
     const onDrop = (e: React.DragEvent) => {
@@ -93,11 +150,21 @@ export default function BillCalculator({ embedded = false, onSaved }: BillCalcul
             const fd = new FormData()
             fd.append('file', file)
             const res = await authFetch('/api/ledger/bill-calc', { method: 'POST', body: fd })
-            const d = await res.json()
+            // Handle non-OK responses with specific error messages
             if (!res.ok) {
-                setError(d?.error || d?.error?.message || 'Failed to read bill')
+                let errMsg = `Server returned ${res.status}`
+                try {
+                    const d = await res.json()
+                    errMsg = d?.error || d?.error?.message || errMsg
+                    // Include debug info if present
+                    if (d?.debug) {
+                        errMsg += ` (debug: ${JSON.stringify(d.debug)})`
+                    }
+                } catch { /* response wasn't JSON — keep generic message */ }
+                setError(errMsg)
                 return
             }
+            const d = await res.json()
             const data = d?.data || d
             setResult(data)
             const initial: Record<number, { rate: string; unit: 'kg' | 'quintal' }> = {}
@@ -115,8 +182,20 @@ export default function BillCalculator({ embedded = false, onSaved }: BillCalcul
                 }
             })
             setRates(initial)
-        } catch {
-            setError('Network error — please try again')
+        } catch (err) {
+            // "fetch failed" / TypeError typically means the request never
+            // reached the server or the connection was reset (often a
+            // Vercel function timeout on Hobby tier — 10s limit).
+            const msg = err instanceof Error ? err.message : String(err)
+            if (msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+                setError(
+                    'Could not reach the server. This usually means the function timed out — ' +
+                    'the OCR takes ~30s but Vercel Hobby tier limits functions to 10s. ' +
+                    'Upgrade to Vercel Pro for 60s timeout, or try again with a smaller photo.'
+                )
+            } else {
+                setError('Error: ' + msg)
+            }
         } finally {
             setLoading(false)
         }
