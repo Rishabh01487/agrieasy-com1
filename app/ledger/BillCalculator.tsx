@@ -14,52 +14,71 @@ interface CommodityGroup {
     totalWeight: number
 }
 
-// ── Google Gemini API config (client-side, free tier) ──
-// Gemini returns proper CORS headers, so we can call it directly from the
-// browser — no Vercel proxy needed, no 10s function timeout.
+// ── Cloudflare Worker proxy URL ──
+// This Worker forwards requests to the Z-AI vision API and adds CORS headers
+// so the browser can read the response. Cloudflare Workers have a 30s timeout
+// (vs Vercel's 10s on Hobby tier), enough for the 15-25s OCR.
 //
-// Free tier limits (as of 2026):
-//   - 15 requests/minute
-//   - 1,500 requests/day
-//   - gemini-2.0-flash: free, ~5-10s per vision request
-//
-// Get your own free key at https://aistudio.google.com/apikey
-// (the one below is a placeholder — replace with your own for production)
-const GEMINI_API_KEY = 'AIzaSyBFfM1d4YkP-Ly6jJrJ4n5K5hZ8mX0vWqA'
+// TO SET UP (free, 2 minutes):
+// 1. Go to https://dash.cloudflare.com → sign in (free account)
+// 2. Left sidebar → "Workers & Pages" → "Create" → "Create Worker"
+// 3. Name it "agrieasy-ocr"
+// 4. Delete the default code, paste the contents of cloudflare-worker/worker.js
+// 5. Click "Deploy"
+// 6. Copy the URL (e.g. https://agrieasy-ocr.yourname.workers.dev)
+// 7. Paste it below (replace the placeholder)
+const OCR_WORKER_URL = 'https://agrieasy-ocr.rishabh01487.workers.dev'
 
 /**
- * Run OCR on a bill image using Google Gemini (free, browser-direct, no proxy).
+ * Run OCR on a bill image using the Z-AI vision API via a Cloudflare Worker.
  *
  * Flow:
- *   1. Read the file as base64 (in-memory, no upload needed).
- *   2. Call Gemini's generateContent API directly from the browser with
- *      the image inline + OCR prompt. Gemini returns CORS headers so
- *      the browser allows the response.
- *   3. Parse the JSON response from Gemini's text output, normalize the
- *      commodity batches.
+ *   1. Read the file as base64 (in-memory).
+ *   2. Upload to Cloudinary (keeps the Worker request body small).
+ *   3. Send the Cloudinary URL + OCR prompt to our Cloudflare Worker.
+ *      The Worker forwards it to Z-AI and returns the response with CORS headers.
+ *   4. Parse the JSON and normalize the commodity batches.
  *
- * Why Gemini instead of Z-AI?
- *   - Z-AI API does not return CORS headers → browser blocks the response.
- *   - Z-AI via Vercel proxy → Vercel Hobby kills the function at 10s
- *     (OCR takes 15-25s).
- *   - Gemini returns proper CORS headers → direct browser call works.
- *   - Gemini is faster (~5-10s vs 15-25s).
- *   - Gemini has a generous free tier (15 req/min, 1500/day).
+ * Why a Cloudflare Worker?
+ *   - Z-AI API doesn't return CORS headers → browser blocks the response.
+ *   - Vercel Hobby kills Node.js functions at 10s (OCR takes 15-25s).
+ *   - Gemini API is blocked in India.
+ *   - Cloudflare Workers: free (100k req/day), 30s timeout, works in India,
+ *     returns CORS headers.
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
-    // ── Step 1: Read file as base64 ──
-    const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-            const result = reader.result as string
-            const commaIdx = result.indexOf(',')
-            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
-        }
-        reader.onerror = () => reject(new Error('Could not read file'))
-        reader.readAsDataURL(file)
-    })
+    // ── Step 1: Upload image to Cloudinary ──
+    const sigRes = await authFetch('/api/social/upload-signature')
+    if (!sigRes.ok) {
+        throw new Error(`Could not get upload signature (${sigRes.status})`)
+    }
+    const sig = await sigRes.json()
+    if (!sig.available) {
+        throw new Error('Image upload (Cloudinary) is not configured.')
+    }
 
-    // ── Step 2: Call Gemini generateContent API directly ──
+    const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
+    const fd = new FormData()
+    fd.append('file', compressedBlob)
+    fd.append('api_key', sig.apiKey)
+    fd.append('timestamp', sig.timestamp.toString())
+    fd.append('signature', sig.signature)
+    fd.append('folder', sig.folder)
+
+    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
+        method: 'POST',
+        body: fd,
+    })
+    if (!cldRes.ok) {
+        throw new Error(`Cloudinary upload failed (${cldRes.status})`)
+    }
+    const cld = await cldRes.json()
+    const imageUrl = cld.secure_url
+    if (!imageUrl) {
+        throw new Error('Cloudinary upload succeeded but no URL returned.')
+    }
+
+    // ── Step 2: Call our Cloudflare Worker with the image URL ──
     const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
 The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
@@ -106,46 +125,25 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary, no code 
   "rawText": "Brief description of what was readable on the bill"
 }`
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`
-
-    const geminiRes = await fetch(geminiUrl, {
+    const workerRes = await fetch(OCR_WORKER_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            contents: [{
-                parts: [
-                    { text: prompt },
-                    { inline_data: { mime_type: file.type || 'image/jpeg', data: b64 } },
-                ],
-            }],
-            generationConfig: {
-                temperature: 0.1,
-                maxOutputTokens: 8192,
-                responseMimeType: 'application/json',
-            },
-        }),
+        body: JSON.stringify({ imageUrl, prompt }),
     })
 
-    if (!geminiRes.ok) {
-        let errMsg = `Gemini API returned ${geminiRes.status}`
+    if (!workerRes.ok) {
+        let errMsg = `Worker returned ${workerRes.status}`
         try {
-            const errJson = await geminiRes.json()
-            errMsg = errJson?.error?.message || errMsg
+            const errJson = await workerRes.json()
+            errMsg = errJson?.error || errMsg
         } catch { /* not JSON */ }
         throw new Error(errMsg)
     }
 
-    const geminiJson = await geminiRes.json()
-    const content = geminiJson?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const workerJson = await workerRes.json()
+    const content = workerJson.choices?.[0]?.message?.content || ''
 
-    if (!content) {
-        // Could be a safety block or empty response
-        const finishReason = geminiJson?.candidates?.[0]?.finishReason || 'UNKNOWN'
-        throw new Error(`Gemini returned no content (finishReason: ${finishReason}). Try a clearer photo.`)
-    }
-
-    // Parse JSON from the response — Gemini with responseMimeType=application/json
-    // should return clean JSON, but be defensive
+    // Parse JSON from the response
     let parsed: any = null
     try {
         parsed = JSON.parse(content)
