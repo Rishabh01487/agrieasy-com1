@@ -1,11 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --brand: #2563eb;
-  --brand-soft: #dbeafe;
-  --brand-ink: #1e3a8a;
+  /* Image 1 reference — warm peach + magenta + navy + gold */
+  --background: #F5E9E2;
+  --foreground: #123C69;
+  --brand: #AC3B61;
+  --brand-soft: #F5D2DB;
+  --brand-ink: #123C69;
+  --brand-accent: #D4A574;
 }
 
 @theme inline {
@@ -16,7 +18,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* Force the light theme — the product is intentionally blue & white everywhere.
+/* Force the light theme — the product is intentionally warm peach + magenta everywhere.
    (Dark mode auto-switch was producing inconsistent palettes.) */
 :root {
   color-scheme: light;
@@ -32,14 +34,14 @@ body {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Instagram-style story ring */
+/* Instagram-style story ring — magenta + gold (AgriEasy brand ring) */
 .story-ring {
-  background: linear-gradient(45deg, #2563eb 0%, #3b82f6 25%, #60a5fa 50%, #93c5fd 75%, #2563eb 100%);
+  background: linear-gradient(45deg, #AC3B61 0%, #C05070 25%, #D4A574 50%, #123C69 75%, #AC3B61 100%);
   padding: 2.5px;
   border-radius: 9999px;
 }
 .story-ring--viewed {
-  background: #cbd5e1;
+  background: #BAB2B5;
 }
 
 /* Double-tap heart burst animation */
@@ -60,11 +62,11 @@ body {
   to   { width: 100%; }
 }
 
-/* Smooth focus rings on inputs */
+/* Smooth focus rings on inputs — magenta brand color */
 input:focus, textarea:focus, select:focus, button:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
-  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3px rgba(172,59,97,0.18);
+  border-color: #AC3B61 !important;
 }
 
 /* Remove number input spinners */

@@ -147,7 +147,7 @@ export default function TransporterTrackingPage() {
     if (booking.driverLocation?.latitude) {
       const mk = L.marker(
         [booking.driverLocation.latitude, booking.driverLocation.longitude],
-        { icon: makeIcon('🚛', '#2563eb', 'YOU') }
+        { icon: makeIcon('🚛', '#AC3B61', 'YOU') }
       ).addTo(m).bindPopup(`<b>Your vehicle (Live)</b><br/>Last update: ${new Date(booking.driverLocation.updatedAt).toLocaleTimeString('en-IN')}`)
       newMarkers.push(mk)
 
@@ -157,7 +157,7 @@ export default function TransporterTrackingPage() {
             [booking.driverLocation.latitude, booking.driverLocation.longitude],
             [booking.buyer.location.latitude, booking.buyer.location.longitude],
           ],
-          { color: '#2563eb', weight: 3, opacity: 0.6, dashArray: '8, 8' }
+          { color: '#AC3B61', weight: 3, opacity: 0.6, dashArray: '8, 8' }
         ).addTo(m)
         setRouteLine(line)
       }
@@ -166,7 +166,7 @@ export default function TransporterTrackingPage() {
     if (Array.isArray(booking.trackingUpdates) && booking.trackingUpdates.length > 1) {
       const trail = L.polyline(
         booking.trackingUpdates.map((t: any) => [t.location.latitude, t.location.longitude]),
-        { color: '#3b82f6', weight: 2, opacity: 0.3 }
+        { color: '#C05070', weight: 2, opacity: 0.3 }
       ).addTo(m)
       void trail
     }

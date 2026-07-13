@@ -94,7 +94,7 @@ export default function BottomTabBar() {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 gap: 2, padding: '4px 2px',
                 textDecoration: 'none',
-                color: active ? '#2563eb' : '#64748b',
+                color: active ? '#AC3B61' : '#64748b',
                 transition: 'color 0.15s ease',
               }}
             >
@@ -104,7 +104,7 @@ export default function BottomTabBar() {
                 <span style={{
                   position: 'absolute', top: 0,
                   width: 28, height: 3, borderRadius: 0,
-                  background: '#2563eb',
+                  background: '#AC3B61',
                 }} />
               )}
             </Link>

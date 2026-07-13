@@ -12,7 +12,7 @@ export default function Loading() {
     }}>
       <div style={{
         width: 56, height: 56, borderRadius: 14,
-        background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
+        background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize: '1.8rem',
         animation: 'pulseScale 1.2s ease-in-out infinite',
@@ -26,7 +26,7 @@ export default function Loading() {
         <div style={{
           position: 'absolute', top: 0, left: 0, height: '100%',
           width: '40%', borderRadius: 2,
-          background: 'linear-gradient(90deg, #2563eb, #60a5fa)',
+          background: 'linear-gradient(90deg, #AC3B61, #D47890)',
           animation: 'loadingBar 1s ease-in-out infinite',
         }} />
       </div>

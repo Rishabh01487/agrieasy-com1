@@ -205,7 +205,7 @@ export default function BuyerDashboard() {
           <StatCard icon="📋" label="Commodities" value={activeCount} sub="In your price-list" href="/buyer/create-listing" />
           <StatCard icon="📅" label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? '⏳ Awaiting your confirmation' : 'No pending bookings'} href="/buyer/bookings" accent="#f59e0b" />
           <StatCard icon="💰" label="Avg Price" value={`₹${avgPrice}`} sub="Per unit across commodities" accent="#10b981" />
-          <StatCard icon="➕" label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" accent="#3b82f6" />
+          <StatCard icon="➕" label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" accent="#C05070" />
         </div>
 
         {/* Pending-bookings alert banner */}
@@ -235,7 +235,7 @@ export default function BuyerDashboard() {
         <div style={{ marginBottom: 28 }}>
           <h2 style={{ color: BUYER.text, fontSize: '1.05rem', fontWeight: 800, margin: '0 0 12px' }}>Quick actions</h2>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <QuickAction icon="📝" label="Add Commodity" href="/buyer/create-listing" color="#3b82f6" />
+            <QuickAction icon="📝" label="Add Commodity" href="/buyer/create-listing" color="#C05070" />
             <QuickAction icon="📅" label="Bookings" href="/buyer/bookings" color="#f59e0b" />
             <QuickAction icon="👤" label="My Profile" href="/buyer/profile" color="#8b5cf6" />
             <QuickAction icon="🚚" label="My Vehicles" href="/buyer/my-vehicles" color="#06b6d4" />

@@ -17,7 +17,7 @@ export default function NotFound() {
           fontSize: '7rem',
           fontWeight: 900,
           lineHeight: 1,
-          background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
+          background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           marginBottom: 8,
@@ -34,7 +34,7 @@ export default function NotFound() {
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Link href="/" style={{
             padding: '12px 28px',
-            background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+            background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 100%)',
             color: '#fff',
             borderRadius: 12,
             fontWeight: 700,
@@ -47,7 +47,7 @@ export default function NotFound() {
           <Link href="/agrisocial" style={{
             padding: '12px 28px',
             background: '#fff',
-            color: '#2563eb',
+            color: '#AC3B61',
             border: '1.5px solid #bfdbfe',
             borderRadius: 12,
             fontWeight: 700,

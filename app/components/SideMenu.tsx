@@ -128,7 +128,7 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
       >
         {/* Header */}
         <div style={{
-          background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
+          background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
           color: '#fff',
           padding: '20px 18px calc(20px + env(safe-area-inset-top))',
           display: 'flex', alignItems: 'center', gap: 12,
@@ -169,11 +169,11 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 18px',
                   textDecoration: 'none',
-                  color: active ? '#2563eb' : '#1e293b',
+                  color: active ? '#AC3B61' : '#1e293b',
                   background: active ? '#eff6ff' : 'transparent',
                   fontWeight: active ? 700 : 600,
                   fontSize: '0.9rem',
-                  borderLeft: active ? '3px solid #2563eb' : '3px solid transparent',
+                  borderLeft: active ? '3px solid #AC3B61' : '3px solid transparent',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -205,11 +205,11 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
                   display: 'flex', alignItems: 'center', gap: 12,
                   padding: '12px 18px',
                   textDecoration: 'none',
-                  color: active ? '#2563eb' : '#1e293b',
+                  color: active ? '#AC3B61' : '#1e293b',
                   background: active ? '#eff6ff' : 'transparent',
                   fontWeight: active ? 700 : 600,
                   fontSize: '0.9rem',
-                  borderLeft: active ? '3px solid #2563eb' : '3px solid transparent',
+                  borderLeft: active ? '3px solid #AC3B61' : '3px solid transparent',
                 }}
               >
                 <span style={{ fontSize: '1.2rem', width: 24, textAlign: 'center' }}>{item.icon}</span>

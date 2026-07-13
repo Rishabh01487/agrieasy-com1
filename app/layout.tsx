@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-capable": "yes",
     "apple-mobile-web-app-status-bar-style": "default",
     "apple-mobile-web-app-title": "AgriEasy",
-    "theme-color": "#2563eb",
+    "theme-color": "#AC3B61",
   }
 };
 
@@ -41,7 +41,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#2563eb",
+  themeColor: "#AC3B61",
   viewportFit: "cover",
 };
 

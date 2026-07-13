@@ -21,7 +21,7 @@ interface MobileNavProps {
   accent?: string
 }
 
-export default function MobileNav({ title, backHref, rightActions, overflowItems, children, accent = '#2563eb' }: MobileNavProps) {
+export default function MobileNav({ title, backHref, rightActions, overflowItems, children, accent = '#AC3B61' }: MobileNavProps) {
   return (
     <>
       {/* SideMenu is always mounted — it renders its own trigger + drawer */}

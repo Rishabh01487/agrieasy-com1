@@ -22,34 +22,63 @@ export const SHARED = {
   font: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
 } as const
 
-// ── Brand palette (single source of truth) ────────────────────────
+// ── Brand palette (Image 1 reference — warm peach + magenta + navy + gold)
+//   Main bg #F5E9E2 · Secondary bg #EDC7B7 · Card #EEE2DC · Muted #BAB2B5
+//   Primary magenta #AC3B61 · Accent navy #123C69 · Gold #D4A574 · White #FFFFFF
 
 export const BRAND = {
-  // Brand blue ramp
-  blue50: '#eff6ff',
-  blue100: '#dbeafe',
-  blue200: '#bfdbfe',
-  blue300: '#93c5fd',
-  blue400: '#60a5fa',
-  blue500: '#3b82f6',
-  blue600: '#2563eb',
-  blue700: '#1d4ed8',
-  blue800: '#1e40af',
-  blue900: '#1e3a8a',
-  ink: '#0f172a',
-  inkSoft: '#1e293b',
-  muted: '#64748b',
-  border: '#e2e8f0',
-  borderSoft: '#eef2f7',
-  bg: '#f8fafc',
-  bgSub: '#f1f5f9',
+  // Warm peach ramp (backgrounds)
+  peach50: '#FBF4EF',
+  peach100: '#F5E9E2',   // main background
+  peach200: '#EEE2DC',   // card / neutral
+  peach300: '#EDC7B7',   // secondary background
+  peach400: '#D4A574',   // warm gold accent
+  peach500: '#BAB2B5',   // muted gray
+  // Brand magenta ramp
+  magenta50: '#FBEAEE',
+  magenta100: '#F5D2DB',
+  magenta200: '#E8A0B0',
+  magenta300: '#D47890',
+  magenta400: '#C05070',
+  magenta500: '#AC3B61',  // primary brand magenta
+  magenta600: '#8E2D4C',  // hover
+  magenta700: '#6F1F3A',
+  // Brand navy ramp
+  navy50: '#E6ECF3',
+  navy100: '#C7D2E0',
+  navy200: '#8FA3BF',
+  navy300: '#5A77A0',
+  navy400: '#2E5783',
+  navy500: '#123C69',     // primary dark navy
+  navy600: '#0E2E52',
+  navy700: '#0A213C',
+  // Aliases (for backwards-compat with code that referenced blue50..blue900)
+  blue50: '#FBF4EF',
+  blue100: '#F5E9E2',
+  blue200: '#EEE2DC',
+  blue300: '#EDC7B7',
+  blue400: '#D4A574',
+  blue500: '#AC3B61',
+  blue600: '#AC3B61',
+  blue700: '#8E2D4C',
+  blue800: '#123C69',
+  blue900: '#0A213C',
+  // Ink & text
+  ink: '#123C69',
+  inkSoft: '#3D4F6E',
+  muted: '#BAB2B5',
+  border: '#EDC7B7',
+  borderSoft: '#F5E9E2',
+  bg: '#F5E9E2',
+  bgSub: '#EDC7B7',
   white: '#ffffff',
-  gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
-  gradientDeep: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
-  gradientSoft: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
-  gradientInstagram: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 35%, #60a5fa 70%, #93c5fd 100%)',
+  // Gradients
+  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
+  gradientDeep: 'linear-gradient(135deg, #8E2D4C 0%, #AC3B61 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
+  gradientInstagram: 'linear-gradient(135deg, #AC3B61 0%, #C05070 35%, #D4A574 70%, #123C69 100%)',
   gradientInstagramRing:
-    'linear-gradient(45deg, #2563eb 0%, #3b82f6 25%, #60a5fa 50%, #93c5fd 75%, #2563eb 100%)',
+    'linear-gradient(45deg, #AC3B61 0%, #C05070 25%, #D4A574 50%, #123C69 75%, #AC3B61 100%)',
 } as const
 
 // ── AgriPay Palette (Blue & White) ─────────────────────────────────
@@ -115,20 +144,20 @@ export const SOCIAL = {
   },
 }
 
-// ── Auth Palette (Blue & White) ────────────────────────────────────
+// ── Auth Palette (Image 1 — warm peach + magenta + navy) ──────────
 
 export const AUTH = {
-  bg: '#f8fafc',
+  bg: '#F5E9E2',
   white: SHARED.white,
-  primary: '#2563eb',
-  primaryHover: '#1d4ed8',
-  primaryLight: '#dbeafe',
-  text: '#0f172a',
-  muted: '#64748b',
-  border: '#bfdbfe',
-  gradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 40%, #1d4ed8 100%)',
-  gradientBlob1: 'radial-gradient(circle at 30% 20%, rgba(37,99,235,0.15) 0%, transparent 50%)',
-  gradientBlob2: 'radial-gradient(circle at 80% 80%, rgba(59,130,246,0.12) 0%, transparent 50%)',
+  primary: '#AC3B61',
+  primaryHover: '#8E2D4C',
+  primaryLight: '#F5D2DB',
+  text: '#123C69',
+  muted: '#BAB2B5',
+  border: '#EDC7B7',
+  gradient: 'linear-gradient(135deg, #D47890 0%, #AC3B61 40%, #8E2D4C 100%)',
+  gradientBlob1: 'radial-gradient(circle at 30% 20%, rgba(172,59,97,0.18) 0%, transparent 50%)',
+  gradientBlob2: 'radial-gradient(circle at 80% 80%, rgba(18,60,105,0.14) 0%, transparent 50%)',
 }
 
 // ── Admin Palette (Dark Slate — kept dark for data density) ───────
@@ -161,83 +190,83 @@ export const ADMIN = {
   sidebarActive: '#2563eb',
 }
 
-// ── Buyer Palette (Blue & White) ──────────────────────────────────
+// ── Buyer Palette (Image 1 — warm peach + magenta + navy) ──────────
 
 export const BUYER = {
-  bg: '#f8fafc',
-  bgSub: '#eff6ff',
+  bg: '#F5E9E2',
+  bgSub: '#EDC7B7',
   white: SHARED.white,
-  primary: '#2563eb',
-  primaryHover: '#1d4ed8',
-  primaryLight: '#dbeafe',
-  primarySoft: '#eff6ff',
-  accent: '#3b82f6',
-  text: '#0f172a',
-  textSecondary: '#1e293b',
-  muted: '#64748b',
-  border: '#bfdbfe',
-  borderLight: '#eff6ff',
+  primary: '#AC3B61',
+  primaryHover: '#8E2D4C',
+  primaryLight: '#F5D2DB',
+  primarySoft: '#FBF4EF',
+  accent: '#123C69',
+  text: '#123C69',
+  textSecondary: '#3D4F6E',
+  muted: '#BAB2B5',
+  border: '#EDC7B7',
+  borderLight: '#F5E9E2',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#d97706',
-  goldLight: '#fef9c3',
+  gold: '#D4A574',
+  goldLight: '#FBF4EF',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
-  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
+  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
 }
 
-// ── Farmer Palette (Blue & White) ─────────────────────────────────
+// ── Farmer Palette (Image 1 — warm peach + magenta + navy) ─────────
 
 export const FARMER = {
-  bg: '#f8fafc',
-  bgSub: '#eff6ff',
+  bg: '#F5E9E2',
+  bgSub: '#EDC7B7',
   white: SHARED.white,
-  primary: '#1d4ed8',
-  primaryHover: '#1e3a8a',
-  primaryLight: '#dbeafe',
-  primarySoft: '#eff6ff',
-  accent: '#3b82f6',
-  text: '#0f172a',
-  textSecondary: '#1e293b',
-  muted: '#64748b',
-  border: '#bfdbfe',
-  borderLight: '#eff6ff',
+  primary: '#AC3B61',
+  primaryHover: '#8E2D4C',
+  primaryLight: '#F5D2DB',
+  primarySoft: '#FBF4EF',
+  accent: '#123C69',
+  text: '#123C69',
+  textSecondary: '#3D4F6E',
+  muted: '#BAB2B5',
+  border: '#EDC7B7',
+  borderLight: '#F5E9E2',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#d97706',
-  goldLight: '#fef9c3',
+  gold: '#D4A574',
+  goldLight: '#FBF4EF',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%)',
-  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
+  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
 }
 
-// ── Transporter Palette (Blue & White) ────────────────────────────
+// ── Transporter Palette (Image 1 — warm peach + magenta + navy) ────
 
 export const TRANSPORTER = {
-  bg: '#f8fafc',
-  bgSub: '#eff6ff',
+  bg: '#F5E9E2',
+  bgSub: '#EDC7B7',
   white: SHARED.white,
-  primary: '#2563eb',
-  primaryHover: '#1d4ed8',
-  primaryLight: '#dbeafe',
-  primarySoft: '#eff6ff',
-  accent: '#3b82f6',
-  text: '#0f172a',
-  textSecondary: '#1e293b',
-  muted: '#64748b',
-  border: '#bfdbfe',
-  borderLight: '#eff6ff',
+  primary: '#AC3B61',
+  primaryHover: '#8E2D4C',
+  primaryLight: '#F5D2DB',
+  primarySoft: '#FBF4EF',
+  accent: '#123C69',
+  text: '#123C69',
+  textSecondary: '#3D4F6E',
+  muted: '#BAB2B5',
+  border: '#EDC7B7',
+  borderLight: '#F5E9E2',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%)',
-  gradientSoft: 'linear-gradient(135deg, #f8fafc 0%, #dbeafe 100%)',
+  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
 }
 
 // ── Reusable Style Presets ─────────────────────────────────────────

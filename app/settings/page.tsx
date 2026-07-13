@@ -34,7 +34,7 @@ export default function SettingsPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
       }}>
-        <Link href={dashboardHref} style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 700, fontSize: '0.88rem' }}>← {t('common.back')}</Link>
+        <Link href={dashboardHref} style={{ color: '#AC3B61', textDecoration: 'none', fontWeight: 700, fontSize: '0.88rem' }}>← {t('common.back')}</Link>
         <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem' }}>⚙️ {t('settings.title')}</span>
         <button onClick={logout} style={{ color: '#dc2626', background: '#fee2e2', border: '1px solid #fca5a5', padding: '6px 12px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>{t('nav.logout')}</button>
       </nav>
@@ -58,7 +58,7 @@ export default function SettingsPage() {
               onClick={() => setLang('en')}
               style={{
                 flex: 1, padding: '16px 20px', borderRadius: 14,
-                border: `2px solid ${lang === 'en' ? '#2563eb' : '#e2e8f0'}`,
+                border: `2px solid ${lang === 'en' ? '#AC3B61' : '#e2e8f0'}`,
                 background: lang === 'en' ? '#eff6ff' : '#fff',
                 cursor: 'pointer', transition: 'all 0.2s ease',
                 display: 'flex', alignItems: 'center', gap: 12,
@@ -66,17 +66,17 @@ export default function SettingsPage() {
             >
               <span style={{ fontSize: '1.8rem' }}>🇬🇧</span>
               <div style={{ textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: lang === 'en' ? '#2563eb' : '#0f172a' }}>English</p>
+                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: lang === 'en' ? '#AC3B61' : '#0f172a' }}>English</p>
                 <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#64748b' }}>Default</p>
               </div>
-              {lang === 'en' && <span style={{ marginLeft: 'auto', color: '#2563eb', fontSize: '1.2rem' }}>✓</span>}
+              {lang === 'en' && <span style={{ marginLeft: 'auto', color: '#AC3B61', fontSize: '1.2rem' }}>✓</span>}
             </button>
 
             <button
               onClick={() => setLang('hi')}
               style={{
                 flex: 1, padding: '16px 20px', borderRadius: 14,
-                border: `2px solid ${lang === 'hi' ? '#2563eb' : '#e2e8f0'}`,
+                border: `2px solid ${lang === 'hi' ? '#AC3B61' : '#e2e8f0'}`,
                 background: lang === 'hi' ? '#eff6ff' : '#fff',
                 cursor: 'pointer', transition: 'all 0.2s ease',
                 display: 'flex', alignItems: 'center', gap: 12,
@@ -84,10 +84,10 @@ export default function SettingsPage() {
             >
               <span style={{ fontSize: '1.8rem' }}>🇮🇳</span>
               <div style={{ textAlign: 'left' }}>
-                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: lang === 'hi' ? '#2563eb' : '#0f172a' }}>हिंदी</p>
+                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: lang === 'hi' ? '#AC3B61' : '#0f172a' }}>हिंदी</p>
                 <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#64748b' }}>Hindi</p>
               </div>
-              {lang === 'hi' && <span style={{ marginLeft: 'auto', color: '#2563eb', fontSize: '1.2rem' }}>✓</span>}
+              {lang === 'hi' && <span style={{ marginLeft: 'auto', color: '#AC3B61', fontSize: '1.2rem' }}>✓</span>}
             </button>
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function SettingsPage() {
             onClick={() => setLang(lang === 'en' ? 'hi' : 'en')}
             style={{
               padding: '10px 24px', borderRadius: 100,
-              background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+              background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 100%)',
               color: '#fff', border: 'none', fontSize: '0.86rem', fontWeight: 700,
               cursor: 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
               whiteSpace: 'nowrap',
@@ -149,7 +149,7 @@ export default function SettingsPage() {
         {/* Link to dashboard */}
         <Link href={dashboardHref} style={{
           display: 'block', textAlign: 'center', padding: '14px',
-          background: 'linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)',
+          background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 100%)',
           color: '#fff', borderRadius: 14, fontSize: '0.92rem', fontWeight: 700,
           textDecoration: 'none', boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
         }}>

@@ -201,7 +201,7 @@ export default function FarmerDashboard() {
         {/* Stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14, marginBottom: 24 }}>
           <StatCard icon="🏪" label="Nearby Buyers" value={nearbyCount} sub="Demand listings within 50 km" href="/farmer/search-buyers" />
-          <StatCard icon="⚖️" label="Total Demand Qty" value={`${totalDemand.toLocaleString('en-IN')} kg`} sub="Across nearby buyers" accent="#3b82f6" />
+          <StatCard icon="⚖️" label="Total Demand Qty" value={`${totalDemand.toLocaleString('en-IN')} kg`} sub="Across nearby buyers" accent="#C05070" />
           <StatCard icon="📈" label="Top Price" value={`₹${topPrice}`} sub="Highest offer / unit nearby" accent="#10b981" />
           <StatCard icon="🚚" label="My Bookings" value="→" sub="Track vehicles & deliveries" href="/farmer/my-bookings" accent="#f59e0b" />
         </div>
@@ -210,7 +210,7 @@ export default function FarmerDashboard() {
         <div style={{ marginBottom: 28 }}>
           <h2 style={{ color: FARMER.text, fontSize: '1.05rem', fontWeight: 800, margin: '0 0 12px' }}>Quick actions</h2>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <QuickAction icon="🔍" label="Search Buyers" href="/farmer/search-buyers" color="#3b82f6" />
+            <QuickAction icon="🔍" label="Search Buyers" href="/farmer/search-buyers" color="#C05070" />
             <QuickAction icon="🚚" label="My Bookings" href="/farmer/my-bookings" color="#10b981" />
             <QuickAction icon="📍" label="Update Location" href="/farmer/setup-location" color="#f59e0b" />
             <QuickAction icon="📒" label="Ledger" href="/ledger" color="#dc2626" />
