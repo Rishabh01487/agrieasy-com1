@@ -5,96 +5,26 @@ import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
 import { BUYER, SHARED, navStyle } from '@/lib/styles'
 
-// ── Z-AI vision API config (client-side — bypasses Vercel function timeout) ──
-// We call the Z-AI API directly from the browser to avoid Vercel's 10s
-// serverless function limit on Hobby tier. The OCR takes ~15-30s.
-const ZAI_CONFIG = {
-    baseUrl: 'https://internal-api.z.ai/v1',
-    apiKey: 'Z.ai',
-    chatId: 'chat-7fcc4e40-ad01-4ab0-a83e-bad8f1cf2840',
-    userId: 'e255a2b5-f0be-4835-9279-65e7282d8a50',
-    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o',
+interface Batch { bagCount: number; weight: number }
+interface CommodityGroup {
+    name: string
+    nameEn: string
+    batches: Batch[]
+    totalBags: number
+    totalWeight: number
 }
 
 /**
- * Call the Z-AI vision API directly from the browser.
- * Tries direct fetch first; falls back to a CORS proxy if blocked.
- * This bypasses Vercel's serverless function timeout (10s on Hobby tier).
- */
-async function callZaiVisionClient(prompt: string, imageBase64: string, mimeType: string): Promise<string> {
-    const url = `${ZAI_CONFIG.baseUrl}/chat/completions/vision`
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${ZAI_CONFIG.apiKey}`,
-        'X-Z-AI-From': 'Z',
-        'X-Chat-Id': ZAI_CONFIG.chatId,
-        'X-User-Id': ZAI_CONFIG.userId,
-        'X-Token': ZAI_CONFIG.token,
-    }
-    const body = {
-        model: 'glm-4.6v',
-        messages: [{
-            role: 'user',
-            content: [
-                { type: 'text', text: prompt },
-                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
-            ],
-        }],
-        thinking: { type: 'disabled' },
-    }
-
-    // Strategy 1: direct fetch (works if Z-AI API allows CORS)
-    try {
-        const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
-        if (res.ok) {
-            const json = await res.json()
-            return json.choices?.[0]?.message?.content || ''
-        }
-        // If 4xx, CORS likely blocked — fall through to proxy
-        console.warn('Direct Z-AI call failed with', res.status, '— trying CORS proxy')
-    } catch (e) {
-        console.warn('Direct Z-AI call errored — trying CORS proxy:', e instanceof Error ? e.message : e)
-    }
-
-    // Strategy 2: CORS proxy fallback #1 (corsproxy.io)
-    try {
-        const proxyUrl1 = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
-        const proxyRes1 = await fetch(proxyUrl1, { method: 'POST', headers, body: JSON.stringify(body) })
-        if (proxyRes1.ok) {
-            const proxyJson = await proxyRes1.json()
-            return proxyJson.choices?.[0]?.message?.content || ''
-        }
-        console.warn('corsproxy.io failed with', proxyRes1.status, '— trying allorigins.win')
-    } catch (e) {
-        console.warn('corsproxy.io errored — trying allorigins.win:', e instanceof Error ? e.message : e)
-    }
-
-    // Strategy 3: CORS proxy fallback #2 (allorigins.win — different provider)
-    try {
-        const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-        const proxyRes2 = await fetch(proxyUrl2, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ...body, _headers: headers }),
-        })
-        if (proxyRes2.ok) {
-            const proxyJson = await proxyRes2.json()
-            return proxyJson.choices?.[0]?.message?.content || ''
-        }
-    } catch (e) {
-        console.warn('allorigins.win errored:', e instanceof Error ? e.message : e)
-    }
-
-    throw new Error(
-        'Could not reach the Z-AI vision API from your browser. This is usually caused by ' +
-        'a Content Security Policy (CSP) block or network firewall. ' +
-        'Please ask the developer to add https://internal-api.z.ai to the CSP connect-src allowlist.'
-    )
-}
-
-/**
- * Run OCR on a bill image — fully client-side, no serverless function.
- * Returns the same shape as the old /api/ledger/bill-calc endpoint.
+ * Run OCR on a bill image — calls our own Edge-runtime proxy which forwards
+ * to the Z-AI vision API. Edge runtime has 25s timeout on Vercel Hobby
+ * (vs 10s for Node.js), enough for the ~15-25s OCR.
+ *
+ * Why not call Z-AI directly from the browser?
+ *   - The Z-AI API does not return CORS headers, so the browser blocks the response.
+ *   - Public CORS proxies either 403 the request or reject large image payloads.
+ *   - The Node.js serverless function times out at 10s on Vercel Hobby.
+ * The Edge proxy solves all three: same-origin (no CORS), no payload size
+ * limit, 25s timeout.
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
     // Read file as base64
@@ -102,7 +32,6 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
         const reader = new FileReader()
         reader.onload = () => {
             const result = reader.result as string
-            // Strip the "data:image/png;base64," prefix
             const commaIdx = result.indexOf(',')
             resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
         }
@@ -156,7 +85,32 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
   "rawText": "Brief description"
 }`
 
-    const content = await callZaiVisionClient(prompt, b64, file.type || 'image/jpeg')
+    // Call our own Edge-runtime proxy (same-origin, no CORS issues, 25s timeout)
+    const proxyRes = await fetch('/api/ledger/bill-calc-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            messages: [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: `data:${file.type || 'image/jpeg'};base64,${b64}` } },
+                ],
+            }],
+        }),
+    })
+
+    if (!proxyRes.ok) {
+        let errMsg = `Server returned ${proxyRes.status}`
+        try {
+            const errJson = await proxyRes.json()
+            errMsg = errJson?.error || errMsg
+        } catch { /* not JSON */ }
+        throw new Error(errMsg)
+    }
+
+    const proxyJson = await proxyRes.json()
+    const content = proxyJson.choices?.[0]?.message?.content || ''
 
     // Parse JSON from the response
     let parsed: any = null
@@ -172,7 +126,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
         throw new Error('Could not parse OCR result. Please try a clearer photo.')
     }
 
-    // Normalize + validate (same logic as the server route)
+    // Normalize + validate
     const commodities: CommodityGroup[] = (parsed.commodities || [])
         .filter((c: any) => c && (c.name || c.nameEn))
         .map((c: any) => {
