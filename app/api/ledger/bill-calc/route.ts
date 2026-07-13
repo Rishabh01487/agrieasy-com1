@@ -1,8 +1,101 @@
 import { NextRequest, NextResponse } from 'next/server'
-import ZAI from 'z-ai-web-dev-sdk'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { apiSuccess } from '@/lib/api-response'
+
+/**
+ * Z-AI vision API configuration.
+ *
+ * Reads from env vars (set on Vercel → Settings → Environment Variables):
+ *   ZAI_BASE_URL  e.g. https://internal-api.z.ai/v1
+ *   ZAI_API_KEY   e.g. Z.ai
+ *   ZAI_CHAT_ID   (optional)
+ *   ZAI_USER_ID   (optional)
+ *   ZAI_TOKEN     (optional JWT)
+ *
+ * Falls back to reading ./z-ai-config.json or /etc/.z-ai-config for local dev.
+ */
+interface ZaiConfig {
+    baseUrl: string
+    apiKey: string
+    chatId?: string
+    userId?: string
+    token?: string
+}
+
+async function loadZaiConfig(): Promise<ZaiConfig> {
+    // 1. Env vars (production / Vercel)
+    if (process.env.ZAI_BASE_URL && process.env.ZAI_API_KEY) {
+        return {
+            baseUrl: process.env.ZAI_BASE_URL,
+            apiKey: process.env.ZAI_API_KEY,
+            chatId: process.env.ZAI_CHAT_ID,
+            userId: process.env.ZAI_USER_ID,
+            token: process.env.ZAI_TOKEN,
+        }
+    }
+    // 2. Local config file (dev)
+    const fs = await import('fs')
+    const path = await import('path')
+    const os = await import('os')
+    const candidates = [
+        path.join(process.cwd(), '.z-ai-config'),
+        path.join(process.cwd(), 'z-ai-config.json'),
+        path.join(os.homedir(), '.z-ai-config'),
+        '/etc/.z-ai-config',
+    ]
+    for (const p of candidates) {
+        try {
+            const cfg = JSON.parse(fs.readFileSync(p, 'utf-8'))
+            if (cfg.baseUrl && cfg.apiKey) return cfg
+        } catch { /* try next */ }
+    }
+    throw new Error(
+        'Z-AI not configured. Set ZAI_BASE_URL + ZAI_API_KEY env vars (Vercel → Settings → Environment Variables), or create .z-ai-config locally.',
+    )
+}
+
+/**
+ * Call the Z-AI vision model directly via fetch (bypasses the z-ai-web-dev-sdk,
+ * which only reads from a .z-ai-config file and doesn't work on Vercel's
+ * read-only serverless filesystem).
+ */
+async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string) {
+    const url = `${config.baseUrl}/chat/completions/vision`
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+        'X-Z-AI-From': 'Z',
+    }
+    if (config.chatId) headers['X-Chat-Id'] = config.chatId
+    if (config.userId) headers['X-User-Id'] = config.userId
+    if (config.token) headers['X-Token'] = config.token
+
+    const body = {
+        model: 'glm-4.6v',
+        messages: [
+            {
+                role: 'user',
+                content: [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: imageUrl } },
+                ],
+            },
+        ],
+        thinking: { type: 'disabled' },
+    }
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+    })
+    if (!res.ok) {
+        const errText = await res.text()
+        throw new Error(`Z-AI vision API failed (${res.status}): ${errText.slice(0, 500)}`)
+    }
+    return await res.json()
+}
 
 /**
  * POST /api/ledger/bill-calc
@@ -71,7 +164,7 @@ export async function POST(req: NextRequest) {
         // Compose the data URL or pass through
         const finalUrl = imageUrl || `data:${mimeType};base64,${imageBase64}`
 
-        const zai = await ZAI.create()
+        const zaiConfig = await loadZaiConfig()
 
         const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
@@ -125,19 +218,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
   "rawText": "Brief description of what was readable on the bill"
 }`
 
-        const response = await zai.chat.completions.createVision({
-            model: 'glm-4.6v',
-            messages: [
-                {
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: prompt },
-                        { type: 'image_url', image_url: { url: finalUrl } },
-                    ],
-                },
-            ],
-            thinking: { type: 'disabled' },
-        })
+        const response = await callZaiVision(zaiConfig, prompt, finalUrl)
 
         const content = response.choices?.[0]?.message?.content || ''
 
