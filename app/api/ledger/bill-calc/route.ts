@@ -6,14 +6,13 @@ import { apiSuccess } from '@/lib/api-response'
 /**
  * Z-AI vision API configuration.
  *
- * Reads from env vars (set on Vercel → Settings → Environment Variables):
- *   ZAI_BASE_URL  e.g. https://internal-api.z.ai/v1
- *   ZAI_API_KEY   e.g. Z.ai
- *   ZAI_CHAT_ID   (optional)
- *   ZAI_USER_ID   (optional)
- *   ZAI_TOKEN     (optional JWT)
+ * Resolution order (first one wins):
+ *   1. process.env.ZAI_BASE_URL + ZAI_API_KEY + (optional) ZAI_CHAT_ID/ZAI_USER_ID/ZAI_TOKEN
+ *      → set these on Vercel → Settings → Environment Variables
+ *   2. .z-ai-config / z-ai-config.json in project root, home dir, or /etc/
+ *      → for local dev only
  *
- * Falls back to reading ./z-ai-config.json or /etc/.z-ai-config for local dev.
+ * After resolving, we call the vision API directly with fetch (no SDK dependency).
  */
 interface ZaiConfig {
     baseUrl: string
@@ -23,42 +22,87 @@ interface ZaiConfig {
     token?: string
 }
 
-async function loadZaiConfig(): Promise<ZaiConfig> {
-    // 1. Env vars (production / Vercel)
-    if (process.env.ZAI_BASE_URL && process.env.ZAI_API_KEY) {
-        return {
-            baseUrl: process.env.ZAI_BASE_URL,
-            apiKey: process.env.ZAI_API_KEY,
-            chatId: process.env.ZAI_CHAT_ID,
-            userId: process.env.ZAI_USER_ID,
-            token: process.env.ZAI_TOKEN,
-        }
+function loadZaiConfigFromEnv(): ZaiConfig | null {
+    const baseUrl = process.env.ZAI_BASE_URL
+    const apiKey = process.env.ZAI_API_KEY
+    if (!baseUrl || !apiKey) return null
+    return {
+        baseUrl,
+        apiKey,
+        chatId: process.env.ZAI_CHAT_ID,
+        userId: process.env.ZAI_USER_ID,
+        token: process.env.ZAI_TOKEN,
     }
-    // 2. Local config file (dev)
-    const fs = await import('fs')
-    const path = await import('path')
-    const os = await import('os')
-    const candidates = [
-        path.join(process.cwd(), '.z-ai-config'),
-        path.join(process.cwd(), 'z-ai-config.json'),
-        path.join(os.homedir(), '.z-ai-config'),
-        '/etc/.z-ai-config',
-    ]
-    for (const p of candidates) {
+}
+
+async function loadZaiConfigFromFile(): Promise<ZaiConfig | null> {
+    try {
+        const fs = await import('fs')
+        const path = await import('path')
+        const os = await import('os')
+        const candidates = [
+            path.join(process.cwd(), '.z-ai-config'),
+            path.join(process.cwd(), 'z-ai-config.json'),
+            path.join(os.homedir(), '.z-ai-config'),
+            '/etc/.z-ai-config',
+            '/tmp/.z-ai-config',
+        ]
+        for (const p of candidates) {
+            try {
+                const cfg = JSON.parse(fs.readFileSync(p, 'utf-8'))
+                if (cfg.baseUrl && cfg.apiKey) {
+                    return cfg
+                }
+            } catch { /* try next */ }
+        }
+    } catch { /* ignore */ }
+    return null
+}
+
+/**
+ * Resolve Z-AI config from env vars first, then from config files.
+ * Also writes the resolved config to /tmp/.z-ai-config so the z-ai-web-dev-sdk
+ * (if anything else uses it) can find it on Vercel's read-only filesystem.
+ */
+async function loadZaiConfig(): Promise<{ config: ZaiConfig; source: string }> {
+    // 1. Env vars (Vercel production)
+    const fromEnv = loadZaiConfigFromEnv()
+    if (fromEnv) {
+        // Persist to /tmp so the SDK can also find it if needed (Vercel /tmp is writable)
         try {
-            const cfg = JSON.parse(fs.readFileSync(p, 'utf-8'))
-            if (cfg.baseUrl && cfg.apiKey) return cfg
-        } catch { /* try next */ }
+            const fs = await import('fs')
+            const path = await import('path')
+            const tmpDir = '/tmp'
+            if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
+            fs.writeFileSync(path.join(tmpDir, '.z-ai-config'), JSON.stringify(fromEnv))
+        } catch { /* best-effort */ }
+        return { config: fromEnv, source: 'env' }
+    }
+
+    // 2. Config file (local dev or already-written /tmp)
+    const fromFile = await loadZaiConfigFromFile()
+    if (fromFile) {
+        return { config: fromFile, source: 'file' }
+    }
+
+    // 3. Nothing found — detailed error
+    const envStatus = {
+        ZAI_BASE_URL: process.env.ZAI_BASE_URL ? '✓ set' : '✗ missing',
+        ZAI_API_KEY: process.env.ZAI_API_KEY ? '✓ set' : '✗ missing',
+        ZAI_CHAT_ID: process.env.ZAI_CHAT_ID ? '✓ set' : '✗ missing',
+        ZAI_USER_ID: process.env.ZAI_USER_ID ? '✓ set' : '✗ missing',
+        ZAI_TOKEN: process.env.ZAI_TOKEN ? '✓ set' : '✗ missing',
     }
     throw new Error(
-        'Z-AI not configured. Set ZAI_BASE_URL + ZAI_API_KEY env vars (Vercel → Settings → Environment Variables), or create .z-ai-config locally.',
+        `Z-AI not configured. Env var status: ${JSON.stringify(envStatus)}. ` +
+        `Set ZAI_BASE_URL and ZAI_API_KEY on Vercel → Settings → Environment Variables, ` +
+        `then redeploy. Local dev: create .z-ai-config in project root.`,
     )
 }
 
 /**
- * Call the Z-AI vision model directly via fetch (bypasses the z-ai-web-dev-sdk,
- * which only reads from a .z-ai-config file and doesn't work on Vercel's
- * read-only serverless filesystem).
+ * Call the Z-AI vision model directly via fetch.
+ * Uses the same headers + body format as z-ai-web-dev-sdk's createVision().
  */
 async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string) {
     const url = `${config.baseUrl}/chat/completions/vision`
@@ -92,7 +136,7 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
     })
     if (!res.ok) {
         const errText = await res.text()
-        throw new Error(`Z-AI vision API failed (${res.status}): ${errText.slice(0, 500)}`)
+        throw new Error(`Z-AI vision API returned ${res.status}: ${errText.slice(0, 800)}`)
     }
     return await res.json()
 }
@@ -164,7 +208,7 @@ export async function POST(req: NextRequest) {
         // Compose the data URL or pass through
         const finalUrl = imageUrl || `data:${mimeType};base64,${imageBase64}`
 
-        const zaiConfig = await loadZaiConfig()
+        const { config: zaiConfig } = await loadZaiConfig()
 
         const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
@@ -307,9 +351,58 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
         })
     } catch (err) {
         console.error('bill-calc error:', err)
+        const msg = err instanceof Error ? err.message : 'Failed to process bill image'
         return NextResponse.json(
-            { error: err instanceof Error ? err.message : 'Failed to process bill image' },
+            {
+                error: msg,
+                // Include debug info to help diagnose Vercel config issues
+                debug: {
+                    envBaseUrl: process.env.ZAI_BASE_URL ? 'set' : 'missing',
+                    envApiKey: process.env.ZAI_API_KEY ? 'set' : 'missing',
+                    envChatId: process.env.ZAI_CHAT_ID ? 'set' : 'missing',
+                    envUserId: process.env.ZAI_USER_ID ? 'set' : 'missing',
+                    envToken: process.env.ZAI_TOKEN ? 'set' : 'missing',
+                    nodeEnv: process.env.NODE_ENV,
+                    vercel: process.env.VERCEL ? 'yes' : 'no',
+                },
+            },
             { status: 500 },
         )
+    }
+}
+
+/**
+ * GET /api/ledger/bill-calc — health check / config debug endpoint.
+ * Returns whether the Z-AI config is resolvable + which source it came from.
+ * Useful for debugging Vercel env var setup.
+ */
+export async function GET(req: NextRequest) {
+    const auth = authenticateRequest(req)
+    if (!auth) return unauthorized()
+    try {
+        const { config, source } = await loadZaiConfig()
+        return apiSuccess({
+            configured: true,
+            source,
+            baseUrl: config.baseUrl,
+            apiKeyPresent: !!config.apiKey,
+            chatIdPresent: !!config.chatId,
+            userIdPresent: !!config.userId,
+            tokenPresent: !!config.token,
+        })
+    } catch (err) {
+        return NextResponse.json({
+            configured: false,
+            error: err instanceof Error ? err.message : 'Unknown error',
+            debug: {
+                envBaseUrl: process.env.ZAI_BASE_URL ? 'set' : 'missing',
+                envApiKey: process.env.ZAI_API_KEY ? 'set' : 'missing',
+                envChatId: process.env.ZAI_CHAT_ID ? 'set' : 'missing',
+                envUserId: process.env.ZAI_USER_ID ? 'set' : 'missing',
+                envToken: process.env.ZAI_TOKEN ? 'set' : 'missing',
+                nodeEnv: process.env.NODE_ENV,
+                vercel: process.env.VERCEL ? 'yes' : 'no',
+            },
+        }, { status: 200 })  // 200 so the user can see the debug info
     }
 }
