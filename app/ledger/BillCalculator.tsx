@@ -56,15 +56,40 @@ async function callZaiVisionClient(prompt: string, imageBase64: string, mimeType
         console.warn('Direct Z-AI call errored — trying CORS proxy:', e instanceof Error ? e.message : e)
     }
 
-    // Strategy 2: CORS proxy fallback (uses corsproxy.io — free, no API key)
-    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
-    const proxyRes = await fetch(proxyUrl, { method: 'POST', headers, body: JSON.stringify(body) })
-    if (!proxyRes.ok) {
-        const errText = await proxyRes.text().catch(() => '')
-        throw new Error(`Z-AI API failed via proxy (${proxyRes.status}): ${errText.slice(0, 300)}`)
+    // Strategy 2: CORS proxy fallback #1 (corsproxy.io)
+    try {
+        const proxyUrl1 = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+        const proxyRes1 = await fetch(proxyUrl1, { method: 'POST', headers, body: JSON.stringify(body) })
+        if (proxyRes1.ok) {
+            const proxyJson = await proxyRes1.json()
+            return proxyJson.choices?.[0]?.message?.content || ''
+        }
+        console.warn('corsproxy.io failed with', proxyRes1.status, '— trying allorigins.win')
+    } catch (e) {
+        console.warn('corsproxy.io errored — trying allorigins.win:', e instanceof Error ? e.message : e)
     }
-    const proxyJson = await proxyRes.json()
-    return proxyJson.choices?.[0]?.message?.content || ''
+
+    // Strategy 3: CORS proxy fallback #2 (allorigins.win — different provider)
+    try {
+        const proxyUrl2 = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
+        const proxyRes2 = await fetch(proxyUrl2, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...body, _headers: headers }),
+        })
+        if (proxyRes2.ok) {
+            const proxyJson = await proxyRes2.json()
+            return proxyJson.choices?.[0]?.message?.content || ''
+        }
+    } catch (e) {
+        console.warn('allorigins.win errored:', e instanceof Error ? e.message : e)
+    }
+
+    throw new Error(
+        'Could not reach the Z-AI vision API from your browser. This is usually caused by ' +
+        'a Content Security Policy (CSP) block or network firewall. ' +
+        'Please ask the developer to add https://internal-api.z.ai to the CSP connect-src allowlist.'
+    )
 }
 
 /**
