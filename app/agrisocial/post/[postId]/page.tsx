@@ -8,7 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
 import { shareContent } from '@/lib/share'
 
-const roleLabel: Record<string, string> = { farmer: 'Farmer', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
+const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }

@@ -10,7 +10,7 @@ type Card = {
 }
 
 const ROLE_CARDS: Card[] = [
-  { href: '/auth/login?role=farmer', emoji: '🌾', title: 'Farmer', sub: 'Sell your produce', color: '#AC3B61' },
+  { href: '/auth/login?role=farmer', emoji: '🌾', title: 'Farmer/Vyapari', sub: 'Sell your produce', color: '#AC3B61' },
   { href: '/auth/login?role=buyer', emoji: '🛒', title: 'Buyer', sub: 'Source fresh crops', color: '#123C69' },
   { href: '/auth/login?role=transporter', emoji: '🚛', title: 'Transporter', sub: 'Deliver goods', color: '#D4A574' },
 ]

@@ -161,7 +161,7 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
 
     const name = current.user?.farmerName || current.user?.firmName || 'User'
     const handle = makeHandle(current.user)
-    const roleLabel = current.user?.role === 'farmer' ? 'Farmer' : current.user?.role === 'buyer' ? 'Buyer' : current.user?.role === 'transporter' ? 'Transporter' : 'Member'
+    const roleLabel = current.user?.role === 'farmer' ? 'Farmer/Vyapari' : current.user?.role === 'buyer' ? 'Buyer' : current.user?.role === 'transporter' ? 'Transporter' : 'Member'
 
     const handleLike = async () => {
         if (liked) return

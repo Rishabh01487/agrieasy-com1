@@ -10,7 +10,7 @@ import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
 type FormData = { identifier: string; password: string }
 
 const roleConfig: Record<string, { icon: string; label: string }> = {
-  farmer: { icon: '🌾', label: 'Farmer' },
+  farmer: { icon: '🌾', label: 'Farmer/Vyapari' },
   buyer: { icon: '🛒', label: 'Buyer' },
   transporter: { icon: '🚛', label: 'Transporter' },
 }

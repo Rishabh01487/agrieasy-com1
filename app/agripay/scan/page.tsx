@@ -30,7 +30,7 @@ export default function ScanToPay() {
                 const res = await authFetch('/api/agripay/wallet')
                 const d = await res.json()
                 if (d.wallet?.agripayId) setAgripayId(d.wallet.agripayId)
-                const label = role === 'farmer' ? 'Farmer' : role === 'buyer' ? 'Buyer' : role === 'transporter' ? 'Transporter' : 'User'
+                const label = role === 'farmer' ? 'Farmer/Vyapari' : role === 'buyer' ? 'Buyer' : role === 'transporter' ? 'Transporter' : 'User'
                 setUserName(label)
             } catch (e) { console.error(e) } finally { setLoading(false) }
         }

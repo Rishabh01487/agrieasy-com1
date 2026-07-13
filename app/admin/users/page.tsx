@@ -48,7 +48,7 @@ export default function AdminUsers() {
         <select value={roleFilter} onChange={e => { setRoleFilter(e.target.value); setPage(1) }}
           style={{ padding: '10px 14px', borderRadius: 8, border: `1px solid ${ADMIN.border}`, background: ADMIN.card, color: ADMIN.text, fontSize: 13, outline: 'none', fontFamily: SHARED.font }}>
           <option value="">All roles</option>
-          <option value="farmer">Farmer</option>
+          <option value="farmer">Farmer/Vyapari</option>
           <option value="buyer">Buyer</option>
           <option value="transporter">Transporter</option>
           <option value="driver">Driver</option>

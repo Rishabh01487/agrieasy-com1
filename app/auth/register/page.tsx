@@ -172,7 +172,7 @@ export default function Register() {
               fontFamily: SHARED.font,
             }}>
               {r === 'farmer' ? '🌾' : r === 'buyer' ? '🛒' : '🚛'}{' '}
-              {r === 'farmer' ? 'Farmer' : r === 'buyer' ? 'Buyer' : 'Transporter'}
+              {r === 'farmer' ? 'Farmer/Vyapari' : r === 'buyer' ? 'Buyer' : 'Transporter'}
             </button>
           ))}
         </div>

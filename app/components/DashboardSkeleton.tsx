@@ -37,7 +37,7 @@ interface DashboardSkeletonProps {
 
 export function DashboardSkeleton({ role, primary, primaryLight, bg, bgSub, border, text, muted, gradient }: DashboardSkeletonProps) {
   const roleIcon = role === 'farmer' ? '🌾' : role === 'buyer' ? '🛒' : '🚛'
-  const roleLabel = role === 'farmer' ? 'Farmer workspace' : role === 'buyer' ? 'Buyer workspace' : 'Transporter workspace'
+  const roleLabel = role === 'farmer' ? 'Farmer/Vyapari workspace' : role === 'buyer' ? 'Buyer workspace' : 'Transporter workspace'
 
   return (
     <div style={{ minHeight: '100vh', background: bg, fontFamily: SHARED.font, color: text }}>

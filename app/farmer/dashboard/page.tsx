@@ -158,7 +158,7 @@ export default function FarmerDashboard() {
             <div style={{ width: 36, height: 36, borderRadius: 10, background: FARMER.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.95rem' }}>🌾</div>
             <div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: FARMER.text, lineHeight: 1 }}>AgriEasy</p>
-              <p style={{ margin: 0, fontSize: '0.7rem', color: FARMER.muted }}>Farmer workspace</p>
+              <p style={{ margin: 0, fontSize: '0.7rem', color: FARMER.muted }}>Farmer/Vyapari workspace</p>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
