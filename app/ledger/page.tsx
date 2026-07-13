@@ -183,8 +183,22 @@ export default function LedgerPage() {
             </nav>
 
             <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 60px' }}>
-                <h1 style={{ color: palette.text, fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>📒 Ledger</h1>
-                <p style={{ color: palette.muted, margin: '0 0 24px', fontSize: '0.92rem' }}>Track your bills, invoices, earnings, and expenses.</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                    <div>
+                        <h1 style={{ color: palette.text, fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>📒 Ledger</h1>
+                        <p style={{ color: palette.muted, margin: 0, fontSize: '0.92rem' }}>Track your bills, invoices, earnings, and expenses.</p>
+                    </div>
+                    {userRole === 'buyer' && (
+                        <Link href="/ledger/bill-calculator" style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 8,
+                            background: palette.gradient, color: '#fff',
+                            padding: '10px 18px', borderRadius: 10, textDecoration: 'none',
+                            fontSize: '0.86rem', fontWeight: 700, boxShadow: SHARED.shadowMd,
+                        }}>
+                            🧮 Bill Calculator
+                        </Link>
+                    )}
+                </div>
 
                 {/* Summary cards */}
                 {summary && (

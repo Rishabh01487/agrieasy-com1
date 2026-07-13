@@ -27,6 +27,7 @@
     "react-hook-form": "^7.68.0",
     "react-leaflet": "^5.0.0",
     "xss": "^1.0.15",
+    "z-ai-web-dev-sdk": "^0.0.18",
     "zod": "^4.4.3"
   },
   "devDependencies": {
