@@ -16,6 +16,7 @@ const ROLE_CARDS: Card[] = [
 ]
 
 const FEATURE_CARDS: Card[] = [
+  { href: '/ledger/bill-calculator', emoji: '🧮', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#AC3B61' },
   { href: '/agripay', emoji: '💳', title: 'AgriPay', sub: 'Pay & transfer', color: '#E98074' },
   { href: '/agrisocial', emoji: '📱', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
   { href: '/ledger', emoji: '📒', title: 'Ledger', sub: 'Bills & earnings', color: '#8E2D4C' },
@@ -193,20 +194,24 @@ export default function Home() {
         </div>
 
         {/* Feature cards — secondary */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 28, maxWidth: 560, width: '100%' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 28, maxWidth: 560, width: '100%' }}>
           {FEATURE_CARDS.map((c, i) => (
-            <Link key={c.title} href={c.href} className="home-card-sm fade-up" style={{
-              background: 'rgba(255,255,255,0.55)',
+            <Link key={c.title} href={c.href} className={`home-card-sm fade-up${c.title === 'Bill Calculator' ? ' home-card-feat' : ''}`} style={{
+              background: c.title === 'Bill Calculator' ? 'linear-gradient(135deg, rgba(172,59,97,0.10), rgba(212,165,116,0.10))' : 'rgba(255,255,255,0.55)',
               backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid rgba(172,59,97,0.10)',
+              border: c.title === 'Bill Calculator' ? '1.5px solid rgba(172,59,97,0.35)' : '1px solid rgba(172,59,97,0.10)',
               borderRadius: 12, padding: '14px 8px', textAlign: 'center',
               textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
-              transition: 'transform .3s, background .2s',
+              transition: 'transform .3s, background .2s, box-shadow .2s',
               animationDelay: `${0.28 + i * 0.06}s`,
+              position: 'relative',
             }}>
-              <div style={{ fontSize: '1.2rem', marginBottom: 4 }}>{c.emoji}</div>
+              {c.title === 'Bill Calculator' && (
+                <span style={{ position: 'absolute', top: -7, right: -3, background: '#AC3B61', color: '#fff', fontSize: '0.56rem', fontWeight: 800, padding: '2px 6px', borderRadius: 100, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: '0 2px 6px rgba(172,59,97,0.3)' }}>NEW</span>
+              )}
+              <div style={{ fontSize: '1.3rem', marginBottom: 4 }}>{c.emoji}</div>
               <p style={{ color: '#AC3B61', fontWeight: 700, fontSize: '0.78rem', margin: 0 }}>{c.title}</p>
-              <p style={{ color: '#5A77A0', fontSize: '0.64rem', opacity: 0.7, margin: '2px 0 0' }}>{c.sub}</p>
+              <p style={{ color: '#5A77A0', fontSize: '0.64rem', opacity: 0.75, margin: '2px 0 0' }}>{c.sub}</p>
             </Link>
           ))}
         </div>
@@ -299,6 +304,12 @@ export default function Home() {
         .home-card-sm:hover {
           transform: translateY(-3px);
           background: rgba(255,255,255,0.95) !important;
+        }
+        .home-card-feat:hover {
+          transform: translateY(-4px) !important;
+          background: linear-gradient(135deg, rgba(172,59,97,0.18), rgba(212,165,116,0.18)) !important;
+          box-shadow: 0 12px 32px rgba(172,59,97,0.2) !important;
+          border-color: rgba(172,59,97,0.55) !important;
         }
 
         .home-cta:hover {
