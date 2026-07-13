@@ -44,6 +44,7 @@ export default function BillCalculatorPage() {
     const [saving, setSaving] = useState(false)
     const [saveMsg, setSaveMsg] = useState('')
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const cameraInputRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
         const info = getUserInfo()
@@ -420,41 +421,90 @@ export default function BillCalculatorPage() {
                     Upload a bill photo — we'll read every batch (10 bags + weight per row), sum the bags and weights per commodity, multiply by your stored rates, and give the total amount to pay.
                 </p>
 
-                {/* Upload area */}
+                {/* Upload area — camera + upload buttons */}
                 {!result && (
-                    <div
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={onDrop}
-                        onClick={() => fileInputRef.current?.click()}
-                        style={{
-                            border: `2.5px dashed ${palette.border}`,
-                            borderRadius: 16,
-                            padding: '40px 20px',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                            background: palette.white,
-                            transition: 'border-color .2s, background .2s',
-                        }}
-                    >
+                    <div>
                         <input
-                            ref={fileInputRef}
+                            ref={cameraInputRef}
                             type="file"
                             accept="image/*"
                             capture="environment"
                             onChange={(e) => onPickFile(e.target.files?.[0] || null)}
                             style={{ display: 'none' }}
                         />
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => onPickFile(e.target.files?.[0] || null)}
+                            style={{ display: 'none' }}
+                        />
                         {previewUrl ? (
-                            <div>
+                            <div
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={onDrop}
+                                onClick={() => fileInputRef.current?.click()}
+                                style={{
+                                    border: `2.5px dashed ${palette.border}`,
+                                    borderRadius: 16,
+                                    padding: '20px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    background: palette.white,
+                                    transition: 'border-color .2s, background .2s',
+                                }}
+                            >
                                 <img src={previewUrl} alt="bill preview" style={{ maxWidth: '100%', maxHeight: 360, borderRadius: 12, marginBottom: 12, boxShadow: SHARED.shadowMd }} />
-                                <p style={{ color: palette.muted, fontSize: '0.84rem', margin: 0 }}>Click to choose a different photo</p>
+                                <p style={{ color: palette.muted, fontSize: '0.84rem', margin: 0 }}>Tap to choose a different photo</p>
                             </div>
                         ) : (
-                            <div>
-                                <div style={{ fontSize: '3rem', marginBottom: 12 }}>📸</div>
-                                <h3 style={{ color: palette.text, margin: '0 0 6px', fontWeight: 700 }}>Tap to upload a bill photo</h3>
-                                <p style={{ color: palette.muted, fontSize: '0.84rem', margin: 0 }}>or drag-and-drop here · JPG/PNG up to 8 MB</p>
-                                <p style={{ color: palette.muted, fontSize: '0.76rem', margin: '8px 0 0' }}>Reads batch rows (e.g. <strong>10 bags · 510 kg</strong>) — Hindi/Devanagari digits + fractions auto-converted to decimal kg</p>
+                            <div
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={onDrop}
+                                style={{
+                                    border: `2.5px dashed ${palette.border}`,
+                                    borderRadius: 16,
+                                    padding: '36px 20px 28px',
+                                    textAlign: 'center',
+                                    background: palette.white,
+                                    transition: 'border-color .2s, background .2s',
+                                }}
+                            >
+                                <div style={{ fontSize: '3rem', marginBottom: 8 }}>📸</div>
+                                <h3 style={{ color: palette.text, margin: '0 0 6px', fontWeight: 700 }}>Choose how to add the bill</h3>
+                                <p style={{ color: palette.muted, fontSize: '0.82rem', margin: '0 0 20px' }}>
+                                    Take a fresh photo with your camera, or upload an existing one from your device.
+                                </p>
+                                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+                                    <button
+                                        onClick={() => cameraInputRef.current?.click()}
+                                        style={{
+                                            flex: '1 1 220px', maxWidth: 280,
+                                            padding: '14px 20px', background: palette.gradient,
+                                            color: '#fff', border: 'none', borderRadius: 12,
+                                            fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
+                                            boxShadow: SHARED.shadowMd, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                        }}
+                                    >
+                                        📷 Take Photo
+                                    </button>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        style={{
+                                            flex: '1 1 220px', maxWidth: 280,
+                                            padding: '14px 20px', background: palette.white,
+                                            color: palette.primary, border: `1.5px solid ${palette.primary}`,
+                                            borderRadius: 12, fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                                        }}
+                                    >
+                                        📁 Upload from Device
+                                    </button>
+                                </div>
+                                <p style={{ color: palette.muted, fontSize: '0.74rem', margin: '16px 0 0' }}>
+                                    JPG / PNG up to 8 MB · reads batch rows (e.g. <strong>10 bags · 510 kg</strong>)<br />
+                                    Hindi/Devanagari digits + fractions auto-converted to decimal kg
+                                </p>
                             </div>
                         )}
                     </div>

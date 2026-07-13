@@ -178,7 +178,17 @@ export default function LedgerPage() {
                         <span style={{ color: palette.muted }}>›</span>
                         <span style={{ color: palette.text, fontWeight: 800, fontSize: '1.05rem' }}>📒 Ledger</span>
                     </div>
-                    <button onClick={() => setShowAddModal(true)} style={{ background: palette.primary, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>+ Add Entry</button>
+                    {userRole === 'buyer' ? (
+                        <Link href="/ledger/bill-calculator" style={{
+                            background: palette.gradient, color: '#fff',
+                            border: 'none', borderRadius: 8, padding: '8px 16px',
+                            fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer',
+                            textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6,
+                            boxShadow: SHARED.shadow,
+                        }}>🧮 Bill Calculator</Link>
+                    ) : (
+                        <button onClick={() => setShowAddModal(true)} style={{ background: palette.primary, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>+ Add Entry</button>
+                    )}
                 </div>
             </nav>
 
@@ -188,17 +198,33 @@ export default function LedgerPage() {
                         <h1 style={{ color: palette.text, fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>📒 Ledger</h1>
                         <p style={{ color: palette.muted, margin: 0, fontSize: '0.92rem' }}>Track your bills, invoices, earnings, and expenses.</p>
                     </div>
-                    {userRole === 'buyer' && (
-                        <Link href="/ledger/bill-calculator" style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 8,
-                            background: palette.gradient, color: '#fff',
-                            padding: '10px 18px', borderRadius: 10, textDecoration: 'none',
-                            fontSize: '0.86rem', fontWeight: 700, boxShadow: SHARED.shadowMd,
-                        }}>
-                            🧮 Bill Calculator
-                        </Link>
-                    )}
+                    {userRole === 'buyer' ? (
+                        <button onClick={() => setShowAddModal(true)} style={{
+                            background: palette.white, color: palette.text,
+                            border: `1.5px solid ${palette.border}`, borderRadius: 10,
+                            padding: '10px 18px', fontSize: '0.86rem', fontWeight: 700, cursor: 'pointer',
+                        }}>+ Manual Entry</button>
+                    ) : null}
                 </div>
+
+                {/* Helpful hint card for buyers on first visit */}
+                {userRole === 'buyer' && (
+                    <Link href="/ledger/bill-calculator" style={{
+                        display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none',
+                        background: palette.gradient, color: '#fff',
+                        padding: '16px 20px', borderRadius: 14, marginBottom: 20,
+                        boxShadow: SHARED.shadowMd, transition: 'transform .2s',
+                    }}>
+                        <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>🧮</span>
+                        <div style={{ flex: 1 }}>
+                            <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Calculate bill from photo →</p>
+                            <p style={{ margin: '2px 0 0', fontSize: '0.8rem', opacity: 0.92 }}>
+                                Snap or upload a bill photo — auto-reads bag batches, multiplies by your rates, gives total to pay. Prints a receipt.
+                            </p>
+                        </div>
+                        <span style={{ fontSize: '1.2rem', opacity: 0.8 }}>→</span>
+                    </Link>
+                )}
 
                 {/* Summary cards */}
                 {summary && (
