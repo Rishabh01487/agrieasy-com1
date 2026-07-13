@@ -24,7 +24,7 @@ export default function SettingsPage() {
   const dashboardHref = userRole ? `/${userRole}/dashboard` : '/'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "'Inter','Segoe UI',system-ui,sans-serif", color: '#0f172a' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, sans-serif", color: '#0f172a' }}>
       {/* Nav */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 50,

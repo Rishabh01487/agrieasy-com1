@@ -21,7 +21,7 @@ export default function GlobalError({
         alignItems: 'center',
         justifyContent: 'center',
         minHeight: '100vh',
-        fontFamily: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
+        fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif",
         background: 'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
         color: '#0f172a',
       }}>

@@ -78,7 +78,7 @@ export default function PWABootstrap() {
           position: 'fixed', bottom: 16, left: 16, right: 16, maxWidth: 480, margin: '0 auto',
           background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
           border: '1.5px solid #AC3B61', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
-          fontFamily: "'Inter',sans-serif",
+          fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
         }}>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>🌾</div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -95,7 +95,7 @@ export default function PWABootstrap() {
         <div style={{
           position: 'fixed', bottom: 16, left: 16, right: 16, maxWidth: 480, margin: '0 auto',
           background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-          border: '1.5px solid #AC3B61', zIndex: 9999, fontFamily: "'Inter',sans-serif",
+          border: '1.5px solid #AC3B61', zIndex: 9999, fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
             <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>🌾</div>

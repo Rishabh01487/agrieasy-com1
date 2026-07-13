@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "./providers";
 import PWABootstrap from "./components/PWABootstrap";
@@ -8,14 +8,11 @@ import CookieConsent from "./components/CookieConsent";
 import { ToastProvider } from "./components/Toast";
 import { LanguageProvider } from "@/lib/i18n/LanguageContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const poppins = Poppins({
+  variable: "--font-poppins",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -63,7 +60,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://nominatim.openstreetmap.org" />
         <link rel="dns-prefetch" href="https://*.tile.openstreetmap.org" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${poppins.variable} antialiased`} style={{ fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif" }}>
         <AuthProvider>
           <LanguageProvider>
             <ToastProvider>

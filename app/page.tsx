@@ -236,7 +236,7 @@ export default function Home() {
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
   background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(172,59,97,0.08) 0%, transparent 60%), linear-gradient(180deg, #F5E9E2 0%, #FBF4EF 40%, #F5E9E2 100%)',
-  fontFamily: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
+  fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif",
   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
   padding: '40px 16px', position: 'relative', overflow: 'hidden',
 }

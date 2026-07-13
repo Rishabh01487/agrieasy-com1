@@ -8,7 +8,7 @@ export default function Loading() {
       alignItems: 'center',
       justifyContent: 'center',
       gap: 16,
-      fontFamily: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
+      fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif",
     }}>
       <div style={{
         width: 56, height: 56, borderRadius: 14,

@@ -19,7 +19,7 @@ export const SHARED = {
   radiusSm: '10px',
   radiusLg: '20px',
   radiusXl: '28px',
-  font: "'Inter','Segoe UI',system-ui,-apple-system,sans-serif",
+  font: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif",
 } as const
 
 // ── Brand palette (Image 1 reference — warm peach + magenta + navy + gold)

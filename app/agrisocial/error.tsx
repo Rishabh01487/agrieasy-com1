@@ -7,7 +7,7 @@ export default function AgriSocialError({ error, reset }: { error: Error & { dig
   useEffect(() => { console.error('AgriSocial error:', error) }, [error])
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafbfc', fontFamily: "'Inter','Segoe UI',sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <div style={{ minHeight: '100vh', background: '#fafbfc', fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ textAlign: 'center', maxWidth: 420 }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/agrisocial-logo.png" alt="AgriSocial" style={{ width: 64, height: 64, borderRadius: 16, objectFit: 'cover', margin: '0 auto 12px', display: 'block' }} />
