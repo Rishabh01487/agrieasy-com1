@@ -5,6 +5,190 @@ import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
 import { BUYER, SHARED, navStyle } from '@/lib/styles'
 
+// ── Z-AI vision API config (client-side — bypasses Vercel function timeout) ──
+// We call the Z-AI API directly from the browser to avoid Vercel's 10s
+// serverless function limit on Hobby tier. The OCR takes ~15-30s.
+const ZAI_CONFIG = {
+    baseUrl: 'https://internal-api.z.ai/v1',
+    apiKey: 'Z.ai',
+    chatId: 'chat-7fcc4e40-ad01-4ab0-a83e-bad8f1cf2840',
+    userId: 'e255a2b5-f0be-4835-9279-65e7282d8a50',
+    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o',
+}
+
+/**
+ * Call the Z-AI vision API directly from the browser.
+ * Tries direct fetch first; falls back to a CORS proxy if blocked.
+ * This bypasses Vercel's serverless function timeout (10s on Hobby tier).
+ */
+async function callZaiVisionClient(prompt: string, imageBase64: string, mimeType: string): Promise<string> {
+    const url = `${ZAI_CONFIG.baseUrl}/chat/completions/vision`
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ZAI_CONFIG.apiKey}`,
+        'X-Z-AI-From': 'Z',
+        'X-Chat-Id': ZAI_CONFIG.chatId,
+        'X-User-Id': ZAI_CONFIG.userId,
+        'X-Token': ZAI_CONFIG.token,
+    }
+    const body = {
+        model: 'glm-4.6v',
+        messages: [{
+            role: 'user',
+            content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: `data:${mimeType};base64,${imageBase64}` } },
+            ],
+        }],
+        thinking: { type: 'disabled' },
+    }
+
+    // Strategy 1: direct fetch (works if Z-AI API allows CORS)
+    try {
+        const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+        if (res.ok) {
+            const json = await res.json()
+            return json.choices?.[0]?.message?.content || ''
+        }
+        // If 4xx, CORS likely blocked — fall through to proxy
+        console.warn('Direct Z-AI call failed with', res.status, '— trying CORS proxy')
+    } catch (e) {
+        console.warn('Direct Z-AI call errored — trying CORS proxy:', e instanceof Error ? e.message : e)
+    }
+
+    // Strategy 2: CORS proxy fallback (uses corsproxy.io — free, no API key)
+    const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+    const proxyRes = await fetch(proxyUrl, { method: 'POST', headers, body: JSON.stringify(body) })
+    if (!proxyRes.ok) {
+        const errText = await proxyRes.text().catch(() => '')
+        throw new Error(`Z-AI API failed via proxy (${proxyRes.status}): ${errText.slice(0, 300)}`)
+    }
+    const proxyJson = await proxyRes.json()
+    return proxyJson.choices?.[0]?.message?.content || ''
+}
+
+/**
+ * Run OCR on a bill image — fully client-side, no serverless function.
+ * Returns the same shape as the old /api/ledger/bill-calc endpoint.
+ */
+async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
+    // Read file as base64
+    const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            const result = reader.result as string
+            // Strip the "data:image/png;base64," prefix
+            const commaIdx = result.indexOf(',')
+            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
+        }
+        reader.onerror = () => reject(new Error('Could not read file'))
+        reader.readAsDataURL(file)
+    })
+
+    const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
+
+The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
+- Hindi (Devanagari) script with Devanagari digits (० १ २ ३ ४ ५ ६ ७ ८ ९)
+- English script with regular digits
+- Mixed (Hindi commodity names + English digits, or vice versa)
+- Weights may use fractions like ½, ¼, ¾, ½ kg written as "5½" or "५ ½"
+
+CRITICAL — HOW INDIAN GRAIN BILLS WORK:
+The buyer weighs bags in BATCHES, not one at a time. They put ~10 bags on the scale at once
+and write down two numbers per batch: (a) the number of bags in that batch, and (b) the total
+weight of those bags. For example, for 25 bags of maize, the bill shows 3 batch rows:
+  - batch 1: 10 bags, 510 kg
+  - batch 2: 10 bags, 505 kg
+  - batch 3:  5 bags, 258 kg
+The last batch is often smaller (the remainder). So each "weight" on the bill is the COMBINED
+weight of multiple bags, NOT a single bag's weight.
+
+YOUR JOB:
+1. Identify each commodity on the bill.
+2. For each commodity, extract every BATCH row as a {bagCount, weight} pair:
+   - bagCount = number of bags weighed together (usually 10, sometimes 5, 3, 2, 1, etc.)
+   - weight = total weight of those bags in kg (decimal, modern numerals — convert 5½ → 5.5, etc.)
+   - If only a weight is visible, assume bagCount = 1.
+   - If only a bag count is visible, skip the row.
+3. Convert ALL numbers to modern decimal numerals (NOT Devanagari). Convert fractions: ½ = 0.5, ¼ = 0.25, ¾ = 0.75, 1½ = 1.5.
+4. For each commodity, compute totalBags = sum of batch.bagCount, totalWeight = sum of batch.weight.
+5. Compute the grand total across all commodities.
+6. Provide a best-effort English transliteration of each commodity name (गेहूँ → Wheat, मक्का → Maize, etc.).
+
+Return ONLY valid JSON in this exact shape (no markdown, no commentary):
+{
+  "commodities": [
+    {
+      "name": "मक्का",
+      "nameEn": "Maize",
+      "batches": [{ "bagCount": 10, "weight": 510.5 }],
+      "totalBags": 25,
+      "totalWeight": 1273.75
+    }
+  ],
+  "grandTotalBags": 25,
+  "grandTotalWeight": 1273.75,
+  "rawText": "Brief description"
+}`
+
+    const content = await callZaiVisionClient(prompt, b64, file.type || 'image/jpeg')
+
+    // Parse JSON from the response
+    let parsed: any = null
+    try {
+        parsed = JSON.parse(content)
+    } catch {
+        const match = content.match(/\{[\s\S]*\}/)
+        if (match) {
+            try { parsed = JSON.parse(match[0]) } catch { /* fall through */ }
+        }
+    }
+    if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Could not parse OCR result. Please try a clearer photo.')
+    }
+
+    // Normalize + validate (same logic as the server route)
+    const commodities: CommodityGroup[] = (parsed.commodities || [])
+        .filter((c: any) => c && (c.name || c.nameEn))
+        .map((c: any) => {
+            let batches: Batch[] = []
+            if (Array.isArray(c.batches) && c.batches.length > 0) {
+                batches = c.batches
+                    .filter((b: any) => b && (typeof b.weight === 'number' || typeof b.bagCount === 'number'))
+                    .map((b: any) => ({
+                        bagCount: typeof b.bagCount === 'number' && !isNaN(b.bagCount) && b.bagCount > 0 ? Math.round(b.bagCount) : 1,
+                        weight: typeof b.weight === 'number' && !isNaN(b.weight) ? Number(b.weight.toFixed(3)) : 0,
+                    }))
+            } else if (Array.isArray(c.weights) && c.weights.length > 0) {
+                batches = c.weights.map((w: number) => ({ bagCount: 1, weight: typeof w === 'number' && !isNaN(w) ? Number(w.toFixed(3)) : 0 }))
+            } else {
+                return null
+            }
+            if (batches.length === 0) return null
+            const totalBags = batches.reduce((s: number, b: Batch) => s + b.bagCount, 0)
+            const totalWeight = Number(batches.reduce((s: number, b: Batch) => s + b.weight, 0).toFixed(3))
+            return {
+                name: (c.name || c.nameEn || 'Unknown').trim(),
+                nameEn: (c.nameEn || '').trim(),
+                batches,
+                totalBags,
+                totalWeight,
+            }
+        })
+        .filter((c: CommodityGroup | null): c is CommodityGroup => c !== null)
+
+    if (commodities.length === 0) {
+        throw new Error(parsed.rawText || 'No commodities could be identified in the bill. Try a clearer photo.')
+    }
+
+    return {
+        commodities,
+        grandTotalBags: commodities.reduce((s, c) => s + c.totalBags, 0),
+        grandTotalWeight: Number(commodities.reduce((s, c) => s + c.totalWeight, 0).toFixed(3)),
+        rawText: parsed.rawText || '',
+    }
+}
+
 interface Batch { bagCount: number; weight: number }
 interface CommodityGroup {
     name: string
@@ -147,25 +331,10 @@ export default function BillCalculator({ embedded = false, onSaved }: BillCalcul
         setResult(null)
         setRates({})
         try {
-            const fd = new FormData()
-            fd.append('file', file)
-            const res = await authFetch('/api/ledger/bill-calc', { method: 'POST', body: fd })
-            // Handle non-OK responses with specific error messages
-            if (!res.ok) {
-                let errMsg = `Server returned ${res.status}`
-                try {
-                    const d = await res.json()
-                    errMsg = d?.error || d?.error?.message || errMsg
-                    // Include debug info if present
-                    if (d?.debug) {
-                        errMsg += ` (debug: ${JSON.stringify(d.debug)})`
-                    }
-                } catch { /* response wasn't JSON — keep generic message */ }
-                setError(errMsg)
-                return
-            }
-            const d = await res.json()
-            const data = d?.data || d
+            // Call Z-AI vision API DIRECTLY from the browser — no serverless
+            // function involved, so no Vercel 10s timeout. The OCR takes
+            // ~15-30s but runs entirely client-side.
+            const data = await runClientSideOcr(file)
             setResult(data)
             const initial: Record<number, { rate: string; unit: 'kg' | 'quintal' }> = {}
             ;(data.commodities || []).forEach((c: CommodityGroup, i: number) => {
@@ -183,19 +352,8 @@ export default function BillCalculator({ embedded = false, onSaved }: BillCalcul
             })
             setRates(initial)
         } catch (err) {
-            // "fetch failed" / TypeError typically means the request never
-            // reached the server or the connection was reset (often a
-            // Vercel function timeout on Hobby tier — 10s limit).
             const msg = err instanceof Error ? err.message : String(err)
-            if (msg.includes('fetch failed') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-                setError(
-                    'Could not reach the server. This usually means the function timed out — ' +
-                    'the OCR takes ~30s but Vercel Hobby tier limits functions to 10s. ' +
-                    'Upgrade to Vercel Pro for 60s timeout, or try again with a smaller photo.'
-                )
-            } else {
-                setError('Error: ' + msg)
-            }
+            setError('Error: ' + msg)
         } finally {
             setLoading(false)
         }
@@ -733,7 +891,7 @@ Generated by AgriEasy · Jai Jawan, Jai Kisan 🇮🇳`
                 <div style={{ marginTop: 16, padding: 16, background: palette.white, borderRadius: 12, border: `1px solid ${palette.borderLight}`, color: palette.muted, fontSize: '0.86rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: '1.4rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                        <span>OCR-extracting batch rows (bag count + weight per row), converting Devanagari digits + fractions to decimal kg…</span>
+                        <span>Reading bill via AI vision (takes ~15-30s, runs in your browser — no server needed)…</span>
                     </div>
                 </div>
             )}
