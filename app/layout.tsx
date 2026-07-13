@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Poppins } from "next/font/google";
+import { Poppins, Dancing_Script } from "next/font/google";
 import "./globals.css";
 import AuthProvider from "./providers";
 import PWABootstrap from "./components/PWABootstrap";
@@ -12,6 +12,13 @@ const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
+
+const dancingScript = Dancing_Script({
+  variable: "--font-dancing",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -60,7 +67,7 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://nominatim.openstreetmap.org" />
         <link rel="dns-prefetch" href="https://*.tile.openstreetmap.org" />
       </head>
-      <body className={`${poppins.variable} antialiased`} style={{ fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif" }}>
+      <body className={`${poppins.variable} ${dancingScript.variable} antialiased`} style={{ fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif" }}>
         <AuthProvider>
           <LanguageProvider>
             <ToastProvider>

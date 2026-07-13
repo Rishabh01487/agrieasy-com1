@@ -60,23 +60,87 @@ export default function Home() {
           </span>
         </div>
 
-        {/* Title */}
+        {/* Title — stylish mixed-font treatment */}
         <h1 className="hero-title" style={{
-          fontSize: 'clamp(2.5rem, 8vw, 4.5rem)',
-          fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em', margin: '0 0 14px',
-          display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '2px',
-          filter: 'drop-shadow(0 2px 8px rgba(172,59,97,0.15))',
+          fontSize: 'clamp(3rem, 10vw, 5.5rem)',
+          fontWeight: 900, lineHeight: 0.95, letterSpacing: '-0.04em', margin: '0 0 18px',
+          display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.05em',
+          position: 'relative',
         }}>
-          <span style={{
-            color: '#AC3B61',
+          {/* Decorative leaf sprig above the title */}
+          <span aria-hidden style={{
+            position: 'absolute', top: '-26px', left: '50%', transform: 'translateX(-50%)',
+            fontSize: '1.4rem', filter: 'drop-shadow(0 2px 4px rgba(212,165,116,0.4))',
+            animation: 'leafSway 4s ease-in-out infinite',
+          }}>🌿</span>
+
+          {/* "Agri" — bold Poppins with magenta gradient + shine sweep */}
+          <span className="hero-agri" style={{
+            background: 'linear-gradient(110deg, #AC3B61 0%, #C05070 35%, #D47890 50%, #C05070 65%, #AC3B61 100%)',
+            backgroundSize: '200% auto',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', color: 'transparent',
             fontWeight: 900,
-          }}>Agri</span>
+            filter: 'drop-shadow(0 3px 10px rgba(172,59,97,0.22))',
+            display: 'inline-block',
+            position: 'relative',
+          }}>
+            Agri
+            {/* Shine sweep overlay */}
+            <span aria-hidden className="hero-agri-shine" style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              background: 'linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.7) 50%, transparent 60%)',
+              backgroundSize: '250% 100%',
+              WebkitBackgroundClip: 'text', backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent', color: 'transparent',
+              pointerEvents: 'none',
+            }}>Agri</span>
+          </span>
+
+          {/* "Easy" — elegant Dancing Script italic with navy→gold gradient */}
           <span style={{
-            color: '#123C69',
-            fontWeight: 300,
-            fontStyle: 'italic',
+            fontFamily: "var(--font-dancing), 'Dancing Script', cursive",
+            background: 'linear-gradient(120deg, #123C69 0%, #2E5783 30%, #D4A574 70%, #C05070 100%)',
+            backgroundSize: '200% auto',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', color: 'transparent',
+            fontWeight: 700, fontStyle: 'italic',
+            fontSize: '1.18em',
+            transform: 'translateY(-0.04em) rotate(-2deg)',
+            display: 'inline-block',
+            filter: 'drop-shadow(0 3px 10px rgba(18,60,105,0.20))',
+            animation: 'gradientFlow 6s ease-in-out infinite',
+            marginLeft: '0.04em',
           }}>Easy</span>
         </h1>
+
+        {/* Decorative underline — flowing swoosh with center leaf accent */}
+        <div aria-hidden style={{
+          position: 'relative', width: 'clamp(180px, 40vw, 280px)', height: 18,
+          margin: '0 auto 18px',
+        }}>
+          <svg viewBox="0 0 280 18" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+            <defs>
+              <linearGradient id="swooshGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#AC3B61" stopOpacity="0" />
+                <stop offset="20%" stopColor="#AC3B61" stopOpacity="0.9" />
+                <stop offset="50%" stopColor="#D4A574" stopOpacity="1" />
+                <stop offset="80%" stopColor="#123C69" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#123C69" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M 5 10 Q 70 2, 140 9 T 275 10" stroke="url(#swooshGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+          </svg>
+          <span style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+            fontSize: '0.95rem',
+            background: 'linear-gradient(135deg, #ffffff 0%, #FBF4EF 100%)',
+            border: '1.5px solid #D4A574',
+            borderRadius: '50%', width: 22, height: 22,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 2px 8px rgba(212,165,116,0.3)',
+          }}>🌱</span>
+        </div>
 
         {/* Taglines */}
         <p style={{ color: '#123C69', fontSize: 'clamp(1rem, 2.2vw, 1.2rem)', margin: '0 0 4px', fontWeight: 600 }}>
@@ -195,7 +259,29 @@ export default function Home() {
         @keyframes shimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes shine { 0% { transform: translateX(-160%) skewX(-20deg); } 100% { transform: translateX(280%) skewX(-20deg); } }
+        @keyframes leafSway {
+          0%,100% { transform: translateX(-50%) rotate(-8deg); }
+          50%     { transform: translateX(-50%) rotate(8deg); }
+        }
+        @keyframes gradientFlow {
+          0%,100% { background-position: 0% center; }
+          50%     { background-position: 100% center; }
+        }
+        @keyframes shineSweep {
+          0%   { background-position: 250% 0; }
+          60%  { background-position: -50% 0; }
+          100% { background-position: -50% 0; }
+        }
         .fade-up { animation: fadeUp 0.7s cubic-bezier(.2,.8,.2,1) both; }
+
+        /* Animated gradient on "Agri" */
+        .hero-agri {
+          animation: gradientFlow 6s ease-in-out infinite;
+        }
+        /* Shine sweep over "Agri" every 4s */
+        .hero-agri-shine {
+          animation: shineSweep 4s ease-in-out infinite;
+        }
 
         .home-card::after {
           content: ''; position: absolute; top: 0; left: 0; width: 50%; height: 100%;
