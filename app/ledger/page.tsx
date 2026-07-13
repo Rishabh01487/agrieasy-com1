@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { BUYER, FARMER, SHARED, navStyle } from '@/lib/styles'
+import BillCalculator from './BillCalculator'
 
 interface LedgerEntry {
     _id: string
@@ -178,15 +179,7 @@ export default function LedgerPage() {
                         <span style={{ color: palette.muted }}>›</span>
                         <span style={{ color: palette.text, fontWeight: 800, fontSize: '1.05rem' }}>📒 Ledger</span>
                     </div>
-                    {userRole === 'buyer' ? (
-                        <Link href="/ledger/bill-calculator" style={{
-                            background: palette.gradient, color: '#fff',
-                            border: 'none', borderRadius: 8, padding: '8px 16px',
-                            fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer',
-                            textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6,
-                            boxShadow: SHARED.shadow,
-                        }}>🧮 Bill Calculator</Link>
-                    ) : (
+                    {userRole !== 'buyer' && (
                         <button onClick={() => setShowAddModal(true)} style={{ background: palette.primary, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>+ Add Entry</button>
                     )}
                 </div>
@@ -198,32 +191,35 @@ export default function LedgerPage() {
                         <h1 style={{ color: palette.text, fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>📒 Ledger</h1>
                         <p style={{ color: palette.muted, margin: 0, fontSize: '0.92rem' }}>Track your bills, invoices, earnings, and expenses.</p>
                     </div>
-                    {userRole === 'buyer' ? (
+                    {userRole === 'buyer' && (
                         <button onClick={() => setShowAddModal(true)} style={{
                             background: palette.white, color: palette.text,
                             border: `1.5px solid ${palette.border}`, borderRadius: 10,
                             padding: '10px 18px', fontSize: '0.86rem', fontWeight: 700, cursor: 'pointer',
                         }}>+ Manual Entry</button>
-                    ) : null}
+                    )}
                 </div>
 
-                {/* Helpful hint card for buyers on first visit */}
+                {/* ── INLINE BILL CALCULATOR ──
+                     For buyers, the bill calculator is embedded directly on this page
+                     so they can snap or upload a photo and get the total in one click —
+                     no navigation to a separate page needed. */}
                 {userRole === 'buyer' && (
-                    <Link href="/ledger/bill-calculator" style={{
-                        display: 'flex', alignItems: 'center', gap: 14, textDecoration: 'none',
-                        background: palette.gradient, color: '#fff',
-                        padding: '16px 20px', borderRadius: 14, marginBottom: 20,
-                        boxShadow: SHARED.shadowMd, transition: 'transform .2s',
+                    <div style={{
+                        background: palette.bgSub, borderRadius: 16, padding: 16,
+                        marginBottom: 24, border: `1px solid ${palette.border}`,
                     }}>
-                        <span style={{ fontSize: '1.8rem', flexShrink: 0 }}>🧮</span>
-                        <div style={{ flex: 1 }}>
-                            <p style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Calculate bill from photo →</p>
-                            <p style={{ margin: '2px 0 0', fontSize: '0.8rem', opacity: 0.92 }}>
-                                Snap or upload a bill photo — auto-reads bag batches, multiplies by your rates, gives total to pay. Prints a receipt.
-                            </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 4px' }}>
+                            <span style={{ fontSize: '1.3rem' }}>🧮</span>
+                            <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
+                                Bill Calculator
+                            </h2>
+                            <span style={{ color: palette.muted, fontSize: '0.76rem', marginLeft: 'auto' }}>
+                                Take/upload a bill photo → get instant total
+                            </span>
                         </div>
-                        <span style={{ fontSize: '1.2rem', opacity: 0.8 }}>→</span>
-                    </Link>
+                        <BillCalculator embedded onSaved={fetchLedger} />
+                    </div>
                 )}
 
                 {/* Summary cards */}
