@@ -15,30 +15,59 @@ interface CommodityGroup {
 }
 
 /**
- * Run OCR on a bill image — calls our own Edge-runtime proxy which forwards
- * to the Z-AI vision API. Edge runtime has 25s timeout on Vercel Hobby
- * (vs 10s for Node.js), enough for the ~15-25s OCR.
+ * Run OCR on a bill image.
+ *
+ * Flow:
+ *   1. Upload the image to Cloudinary (we already have it configured).
+ *      This gives us a public URL and keeps the proxy request body small.
+ *   2. Send the Cloudinary URL + OCR prompt to our Edge-runtime proxy
+ *      (/api/ledger/bill-calc-proxy). Edge runtime has 25s timeout on
+ *      Vercel Hobby (vs 10s for Node.js), enough for the ~15-25s OCR.
+ *   3. Parse the JSON response and normalize the commodity batches.
  *
  * Why not call Z-AI directly from the browser?
- *   - The Z-AI API does not return CORS headers, so the browser blocks the response.
- *   - Public CORS proxies either 403 the request or reject large image payloads.
- *   - The Node.js serverless function times out at 10s on Vercel Hobby.
- * The Edge proxy solves all three: same-origin (no CORS), no payload size
- * limit, 25s timeout.
+ *   - Z-AI API does not return CORS headers → browser blocks the response.
+ *   - Public CORS proxies either 403 the request or reject large payloads.
+ *   - Node.js serverless functions time out at 10s on Vercel Hobby.
+ * The Edge proxy solves all three: same-origin (no CORS), small body
+ * (just a URL), 25s timeout.
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
-    // Read file as base64
-    const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-            const result = reader.result as string
-            const commaIdx = result.indexOf(',')
-            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
-        }
-        reader.onerror = () => reject(new Error('Could not read file'))
-        reader.readAsDataURL(file)
-    })
+    // ── Step 1: Upload image to Cloudinary ──
+    const sigRes = await authFetch('/api/social/upload-signature')
+    if (!sigRes.ok) {
+        const errText = await sigRes.text().catch(() => '')
+        throw new Error(`Could not get upload signature (${sigRes.status}): ${errText.slice(0, 200)}`)
+    }
+    const sig = await sigRes.json()
+    if (!sig.available) {
+        throw new Error('Image upload (Cloudinary) is not configured. Cannot process bill.')
+    }
 
+    // Compress client-side before uploading
+    const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
+    const fd = new FormData()
+    fd.append('file', compressedBlob)
+    fd.append('api_key', sig.apiKey)
+    fd.append('timestamp', sig.timestamp.toString())
+    fd.append('signature', sig.signature)
+    fd.append('folder', sig.folder)
+
+    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
+        method: 'POST',
+        body: fd,
+    })
+    if (!cldRes.ok) {
+        const errText = await cldRes.text().catch(() => '')
+        throw new Error(`Cloudinary upload failed (${cldRes.status}): ${errText.slice(0, 200)}`)
+    }
+    const cld = await cldRes.json()
+    const imageUrl = cld.secure_url
+    if (!imageUrl) {
+        throw new Error('Cloudinary upload succeeded but no URL returned.')
+    }
+
+    // ── Step 2: Call our Edge proxy with the image URL ──
     const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
 The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
@@ -85,19 +114,10 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
   "rawText": "Brief description"
 }`
 
-    // Call our own Edge-runtime proxy (same-origin, no CORS issues, 25s timeout)
     const proxyRes = await fetch('/api/ledger/bill-calc-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            messages: [{
-                role: 'user',
-                content: [
-                    { type: 'text', text: prompt },
-                    { type: 'image_url', image_url: { url: `data:${file.type || 'image/jpeg'};base64,${b64}` } },
-                ],
-            }],
-        }),
+        body: JSON.stringify({ imageUrl, prompt }),
     })
 
     if (!proxyRes.ok) {
@@ -105,6 +125,8 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
         try {
             const errJson = await proxyRes.json()
             errMsg = errJson?.error || errMsg
+            if (errJson?.detail) errMsg += ` — ${errJson.detail}`
+            if (errJson?.errorType) errMsg += ` [${errJson.errorType}]`
         } catch { /* not JSON */ }
         throw new Error(errMsg)
     }
@@ -167,6 +189,49 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
         rawText: parsed.rawText || '',
     }
 }
+
+/**
+ * Compress an image File to a Blob (for upload to Cloudinary).
+ * Resizes to maxDim on the longest side, re-encodes as JPEG at the given quality.
+ */
+function compressImageToBlob(file: File, maxDim: number, quality: number): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        const img = new Image()
+        const url = URL.createObjectURL(file)
+        img.onload = () => {
+            URL.revokeObjectURL(url)
+            let { width, height } = img
+            if (width > maxDim || height > maxDim) {
+                if (width > height) {
+                    height = Math.round(height * maxDim / width)
+                    width = maxDim
+                } else {
+                    width = Math.round(width * maxDim / height)
+                    height = maxDim
+                }
+            }
+            const canvas = document.createElement('canvas')
+            canvas.width = width
+            canvas.height = height
+            const ctx = canvas.getContext('2d')
+            if (!ctx) { reject(new Error('Canvas not supported')); return }
+            ctx.fillStyle = '#fff'
+            ctx.fillRect(0, 0, width, height)
+            ctx.drawImage(img, 0, 0, width, height)
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) { reject(new Error('Compression failed')); return }
+                    resolve(blob)
+                },
+                'image/jpeg',
+                quality,
+            )
+        }
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image')) }
+        img.src = url
+    })
+}
+
 
 interface Batch { bagCount: number; weight: number }
 interface CommodityGroup {
