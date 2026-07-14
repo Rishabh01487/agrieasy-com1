@@ -139,7 +139,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
   "rawText": "Brief description of what was readable on the bill"
 }`
 
-    const proxyRes = await authFetch('/api/ledger/bill-calc-proxy', {
+    const proxyRes = await fetch('/api/ledger/bill-calc-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: b64, mimeType: 'image/jpeg', prompt }),
