@@ -51,161 +51,184 @@ const OPENROUTER_MODEL = 'nvidia/nemotron-nano-12b-v2-vl:free'
  *   - OpenAI-compatible API → same request format.
  */
 /**
- * Run OCR on a bill image using OpenRouter with a TWO-STEP approach.
+ * Run OCR on a bill image using Z-AI glm-4.6v (the most accurate model for
+ * handwritten Hindi bills) via our Edge-runtime proxy.
  *
- * Step 1: Ask the model to list all commodity names it sees (simple, fast).
- * Step 2: For EACH commodity, make a separate call asking only for that
- *         commodity's batch weights. This prevents the model from duplicating
- *         data across commodities (which was happening with the single-call approach).
+ * Flow:
+ *   1. Upload the image to Cloudinary (small body for the proxy).
+ *   2. Call our Edge proxy (/api/ledger/bill-calc-proxy) which forwards
+ *      to Z-AI. Edge runtime has 25-30s timeout — enough for OCR.
+ *   3. Parse the JSON response and normalize the commodity batches.
  *
- * This uses more API calls (1 + N where N = number of commodities) but each
- * call is simpler and more accurate. For a typical bill with 3 commodities,
- * that's 4 calls — well within the free tier (20 req/min).
+ * Why Z-AI glm-4.6v instead of OpenRouter free models?
+ *   - OpenRouter free models (nvidia 12B, gemma) gave WRONG results:
+ *     misread "551" as "5510", duplicated data across commodities.
+ *   - Z-AI glm-4.6v gave PERFECT results in testing — correctly read all
+ *     3 commodities with accurate weights.
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
-    const b64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => {
-            const result = reader.result as string
-            const commaIdx = result.indexOf(',')
-            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
-        }
-        reader.onerror = () => reject(new Error('Could not read file'))
-        reader.readAsDataURL(file)
+    // ── Step 1: Upload image to Cloudinary ──
+    const sigRes = await authFetch('/api/social/upload-signature')
+    if (!sigRes.ok) {
+        throw new Error(`Could not get upload signature (${sigRes.status})`)
+    }
+    const sig = await sigRes.json()
+    if (!sig.available) {
+        throw new Error('Image upload (Cloudinary) is not configured.')
+    }
+
+    const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
+    const fd = new FormData()
+    fd.append('file', compressedBlob)
+    fd.append('api_key', sig.apiKey)
+    fd.append('timestamp', sig.timestamp.toString())
+    fd.append('signature', sig.signature)
+    fd.append('folder', sig.folder)
+
+    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
+        method: 'POST',
+        body: fd,
     })
-    const dataUrl = `data:${file.type || 'image/jpeg'};base64,${b64}`
-
-    // ── Helper: call OpenRouter ──
-    async function callOR(userText: string): Promise<string> {
-        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                'HTTP-Referer': window.location.origin,
-                'X-Title': 'AgriEasy Bill Calculator',
-            },
-            body: JSON.stringify({
-                model: OPENROUTER_MODEL,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        { type: 'text', text: userText },
-                        { type: 'image_url', image_url: { url: dataUrl } },
-                    ],
-                }],
-                temperature: 0.1,
-                max_tokens: 2000,
-            }),
-        })
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({}))
-            throw new Error(err?.error?.message || `OpenRouter returned ${res.status}`)
-        }
-        const json = await res.json()
-        return json?.choices?.[0]?.message?.content || ''
+    if (!cldRes.ok) {
+        throw new Error(`Cloudinary upload failed (${cldRes.status})`)
+    }
+    const cld = await cldRes.json()
+    const imageUrl = cld.secure_url
+    if (!imageUrl) {
+        throw new Error('Cloudinary upload succeeded but no URL returned.')
     }
 
-    // ── Step 1: Identify commodity names ──
-    const step1Prompt = `Look at this bill photo from an Indian grain merchant. 
-List ONLY the commodity names you can see (e.g. Wheat, Maize, Barley, Rice, etc.).
-Return ONLY a JSON array of strings, nothing else. Example: ["Wheat", "Maize", "Barley"]`
+    // ── Step 2: Call our Edge proxy with the image URL + OCR prompt ──
+    const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
-    const step1Response = await callOR(step1Prompt)
+The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
+- Hindi (Devanagari) script with Devanagari digits (० १ २ ३ ४ ५ ६ ७ ८ ९)
+- English script with regular digits
+- Mixed (Hindi commodity names + English digits, or vice versa)
+- Weights may use fractions like ½, ¼, ¾, ½ kg written as "5½" or "५ ½"
 
-    // Parse commodity names
-    let commodityNames: string[] = []
-    try {
-        const match = step1Response.match(/\[[\s\S]*\]/)
-        if (match) commodityNames = JSON.parse(match[0])
-    } catch { /* fall through */ }
+CRITICAL — HOW INDIAN GRAIN BILLS WORK:
+The buyer weighs bags in BATCHES, not one at a time. They put ~10 bags on the scale at once
+and write down two numbers per batch: (a) the number of bags in that batch, and (b) the total
+weight of those bags. For example, for 25 bags of maize, the bill shows 3 batch rows:
+  - batch 1: 10 bags, 510 kg
+  - batch 2: 10 bags, 505 kg
+  - batch 3:  5 bags, 258 kg
+The last batch is often smaller (the remainder). So each "weight" on the bill is the COMBINED
+weight of multiple bags, NOT a single bag's weight.
 
-    if (commodityNames.length === 0) {
-        // Fallback: try to extract names from the text
-        const words = step1Response.match(/"([^"]+)"/g)
-        if (words) commodityNames = words.map(w => w.replace(/"/g, ''))
-    }
+YOUR JOB:
+1. Identify each commodity on the bill (e.g. गेहूँ, चावल, बाजरा, मक्का, अरहर, चना, सरसो, ज्वार, उड़द, मूंग, etc.).
+2. For each commodity, extract every BATCH row as a {bagCount, weight} pair:
+   - bagCount = number of bags weighed together in that batch (usually 10, sometimes 5, 3, 2, 1, etc.)
+   - weight = total weight of those bags in kg (decimal, modern numerals — convert 5½ → 5.5, ¼ → 0.25, etc.)
+   - If the bill shows ONLY a weight with no bag count visible, assume bagCount = 1 (single bag).
+   - If the bill shows ONLY a bag count with no weight visible, skip that row.
+3. Convert ALL numbers to modern decimal numerals (NOT Devanagari). Convert fractions: ½ = 0.5, ¼ = 0.25, ¾ = 0.75, 1½ = 1.5, etc.
+4. For each commodity, compute totalBags = sum of batch.bagCount, totalWeight = sum of batch.weight.
+5. Compute the grand total: sum of all commodities' totalBags and totalWeight.
+6. Also provide a best-effort English transliteration of each commodity name (e.g. गेहूँ → Wheat, चावल → Rice, बाजरा → Bajra/Pearl Millet, मक्का → Maize, अरहर → Arhar/Pigeon Pea, चना → Chickpea/Gram, सरसो → Mustard, ज्वार → Jowar/Sorghum, उड़द → Urad/Black Gram, मूंग → Mung/Green Gram).
 
-    if (commodityNames.length === 0) {
-        throw new Error('Could not identify any commodities in the bill. Try a clearer photo.')
-    }
+IMPORTANT: Read each commodity's weights SEPARATELY. Do NOT copy data from one commodity to another.
+Each commodity has its own list of batch weights — read them carefully from the section of the bill
+that belongs to that commodity.
 
-    // ── Step 2: For each commodity, read its batch weights ──
-    const commodities: CommodityGroup[] = []
+If the image is unclear or no commodities can be identified, return an empty commodities array with a note in rawText.
 
-    for (const commodityName of commodityNames) {
-        const step2Prompt = `Look at this bill photo from an Indian grain merchant.
-Focus ONLY on the section for "${commodityName}". 
-Read every batch weight number written under "${commodityName}".
-
-IMPORTANT FACTS ABOUT INDIAN GRAIN BILLS:
-- The buyer weighs bags in batches of ~10. Each number is the COMBINED weight of those bags.
-- Numbers may be in Hindi (Devanagari) or English digits. Convert ALL to modern decimal numbers.
-- If you see "5510" it means 5510 kg for that batch (NOT 55.10).
-
-For each batch row you can see under "${commodityName}", report:
-- bagCount: number of bags in that batch (usually 10, sometimes 5 or other)
-- weight: the total weight number for that batch in kg
-
-Return ONLY valid JSON, no markdown:
+Return ONLY valid JSON in this exact shape (no markdown, no commentary):
 {
-  "commodity": "${commodityName}",
-  "batches": [
-    {"bagCount": 10, "weight": 5510},
-    {"bagCount": 10, "weight": 5610}
-  ]
-}
-
-If you cannot find any batch weights for "${commodityName}", return: {"commodity":"${commodityName}","batches":[]}`
-
-        const step2Response = await callOR(step2Prompt)
-
-        // Parse the batch data
-        let parsedBatch: any = null
-        try {
-            const match = step2Response.match(/\{[\s\S]*\}/)
-            if (match) parsedBatch = JSON.parse(match[0])
-        } catch { /* fall through */ }
-
-        if (!parsedBatch || !Array.isArray(parsedBatch.batches) || parsedBatch.batches.length === 0) {
-            continue // skip commodities with no readable batches
-        }
-
-        // Normalize batches
-        const batches: Batch[] = parsedBatch.batches
-            .filter((b: any) => b && (typeof b.weight === 'number' || typeof b.bagCount === 'number'))
-            .map((b: any) => ({
-                bagCount: typeof b.bagCount === 'number' && !isNaN(b.bagCount) && b.bagCount > 0 ? Math.round(b.bagCount) : 10,
-                weight: typeof b.weight === 'number' && !isNaN(b.weight) ? Number(b.weight.toFixed(3)) : 0,
-            }))
-
-        if (batches.length === 0) continue
-
-        const totalBags = batches.reduce((s, b) => s + b.bagCount, 0)
-        const totalWeight = Number(batches.reduce((s, b) => s + b.weight, 0).toFixed(3))
-
-        commodities.push({
-            name: commodityName.trim(),
-            nameEn: '', // We could add a transliteration call here if needed
-            batches,
-            totalBags,
-            totalWeight,
-        })
+  "commodities": [
+    {
+      "name": "मक्का",
+      "nameEn": "Maize",
+      "batches": [
+        { "bagCount": 10, "weight": 510.5 },
+        { "bagCount": 10, "weight": 505.0 },
+        { "bagCount": 5,  "weight": 258.25 }
+      ],
+      "totalBags": 25,
+      "totalWeight": 1273.75
     }
+  ],
+  "grandTotalBags": 25,
+  "grandTotalWeight": 1273.75,
+  "rawText": "Brief description of what was readable on the bill"
+}`
+
+    const proxyRes = await fetch('/api/ledger/bill-calc-proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageUrl, prompt }),
+    })
+
+    if (!proxyRes.ok) {
+        let errMsg = `Proxy returned ${proxyRes.status}`
+        try {
+            const errJson = await proxyRes.json()
+            errMsg = errJson?.error || errMsg
+            if (errJson?.detail) errMsg += ` — ${errJson.detail}`
+        } catch { /* not JSON */ }
+        throw new Error(errMsg)
+    }
+
+    const proxyJson = await proxyRes.json()
+    const content = proxyJson.choices?.[0]?.message?.content || ''
+
+    // Parse JSON from the response
+    let parsed: any = null
+    try {
+        parsed = JSON.parse(content)
+    } catch {
+        const match = content.match(/\{[\s\S]*\}/)
+        if (match) {
+            try { parsed = JSON.parse(match[0]) } catch { /* fall through */ }
+        }
+    }
+    if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Could not parse OCR result. Please try a clearer photo.')
+    }
+
+    // Normalize + validate
+    const commodities: CommodityGroup[] = (parsed.commodities || [])
+        .filter((c: any) => c && (c.name || c.nameEn))
+        .map((c: any) => {
+            let batches: Batch[] = []
+            if (Array.isArray(c.batches) && c.batches.length > 0) {
+                batches = c.batches
+                    .filter((b: any) => b && (typeof b.weight === 'number' || typeof b.bagCount === 'number'))
+                    .map((b: any) => ({
+                        bagCount: typeof b.bagCount === 'number' && !isNaN(b.bagCount) && b.bagCount > 0 ? Math.round(b.bagCount) : 1,
+                        weight: typeof b.weight === 'number' && !isNaN(b.weight) ? Number(b.weight.toFixed(3)) : 0,
+                    }))
+            } else if (Array.isArray(c.weights) && c.weights.length > 0) {
+                batches = c.weights.map((w: number) => ({ bagCount: 1, weight: typeof w === 'number' && !isNaN(w) ? Number(w.toFixed(3)) : 0 }))
+            } else {
+                return null
+            }
+            if (batches.length === 0) return null
+            const totalBags = batches.reduce((s: number, b: Batch) => s + b.bagCount, 0)
+            const totalWeight = Number(batches.reduce((s: number, b: Batch) => s + b.weight, 0).toFixed(3))
+            return {
+                name: (c.name || c.nameEn || 'Unknown').trim(),
+                nameEn: (c.nameEn || '').trim(),
+                batches,
+                totalBags,
+                totalWeight,
+            }
+        })
+        .filter((c: CommodityGroup | null): c is CommodityGroup => c !== null)
 
     if (commodities.length === 0) {
-        throw new Error('Could not read any batch weights from the bill. Try a clearer photo.')
+        throw new Error(parsed.rawText || 'No commodities could be identified in the bill. Try a clearer photo.')
     }
 
     return {
         commodities,
         grandTotalBags: commodities.reduce((s, c) => s + c.totalBags, 0),
         grandTotalWeight: Number(commodities.reduce((s, c) => s + c.totalWeight, 0).toFixed(3)),
-        rawText: `Identified ${commodityNames.length} commodities: ${commodityNames.join(', ')}. Read batches for ${commodities.length} commodities.`,
+        rawText: parsed.rawText || '',
     }
 }
-
-
 
 /**
  * Compress an image File to a Blob (for upload to Cloudinary).
