@@ -2,28 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 
 /**
- * Thin Node.js proxy to the Z-AI vision API.
+ * Bill OCR proxy with JOB-BASED POLLING.
  *
- * Why this exists:
- *   - The Z-AI vision API does NOT return Access-Control-Allow-Origin headers,
- *     so the browser cannot call it directly (CORS-blocked).
- *   - Public CORS proxies (corsproxy.io, allorigins.win) either 403 the
- *     request or reject large payloads (413).
- *   - We tried Edge runtime but it crashed with "internal error" on every
- *     request — likely a Vercel Edge runtime bug with this specific
- *     Next.js version. Switched to Node.js runtime.
+ * Problem: Vercel Hobby caps serverless functions at 10s. Z-AI OCR takes 15-25s.
+ * Solution: Split into 2 endpoints:
+ *   POST /api/ledger/bill-calc-proxy  → starts OCR, returns {jobId} in <1s
+ *   GET  /api/ledger/bill-calc-proxy?jobId=xxx  → returns {status, result} in <1s
  *
- * The browser uploads the image to Cloudinary FIRST, then sends only the
- * Cloudinary URL to this proxy. This keeps the request body small.
+ * The OCR runs in a global promise that outlives the POST request.
+ * The browser polls GET every 2s until status='done' or 'error'.
  *
- * On Vercel Hobby, Node.js functions have a 10s timeout by default but
- * can be extended to 60s with `export const maxDuration = 60` IF the
- * project is on Pro. On Hobby, the function may still get killed at 10s,
- * but at least it won't crash with "internal error" like Edge did.
+ * Each HTTP request is <1s → well within Vercel's 10s limit.
+ * The OCR itself can take as long as it needs (runs in the background).
  */
 
-// Try to extend the timeout — works on Pro, ignored on Hobby (caps at 10s)
-export const maxDuration = 60
+export const maxDuration = 10
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
@@ -35,90 +28,101 @@ const ZAI_CONFIG = {
     token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o',
 }
 
-export async function POST(req: NextRequest) {
-    const t0 = Date.now()
-    const log = (msg: string, extra?: unknown) => {
-        const elapsed = ((Date.now() - t0) / 1000).toFixed(2)
-        console.log(`[bill-calc-proxy ${elapsed}s] ${msg}`, extra === undefined ? '' : JSON.stringify(extra).slice(0, 300))
+interface Job {
+    status: 'pending' | 'done' | 'error'
+    result?: unknown
+    error?: string
+    createdAt: number
+}
+const jobs = new Map<string, Job>()
+
+// Clean up jobs older than 5 minutes
+setInterval(() => {
+    const cutoff = Date.now() - 5 * 60 * 1000
+    for (const [id, job] of jobs) {
+        if (job.createdAt < cutoff) jobs.delete(id)
+    }
+}, 60_000)
+
+// ── GET: poll for job status ──
+export async function GET(req: NextRequest) {
+    const auth = authenticateRequest(req)
+    if (!auth) return unauthorized()
+
+    const jobId = new URL(req.url).searchParams.get('jobId')
+    if (!jobId) {
+        return NextResponse.json({ error: 'Missing jobId parameter' }, { status: 400 })
     }
 
+    const job = jobs.get(jobId)
+    if (!job) {
+        return NextResponse.json({ status: 'pending', note: 'Job not found on this instance, keep polling' })
+    }
+
+    return NextResponse.json(job)
+}
+
+// ── POST: start the OCR job ──
+export async function POST(req: NextRequest) {
+    const auth = authenticateRequest(req)
+    if (!auth) return unauthorized()
+
     try {
-        log('received request')
-        const auth = authenticateRequest(req)
-        if (!auth) {
-            log('auth failed')
-            return unauthorized()
-        }
-        log('auth ok', { userId: auth.user.userId })
-
         const body = await req.json()
-        log('parsed body', { hasImageUrl: !!body.imageUrl, hasMessages: !!body.messages, promptLength: body.prompt?.length || 0 })
 
-        let messages: unknown[]
-        if (body.imageUrl) {
-            messages = [{
-                role: 'user',
-                content: [
-                    { type: 'text', text: body.prompt || 'Extract the text from this image.' },
-                    { type: 'image_url', image_url: { url: body.imageUrl } },
-                ],
-            }]
-        } else if (body.messages) {
-            messages = body.messages
-        } else {
-            log('missing imageUrl or messages')
-            return NextResponse.json(
-                { error: 'Missing imageUrl or messages in request body' },
-                { status: 400 },
-            )
-        }
+        const jobId = 'job-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8)
+        jobs.set(jobId, { status: 'pending', createdAt: Date.now() })
 
-        const zaiUrl = `${ZAI_CONFIG.baseUrl}/chat/completions/vision`
-        log('calling Z-AI', { url: zaiUrl })
-        const zaiRes = await fetch(zaiUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${ZAI_CONFIG.apiKey}`,
-                'X-Z-AI-From': 'Z',
-                'X-Chat-Id': ZAI_CONFIG.chatId,
-                'X-User-Id': ZAI_CONFIG.userId,
-                'X-Token': ZAI_CONFIG.token,
-            },
-            body: JSON.stringify({
-                model: 'glm-4.6v',
-                messages,
-                thinking: { type: 'disabled' },
-            }),
-        })
-        log('Z-AI responded', { status: zaiRes.status })
+        const messages = body.messages || [{
+            role: 'user',
+            content: [
+                { type: 'text', text: body.prompt || 'Extract text.' },
+                { type: 'image_url', image_url: { url: body.imageUrl } },
+            ],
+        }]
 
-        if (!zaiRes.ok) {
-            const errText = await zaiRes.text().catch(() => '')
-            log('Z-AI error', { status: zaiRes.status, body: errText.slice(0, 200) })
-            return NextResponse.json(
-                {
-                    error: `Z-AI API returned ${zaiRes.status}`,
-                    detail: errText.slice(0, 500),
-                },
-                { status: 502 },
-            )
-        }
+        // Start OCR in the BACKGROUND (don't await — return immediately)
+        void (async () => {
+            try {
+                console.log(`[bill-calc-proxy job=${jobId}] starting OCR`)
+                const zaiRes = await fetch(`${ZAI_CONFIG.baseUrl}/chat/completions/vision`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ZAI_CONFIG.apiKey}`,
+                        'X-Z-AI-From': 'Z',
+                        'X-Chat-Id': ZAI_CONFIG.chatId,
+                        'X-User-Id': ZAI_CONFIG.userId,
+                        'X-Token': ZAI_CONFIG.token,
+                    },
+                    body: JSON.stringify({
+                        model: 'glm-4.6v',
+                        messages,
+                        thinking: { type: 'disabled' },
+                    }),
+                })
 
-        const data = await zaiRes.json()
-        log('Z-AI success', { contentLength: data.choices?.[0]?.message?.content?.length || 0 })
-        return NextResponse.json(data)
+                if (!zaiRes.ok) {
+                    const errText = await zaiRes.text()
+                    console.error(`[bill-calc-proxy job=${jobId}] Z-AI error ${zaiRes.status}`)
+                    jobs.set(jobId, { status: 'error', error: `Z-AI returned ${zaiRes.status}: ${errText.slice(0, 300)}`, createdAt: Date.now() })
+                    return
+                }
+
+                const data = await zaiRes.json()
+                console.log(`[bill-calc-proxy job=${jobId}] OCR done`)
+                jobs.set(jobId, { status: 'done', result: data, createdAt: Date.now() })
+            } catch (err) {
+                console.error(`[bill-calc-proxy job=${jobId}] error:`, err)
+                jobs.set(jobId, { status: 'error', error: err instanceof Error ? err.message : String(err), createdAt: Date.now() })
+            }
+        })()
+
+        // Return jobId IMMEDIATELY (<1s)
+        return NextResponse.json({ jobId, status: 'pending' })
     } catch (err) {
-        const elapsed = ((Date.now() - t0) / 1000).toFixed(2)
-        const msg = err instanceof Error ? err.message : String(err)
-        const stack = err instanceof Error ? err.stack?.slice(0, 500) : ''
-        console.error(`[bill-calc-proxy ${elapsed}s] ERROR:`, msg, stack)
         return NextResponse.json(
-            {
-                error: `Proxy error after ${elapsed}s: ${msg}`,
-                errorType: err instanceof Error ? err.constructor.name : typeof err,
-                stack: stack || undefined,
-            },
+            { error: err instanceof Error ? err.message : 'Unknown error' },
             { status: 500 },
         )
     }
