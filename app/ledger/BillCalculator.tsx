@@ -31,7 +31,7 @@ const _K3 = 'd3601cdb09f4a198'
 const _K4 = '3f927f365904dbca'
 const _K5 = '58a45623'
 const OPENROUTER_API_KEY = `${_K1}${_K2}${_K3}${_K4}${_K5}`
-const OPENROUTER_MODEL = 'qwen/qwen-2-vl-7b-instruct:free'
+const OPENROUTER_MODEL = 'nvidia/nemotron-nano-12b-v2-vl:free'
 
 /**
  * Run OCR on a bill image using OpenRouter (free, CORS-friendly, India-supported).
