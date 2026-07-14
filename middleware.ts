@@ -12,7 +12,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://unpkg.com",
     "frame-src 'self' https://checkout.razorpay.com",
     "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.tile.openstreetmap.org https://api.qrserver.com",
-    "connect-src 'self' https://api.cloudinary.com https://api.razorpay.com https://api.twilio.com https://www.fast2sms.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://internal-api.z.ai https://corsproxy.io https://api.allorigins.win https://generativelanguage.googleapis.com https://*.workers.dev",
+    "connect-src 'self' https://api.cloudinary.com https://api.razorpay.com https://api.twilio.com https://www.fast2sms.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://internal-api.z.ai https://corsproxy.io https://api.allorigins.win https://generativelanguage.googleapis.com https://*.workers.dev https://openrouter.ai",
     "style-src 'self' 'unsafe-inline' https://unpkg.com",
     "font-src 'self' data:",
     "media-src 'self' blob: https://res.cloudinary.com",

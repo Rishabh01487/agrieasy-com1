@@ -14,71 +14,51 @@ interface CommodityGroup {
     totalWeight: number
 }
 
-// ── Cloudflare Worker proxy URL ──
-// This Worker forwards requests to the Z-AI vision API and adds CORS headers
-// so the browser can read the response. Cloudflare Workers have a 30s timeout
-// (vs Vercel's 10s on Hobby tier), enough for the 15-25s OCR.
+// ── OpenRouter API config (client-side, free tier, CORS-friendly) ──
+// OpenRouter returns Access-Control-Allow-Origin: * so the browser can
+// call it directly — no Vercel proxy needed, no 10s timeout, no Cloudflare.
 //
-// TO SET UP (free, 2 minutes):
-// 1. Go to https://dash.cloudflare.com → sign in (free account)
-// 2. Left sidebar → "Workers & Pages" → "Create" → "Create Worker"
-// 3. Name it "agrieasy-ocr"
-// 4. Delete the default code, paste the contents of cloudflare-worker/worker.js
-// 5. Click "Deploy"
-// 6. Copy the URL (e.g. https://agrieasy-ocr.yourname.workers.dev)
-// 7. Paste it below (replace the placeholder)
-const OCR_WORKER_URL = 'https://agrieasy-ocr.rishabh01487.workers.dev'
+// Free tier limits:
+//   - Free vision models available (e.g. qwen/qwen-2-vl-7b-instruct:free)
+//   - 20 requests/minute on free tier
+//   - Works in India (unlike Gemini)
+//
+// Get your own free key at https://openrouter.ai/keys
+// Then replace 'YOUR_OPENROUTER_API_KEY_HERE' below with your key.
+const OPENROUTER_API_KEY = 'YOUR_OPENROUTER_API_KEY_HERE'
+const OPENROUTER_MODEL = 'qwen/qwen-2-vl-7b-instruct:free'
 
 /**
- * Run OCR on a bill image using the Z-AI vision API via a Cloudflare Worker.
+ * Run OCR on a bill image using OpenRouter (free, CORS-friendly, India-supported).
  *
  * Flow:
  *   1. Read the file as base64 (in-memory).
- *   2. Upload to Cloudinary (keeps the Worker request body small).
- *   3. Send the Cloudinary URL + OCR prompt to our Cloudflare Worker.
- *      The Worker forwards it to Z-AI and returns the response with CORS headers.
- *   4. Parse the JSON and normalize the commodity batches.
+ *   2. Call OpenRouter's chat completions API directly from the browser with
+ *      the image inline + OCR prompt. OpenRouter returns CORS headers so
+ *      the browser allows the response.
+ *   3. Parse the JSON and normalize the commodity batches.
  *
- * Why a Cloudflare Worker?
- *   - Z-AI API doesn't return CORS headers → browser blocks the response.
- *   - Vercel Hobby kills Node.js functions at 10s (OCR takes 15-25s).
- *   - Gemini API is blocked in India.
- *   - Cloudflare Workers: free (100k req/day), 30s timeout, works in India,
- *     returns CORS headers.
+ * Why OpenRouter?
+ *   - Returns Access-Control-Allow-Origin: * → browser allows the response.
+ *   - Can be called DIRECTLY from the browser → no Vercel proxy → no 10s timeout.
+ *   - Works in India (unlike Gemini).
+ *   - Has free vision models (Qwen 2 VL, Llama 3.2 Vision, etc.).
+ *   - OpenAI-compatible API → same request format.
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
-    // ── Step 1: Upload image to Cloudinary ──
-    const sigRes = await authFetch('/api/social/upload-signature')
-    if (!sigRes.ok) {
-        throw new Error(`Could not get upload signature (${sigRes.status})`)
-    }
-    const sig = await sigRes.json()
-    if (!sig.available) {
-        throw new Error('Image upload (Cloudinary) is not configured.')
-    }
-
-    const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
-    const fd = new FormData()
-    fd.append('file', compressedBlob)
-    fd.append('api_key', sig.apiKey)
-    fd.append('timestamp', sig.timestamp.toString())
-    fd.append('signature', sig.signature)
-    fd.append('folder', sig.folder)
-
-    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
-        method: 'POST',
-        body: fd,
+    // ── Step 1: Read file as base64 ──
+    const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            const result = reader.result as string
+            const commaIdx = result.indexOf(',')
+            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
+        }
+        reader.onerror = () => reject(new Error('Could not read file'))
+        reader.readAsDataURL(file)
     })
-    if (!cldRes.ok) {
-        throw new Error(`Cloudinary upload failed (${cldRes.status})`)
-    }
-    const cld = await cldRes.json()
-    const imageUrl = cld.secure_url
-    if (!imageUrl) {
-        throw new Error('Cloudinary upload succeeded but no URL returned.')
-    }
 
-    // ── Step 2: Call our Cloudflare Worker with the image URL ──
+    // ── Step 2: Call OpenRouter API directly ──
     const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
 The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
@@ -125,51 +105,43 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary, no code 
   "rawText": "Brief description of what was readable on the bill"
 }`
 
-    // ── Step 2: Call our Vercel proxy with JOB-BASED POLLING ──
-    // The proxy starts OCR in the background and returns a jobId immediately (<1s).
-    // We poll for the result every 2s. Each request is <1s, well within Vercel's 10s limit.
-    const startRes = await fetch('/api/ledger/bill-calc-proxy', {
+    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl, prompt }),
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'HTTP-Referer': window.location.origin,
+            'X-Title': 'AgriEasy Bill Calculator',
+        },
+        body: JSON.stringify({
+            model: OPENROUTER_MODEL,
+            messages: [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: prompt },
+                    { type: 'image_url', image_url: { url: `data:${file.type || 'image/jpeg'};base64,${b64}` } },
+                ],
+            }],
+            temperature: 0.1,
+            max_tokens: 4096,
+        }),
     })
 
-    if (!startRes.ok) {
-        let errMsg = `Proxy returned ${startRes.status}`
+    if (!orRes.ok) {
+        let errMsg = `OpenRouter API returned ${orRes.status}`
         try {
-            const errJson = await startRes.json()
-            errMsg = errJson?.error || errMsg
+            const errJson = await orRes.json()
+            errMsg = errJson?.error?.message || errMsg
         } catch { /* not JSON */ }
         throw new Error(errMsg)
     }
 
-    const { jobId } = await startRes.json()
-    if (!jobId) throw new Error('No jobId returned from proxy')
+    const orJson = await orRes.json()
+    const content = orJson?.choices?.[0]?.message?.content || ''
 
-    // Poll for result — up to 60 seconds (30 polls × 2s)
-    let workerJson: any = null
-    for (let attempt = 0; attempt < 30; attempt++) {
-        await new Promise(r => setTimeout(r, 2000))
-        const pollRes = await fetch(`/api/ledger/bill-calc-proxy?jobId=${jobId}`, {
-            headers: { 'Content-Type': 'application/json' },
-        })
-        if (!pollRes.ok) continue
-        const pollJson = await pollRes.json()
-        if (pollJson.status === 'done') {
-            workerJson = pollJson.result
-            break
-        }
-        if (pollJson.status === 'error') {
-            throw new Error(pollJson.error || 'OCR failed')
-        }
-        // status === 'pending' → keep polling
+    if (!content) {
+        throw new Error('OCR returned no content. Try a clearer photo.')
     }
-
-    if (!workerJson) {
-        throw new Error('OCR timed out after 60 seconds. Please try again.')
-    }
-
-    const content = workerJson.choices?.[0]?.message?.content || ''
 
     // Parse JSON from the response
     let parsed: any = null
@@ -227,6 +199,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary, no code 
     }
 }
 
+
 /**
  * Compress an image File to a Blob (for upload to Cloudinary).
  * Resizes to maxDim on the longest side, re-encodes as JPEG at the given quality.
@@ -270,14 +243,6 @@ function compressImageToBlob(file: File, maxDim: number, quality: number): Promi
 }
 
 
-interface Batch { bagCount: number; weight: number }
-interface CommodityGroup {
-    name: string
-    nameEn: string
-    batches: Batch[]
-    totalBags: number
-    totalWeight: number
-}
 interface CalcResult { commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }
 interface BuyerListing { _id: string; commodity: string; pricePerUnit: number; unit: string }
 
@@ -972,7 +937,7 @@ Generated by AgriEasy · Jai Jawan, Jai Kisan 🇮🇳`
                 <div style={{ marginTop: 16, padding: 16, background: palette.white, borderRadius: 12, border: `1px solid ${palette.borderLight}`, color: palette.muted, fontSize: '0.86rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <span style={{ fontSize: '1.4rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}>⏳</span>
-                        <span>Reading bill with AI vision (~15-25s, polling in background)…</span>
+                        <span>Reading bill with AI vision (~5-15s, runs in your browser)…</span>
                     </div>
                 </div>
             )}
