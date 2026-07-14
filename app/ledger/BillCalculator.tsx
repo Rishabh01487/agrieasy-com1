@@ -67,38 +67,22 @@ const OPENROUTER_MODEL = 'nvidia/nemotron-nano-12b-v2-vl:free'
  *     3 commodities with accurate weights.
  */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
-    // ── Step 1: Upload image to Cloudinary ──
-    const sigRes = await authFetch('/api/social/upload-signature')
-    if (!sigRes.ok) {
-        throw new Error(`Could not get upload signature (${sigRes.status})`)
-    }
-    const sig = await sigRes.json()
-    if (!sig.available) {
-        throw new Error('Image upload (Cloudinary) is not configured.')
-    }
-
+    // ── Step 1: Compress image client-side + read as base64 ──
+    // No Cloudinary upload needed — we send the base64 directly to our proxy.
+    // This avoids the 401 auth error on the upload-signature endpoint.
     const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
-    const fd = new FormData()
-    fd.append('file', compressedBlob)
-    fd.append('api_key', sig.apiKey)
-    fd.append('timestamp', sig.timestamp.toString())
-    fd.append('signature', sig.signature)
-    fd.append('folder', sig.folder)
-
-    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
-        method: 'POST',
-        body: fd,
+    const b64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+            const result = reader.result as string
+            const commaIdx = result.indexOf(',')
+            resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
+        }
+        reader.onerror = () => reject(new Error('Could not read file'))
+        reader.readAsDataURL(compressedBlob)
     })
-    if (!cldRes.ok) {
-        throw new Error(`Cloudinary upload failed (${cldRes.status})`)
-    }
-    const cld = await cldRes.json()
-    const imageUrl = cld.secure_url
-    if (!imageUrl) {
-        throw new Error('Cloudinary upload succeeded but no URL returned.')
-    }
 
-    // ── Step 2: Call our Edge proxy with the image URL + OCR prompt ──
+    // ── Step 2: Call our Edge proxy with the base64 image + OCR prompt ──
     const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
 The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
@@ -158,7 +142,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
     const proxyRes = await fetch('/api/ledger/bill-calc-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageUrl, prompt }),
+        body: JSON.stringify({ imageBase64: b64, mimeType: 'image/jpeg', prompt }),
     })
 
     if (!proxyRes.ok) {

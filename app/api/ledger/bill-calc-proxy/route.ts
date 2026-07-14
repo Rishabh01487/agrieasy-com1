@@ -40,22 +40,33 @@ export async function POST(req: NextRequest) {
         if (!auth) return unauthorized()
 
         const body = await req.json()
-        const { imageUrl, prompt } = body
-
-        if (!imageUrl || !prompt) {
+        // Accept either { imageUrl, prompt } or { imageBase64, mimeType, prompt }
+        let messages: unknown[]
+        if (body.imageBase64) {
+            const dataUrl = `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}`
+            messages = [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: body.prompt || 'Extract text.' },
+                    { type: 'image_url', image_url: { url: dataUrl } },
+                ],
+            }]
+        } else if (body.imageUrl) {
+            messages = [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: body.prompt || 'Extract text.' },
+                    { type: 'image_url', image_url: { url: body.imageUrl } },
+                ],
+            }]
+        } else if (body.messages) {
+            messages = body.messages
+        } else {
             return NextResponse.json(
-                { error: 'Missing imageUrl or prompt' },
+                { error: 'Missing imageBase64 or imageUrl or messages' },
                 { status: 400 },
             )
         }
-
-        const messages = [{
-            role: 'user',
-            content: [
-                { type: 'text', text: prompt },
-                { type: 'image_url', image_url: { url: imageUrl } },
-            ],
-        }]
 
         const zaiUrl = `${ZAI_CONFIG.baseUrl}/chat/completions/vision`
         const zaiRes = await fetch(zaiUrl, {
