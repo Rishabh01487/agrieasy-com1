@@ -101,6 +101,13 @@ weight of those bags. For example, for 25 bags of maize, the bill shows 3 batch 
 The last batch is often smaller (the remainder). So each "weight" on the bill is the COMBINED
 weight of multiple bags, NOT a single bag's weight.
 
+CRITICAL — READ THE NUMBERS CAREFULLY:
+- A typical batch of 10 bags weighs between 400-700 kg (NOT 4000-7000 kg).
+- If you see "551" written, it means 551 kg, NOT 5510 kg. Do NOT add extra zeros.
+- If you see "51" written, it means 51 kg, NOT 510 kg.
+- Read EXACTLY what is written — do not infer or pad with zeros.
+- Each commodity has its OWN list of weights — do NOT copy weights from one commodity to another.
+
 YOUR JOB:
 1. Identify each commodity on the bill (e.g. गेहूँ, चावल, बाजरा, मक्का, अरहर, चना, सरसो, ज्वार, उड़द, मूंग, etc.).
 2. For each commodity, extract every BATCH row as a {bagCount, weight} pair:
