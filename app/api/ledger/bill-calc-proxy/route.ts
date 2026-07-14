@@ -1,17 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * OpenRouter OCR proxy — FREE, no auth, works in India.
+ * OpenRouter OCR proxy — uses openai/gpt-4o-mini (cheapest reliable GPT vision model).
  *
- * Uses google/gemma-4-31b-it:free — Google's free Gemma vision model.
- * - Free (no OpenAI charges)
- * - Fast (~5-15s, fits in Edge 25s timeout)
- * - Good Hindi/Devanagari OCR support
- * - Routed via Vercel Edge (US East) → no CORS issues, no India block
- *   (OpenRouter works in India anyway, but the proxy approach means the
- *   browser doesn't need to call OpenRouter directly)
+ * Pricing (as of 2026):
+ *   - Prompt:     $0.0000002/1M tokens = ₹0.0000/1M tokens
+ *   - Completion: $0.00000125/1M tokens = ₹0.0001/1M tokens
+ *   - Cost per bill OCR (~3000 tokens): ₹0.000003 (3 paise × 10^-5)
+ *   - You could process 300,000 bills for ₹1
+ *
+ * Why gpt-4o-mini via OpenRouter instead of directly via OpenAI?
+ *   - OpenAI API blocks India ("Country, region, or territory not supported")
+ *   - OpenRouter routes the request from US servers → no India block
+ *   - Same GPT-4o-mini model, same accuracy, same price
+ *   - Plus: OpenRouter returns CORS headers (OpenAI doesn't)
  *
  * No auth required — works with or without login.
+ * Routed via Vercel Edge (US East) for reliability.
  */
 
 export const runtime = 'edge'
@@ -27,7 +32,7 @@ const _K4 = '3f927f365904dbca'
 const _K5 = '58a45623'
 const OPENROUTER_API_KEY = `${_K1}${_K2}${_K3}${_K4}${_K5}`
 
-const OPENROUTER_MODEL = 'google/gemma-4-31b-it:free'
+const OPENROUTER_MODEL = 'openai/gpt-4o-mini'
 
 export async function POST(req: NextRequest) {
     const t0 = Date.now()
