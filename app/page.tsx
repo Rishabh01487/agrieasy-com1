@@ -1,25 +1,25 @@
 import Link from 'next/link'
 import type { CSSProperties } from 'react'
+import { CardIcon } from './components/CardIcons'
 
 type Card = {
   href: string
-  emoji: string
   title: string
   sub: string
   color: string
 }
 
 const ROLE_CARDS: Card[] = [
-  { href: '/auth/login?role=farmer', emoji: '🌾', title: 'Farmer/Vyapari', sub: 'Sell your produce', color: '#AC3B61' },
-  { href: '/auth/login?role=buyer', emoji: '🛒', title: 'Buyer', sub: 'Source fresh crops', color: '#123C69' },
-  { href: '/auth/login?role=transporter', emoji: '🚛', title: 'Transporter', sub: 'Deliver goods', color: '#D4A574' },
+  { href: '/auth/login?role=farmer', title: 'Farmer/Vyapari', sub: 'Sell your produce', color: '#AC3B61' },
+  { href: '/auth/login?role=buyer', title: 'Buyer', sub: 'Source fresh crops', color: '#123C69' },
+  { href: '/auth/login?role=transporter', title: 'Transporter', sub: 'Deliver goods', color: '#D4A574' },
 ]
 
 const FEATURE_CARDS: Card[] = [
-  { href: '/ledger/bill-calculator', emoji: '🧮', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#AC3B61' },
-  { href: '/agripay', emoji: '💳', title: 'AgriPay', sub: 'Pay & transfer', color: '#E98074' },
-  { href: '/agrisocial', emoji: '📱', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
-  { href: '/ledger', emoji: '📒', title: 'Ledger', sub: 'Bills & earnings', color: '#8E2D4C' },
+  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#AC3B61' },
+  { href: '/agripay', title: 'AgriPay', sub: 'Pay & transfer', color: '#E98074' },
+  { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
+  { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#8E2D4C' },
 ]
 
 const FEATURES = ['Zero middlemen', 'Instant UPI payments', 'Real-time tracking', 'Live GPS tracking']
@@ -182,11 +182,13 @@ export default function Home() {
               position: 'relative', overflow: 'hidden',
             }}>
               <div style={{
-                width: 44, height: 44, borderRadius: 12, marginBottom: 8,
-                background: `${c.color}18`, border: `1px solid ${c.color}25`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem',
-                boxShadow: `0 4px 12px ${c.color}12`,
-              }}>{c.emoji}</div>
+                width: 52, height: 52, borderRadius: 14, marginBottom: 10,
+                background: `linear-gradient(135deg, ${c.color}12, ${c.color}06)`, border: `1.5px solid ${c.color}30`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: `0 4px 14px ${c.color}15`,
+              }}>
+                <CardIcon name={c.title} size={34} color={c.color} />
+              </div>
               <p style={{ color: '#AC3B61', fontWeight: 800, fontSize: '0.92rem', margin: 0 }}>{c.title}</p>
               <p style={{ color: '#5A77A0', fontSize: '0.7rem', margin: '3px 0 0' }}>{c.sub}</p>
             </Link>
@@ -209,7 +211,13 @@ export default function Home() {
               {c.title === 'Bill Calculator' && (
                 <span style={{ position: 'absolute', top: -7, right: -3, background: '#AC3B61', color: '#fff', fontSize: '0.56rem', fontWeight: 800, padding: '2px 6px', borderRadius: 100, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: '0 2px 6px rgba(172,59,97,0.3)' }}>NEW</span>
               )}
-              <div style={{ fontSize: '1.3rem', marginBottom: 4 }}>{c.emoji}</div>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, marginBottom: 6,
+                background: `${c.color}12`, border: `1px solid ${c.color}25`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <CardIcon name={c.title} size={28} color={c.color} />
+              </div>
               <p style={{ color: '#AC3B61', fontWeight: 700, fontSize: '0.78rem', margin: 0 }}>{c.title}</p>
               <p style={{ color: '#5A77A0', fontSize: '0.64rem', opacity: 0.75, margin: '2px 0 0' }}>{c.sub}</p>
             </Link>
