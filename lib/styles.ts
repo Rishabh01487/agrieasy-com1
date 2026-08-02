@@ -83,64 +83,68 @@ export const BRAND = {
 
 // ── AgriPay Palette (Blue & White) ─────────────────────────────────
 
+// ── AgriPay Palette (Imperial Blue + White Convolvulus) ───────────
+//   Imperial Blue #021F94 · White Convolvulus #F5F2F3 · accent #4060C8
+
 export const AGRI = {
-  bg: '#EAEBDC',
-  bgSub: '#D8D9CA',
+  bg: '#F5F2F3',
+  bgSub: '#E8E5E8',
   white: SHARED.white,
-  primary: '#E98074',
-  primaryHover: '#E85A4F',
-  primaryLight: '#F5D5D0',
-  primarySoft: '#EAEBDC',
-  accent: '#E85A4F',
-  text: '#5D5D5D',
-  textSecondary: '#8E8D8A',
-  muted: '#8E8D8A',
-  border: '#D8C3A5',
-  borderLight: '#EAEBDC',
+  primary: '#021F94',
+  primaryHover: '#011A7A',
+  primaryLight: '#DDE3F5',
+  primarySoft: '#F5F2F3',
+  accent: '#4060C8',
+  text: '#1A1A2E',
+  textSecondary: '#4A4A6E',
+  muted: '#8E8EA0',
+  border: '#D8D5D8',
+  borderLight: '#E8E5E8',
   card: SHARED.white,
   green: SHARED.success,
   greenLight: '#dcfce7',
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#D8C3A5',
-  goldLight: '#EAEBDC',
-  gradient: 'linear-gradient(135deg, #E98074 0%, #E85A4F 50%, #D8C3A5 100%)',
-  gradientSoft: 'linear-gradient(135deg, #EAEBDC 0%, #F5D5D0 100%)',
-  gradientCard: 'linear-gradient(145deg, #E98074 0%, #E85A4F 100%)',
+  gold: '#4060C8',
+  goldLight: '#F5F2F3',
+  gradient: 'linear-gradient(135deg, #021F94 0%, #1A3AAA 50%, #4060C8 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5F2F3 0%, #DDE3F5 100%)',
+  gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (Blue & White — Instagram-style) ───────────
+// ── AgriSocial Palette (Off-white + Blue-gray + Dark Navy) ────────
+//   Off-white #F6F3ED · Light blue-gray #C2CBD3 · Dark navy #313851
 
 export const SOCIAL = {
-  bg: '#EDE8F5',
-  bgSub: '#D4D8E8',
+  bg: '#F6F3ED',
+  bgSub: '#E8E5DD',
   white: SHARED.white,
-  primary: '#3D52A0',
-  primaryHover: '#2A3A80',
-  primaryLight: '#ADBBD4',
-  primarySoft: '#EDE8F5',
-  accent: '#7091E6',
-  text: '#1A1A1A',
-  textSecondary: '#4A4A4A',
-  muted: '#8697C4',
-  border: '#ADBBD4',
-  borderLight: '#D4D8E8',
+  primary: '#313851',
+  primaryHover: '#252A3F',
+  primaryLight: '#D8DDE5',
+  primarySoft: '#F6F3ED',
+  accent: '#C2CBD3',
+  text: '#1A1F2E',
+  textSecondary: '#4A5266',
+  muted: '#8A92A0',
+  border: '#C2CBD3',
+  borderLight: '#D8DDE5',
   card: SHARED.white,
-  green: '#3D52A0',
-  greenLight: '#EDE8F5',
-  red: '#E85A4F',
+  green: '#313851',
+  greenLight: '#F6F3ED',
+  red: '#C05050',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, #3D52A0 0%, #7091E6 50%, #8697C4 100%)',
-  gradientSoft: 'linear-gradient(135deg, #EDE8F5 0%, #ADBBD4 100%)',
+  gradient: 'linear-gradient(135deg, #313851 0%, #4A5266 50%, #C2CBD3 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F6F3ED 0%, #D8DDE5 100%)',
   gradientRing:
-    'linear-gradient(45deg, #3D52A0 0%, #7091E6 25%, #8697C4 50%, #ADBBD4 75%, #3D52A0 100%)',
+    'linear-gradient(45deg, #313851 0%, #4A5266 25%, #C2CBD3 50%, #8A92A0 75%, #313851 100%)',
   clips: {
     bg: '#0a0f1e',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
-    accent: '#7091E6',
-    gradient: 'linear-gradient(135deg, #3D52A0 0%, #7091E6 50%, #8697C4 100%)',
+    accent: '#C2CBD3',
+    gradient: 'linear-gradient(135deg, #313851 0%, #4A5266 50%, #C2CBD3 100%)',
   },
 }
 
@@ -190,34 +194,63 @@ export const ADMIN = {
   sidebarActive: '#2563eb',
 }
 
-// ── Buyer Palette (Image 1 — warm peach + magenta + navy) ──────────
+// ── Buyer Palette (Plum + Milk) ───────────────────────────────────
+//   Plum #381932 · Milk #FFF3E6
 
 export const BUYER = {
-  bg: '#FAF7EE',
-  bgSub: '#E8E4D6',
+  bg: '#FFF3E6',
+  bgSub: '#F5E5D0',
   white: SHARED.white,
-  primary: '#31372B',
-  primaryHover: '#262B20',
-  primaryLight: '#EFEBDD',
-  primarySoft: '#FAF7EE',
-  accent: '#31372B',
-  text: '#31372B',
-  textSecondary: '#6B6E5A',
-  muted: '#A8A695',
-  border: '#E8E4D6',
-  borderLight: '#FAF7EE',
+  primary: '#381932',
+  primaryHover: '#261020',
+  primaryLight: 'rgba(56,25,50,0.1)',
+  primarySoft: '#FFF3E6',
+  accent: '#5A2E50',
+  text: '#381932',
+  textSecondary: '#6A4A60',
+  muted: '#A890A0',
+  border: '#E8D5C0',
+  borderLight: '#F5E5D0',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#4A5240',
-  goldLight: '#FAF7EE',
+  gold: '#5A2E50',
+  goldLight: '#FFF3E6',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
+  gradient: 'linear-gradient(135deg, #381932 0%, #4A2050 50%, #5A2E50 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FFF3E6 0%, #F5E5D0 100%)',
 }
 
-// ── Farmer Palette (Image 1 — warm peach + magenta + navy) ─────────
+// ── Ledger Palette (Masterpiece Red + Dirty White) ───────────────
+//   Masterpiece Red #5A2132 · Dirty White #EFE9E9
+
+export const LEDGER = {
+  bg: '#EFE9E9',
+  bgSub: '#E0D5D5',
+  white: SHARED.white,
+  primary: '#5A2132',
+  primaryHover: '#3F1525',
+  primaryLight: '#F0DCDF',
+  primarySoft: '#EFE9E9',
+  accent: '#7A3050',
+  text: '#3A1520',
+  textSecondary: '#6A4555',
+  muted: '#A89098',
+  border: '#D5C5C8',
+  borderLight: '#E0D5D5',
+  card: SHARED.white,
+  red: SHARED.error,
+  redLight: '#fef2f2',
+  green: SHARED.success,
+  greenLight: '#dcfce7',
+  gold: '#7A3050',
+  goldLight: '#EFE9E9',
+  gradient: 'linear-gradient(135deg, #5A2132 0%, #6F2A40 50%, #7A3050 100%)',
+  gradientSoft: 'linear-gradient(135deg, #EFE9E9 0%, #E0D5D5 100%)',
+}
+
+// ── Farmer Palette (Home — Floral White + Black Olive) ─────────────
 
 export const FARMER = {
   bg: '#FAF7EE',
@@ -244,29 +277,30 @@ export const FARMER = {
   gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
 }
 
-// ── Transporter Palette (Image 1 — warm peach + magenta + navy) ────
+// ── Transporter Palette (Peach + Dark Slate Green) ───────────────
+//   Peach #FEDAB8 · Dark Slate Green #203C3D · Black
 
 export const TRANSPORTER = {
-  bg: '#FAF7EE',
-  bgSub: '#E8E4D6',
+  bg: '#FEDAB8',
+  bgSub: '#FCE0C5',
   white: SHARED.white,
-  primary: '#31372B',
-  primaryHover: '#262B20',
-  primaryLight: '#EFEBDD',
-  primarySoft: '#FAF7EE',
-  accent: '#31372B',
-  text: '#31372B',
-  textSecondary: '#6B6E5A',
-  muted: '#A8A695',
-  border: '#E8E4D6',
-  borderLight: '#FAF7EE',
+  primary: '#203C3D',
+  primaryHover: '#15292A',
+  primaryLight: '#FEDAB8',
+  primarySoft: '#FFF0E0',
+  accent: '#203C3D',
+  text: '#1A1A1A',
+  textSecondary: '#3A4A4B',
+  muted: '#7A8A8B',
+  border: '#FCC8A0',
+  borderLight: '#FEDAB8',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
+  gradient: 'linear-gradient(135deg, #203C3D 0%, #2E5658 50%, #3A6A6C 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FEDAB8 0%, #FCC8A0 100%)',
 }
 
 // ── Reusable Style Presets ─────────────────────────────────────────
