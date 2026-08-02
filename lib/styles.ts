@@ -112,39 +112,40 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (Single color: #F6F3ED) ─────────────────────
-//   Off-white #F6F3ED only — used for bg + primary + accent + borders
+// ── AgriSocial Palette (Dark Navy #313851 + Off-white #F6F3ED) ────
+//   #313851 (dark slate navy — from uploaded reference) for primary/accent/text
+//   #F6F3ED (off-white) for backgrounds/cards/borders
 
 export const SOCIAL = {
   bg: '#F6F3ED',
   bgSub: '#EDEAE0',
   white: SHARED.white,
-  primary: '#F6F3ED',
-  primaryHover: '#E8E5DC',
-  primaryLight: '#F6F3ED',
+  primary: '#313851',
+  primaryHover: '#252A3F',
+  primaryLight: '#313851',
   primarySoft: '#F6F3ED',
-  accent: '#F6F3ED',
-  text: '#3A4250',
-  textSecondary: '#6A7280',
-  muted: '#9AA2B0',
-  border: '#F6F3ED',
-  borderLight: '#F0EDE4',
+  accent: '#313851',
+  text: '#313851',
+  textSecondary: '#4A5266',
+  muted: '#6A7280',
+  border: '#313851',
+  borderLight: '#E0DDD4',
   card: SHARED.white,
-  green: '#F6F3ED',
+  green: '#313851',
   greenLight: '#F6F3ED',
-  red: '#D88080',
+  red: '#C05050',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, #F6F3ED 0%, #EDEAE0 50%, #E0DDD4 100%)',
+  gradient: 'linear-gradient(135deg, #313851 0%, #3F4660 50%, #4A5266 100%)',
   gradientSoft: 'linear-gradient(135deg, #F6F3ED 0%, #EDEAE0 100%)',
   gradientRing:
-    'linear-gradient(45deg, #F6F3ED 0%, #EDEAE0 25%, #E0DDD4 50%, #EDEAE0 75%, #F6F3ED 100%)',
+    'linear-gradient(45deg, #313851 0%, #3F4660 25%, #4A5266 50%, #3F4660 75%, #313851 100%)',
   clips: {
     bg: '#0a0f1e',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
-    accent: '#F6F3ED',
-    gradient: 'linear-gradient(135deg, #F6F3ED 0%, #EDEAE0 50%, #E0DDD4 100%)',
+    accent: '#313851',
+    gradient: 'linear-gradient(135deg, #313851 0%, #3F4660 50%, #4A5266 100%)',
   },
 }
 
