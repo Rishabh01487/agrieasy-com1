@@ -112,46 +112,40 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (5-color: Space cadet + Ultra Violet + Taupe + Dogwood + Timberwolf) ─
-//   #22223B Space cadet  — primary, headings, key buttons (strong contrast)
-//   #4A4E69 Ultra Violet — accent, links, body text (softer secondary)
-//   #867D86 Taupe gray   — muted text (timestamps, captions)
-//   #C2ACA2 Pale Dogwood — borders, dividers (warm visible separator)
-//   #E8DCD6 Timberwolf   — background (soft cream, easy on eyes for scrolling)
+// ── AgriSocial Palette (3-color: Lavender + Blue + Navy — no mixing) ─
+//   #BFB0DF (lavender)  — background only
+//   #5A80CA (blue)      — primary, accent, buttons, borders only
+//   #42476E (navy)      — text, headings only
 
 export const SOCIAL = {
-  bg: '#E8DCD6',
-  bgSub: '#C2ACA2',
+  bg: '#BFB0DF',
+  bgSub: '#BFB0DF',
   white: SHARED.white,
-  primary: '#22223B',
-  primaryHover: '#15162B',
-  primaryLight: '#4A4E69',
-  primarySoft: '#E8DCD6',
-  accent: '#4A4E69',
-  text: '#22223B',
-  textSecondary: '#4A4E69',
-  muted: '#867D86',
-  border: '#C2ACA2',
-  borderLight: '#E8DCD6',
+  primary: '#5A80CA',
+  primaryHover: '#5A80CA',
+  primaryLight: '#5A80CA',
+  primarySoft: '#BFB0DF',
+  accent: '#5A80CA',
+  text: '#42476E',
+  textSecondary: '#42476E',
+  muted: '#42476E',
+  border: '#5A80CA',
+  borderLight: '#5A80CA',
   card: SHARED.white,
-  green: '#22223B',
-  greenLight: '#E8DCD6',
-  red: '#9B4A4A',
-  redLight: '#fef2f2',
-  // Primary gradient: Space cadet → Ultra Violet (rich, professional)
-  gradient: 'linear-gradient(135deg, #22223B 0%, #2E3050 35%, #4A4E69 75%, #5A5E7A 100%)',
-  // Soft gradient: Timberwolf → Pale Dogwood (subtle warmth for surfaces)
-  gradientSoft: 'linear-gradient(135deg, #E8DCD6 0%, #C2ACA2 100%)',
-  // Story ring: full 5-color sweep (Instagram-style)
-  gradientRing:
-    'linear-gradient(45deg, #22223B 0%, #4A4E69 25%, #867D86 50%, #C2ACA2 75%, #22223B 100%)',
+  green: '#5A80CA',
+  greenLight: '#BFB0DF',
+  red: '#5A80CA',
+  redLight: '#BFB0DF',
+  gradient: '#5A80CA',
+  gradientSoft: '#BFB0DF',
+  gradientRing: '#5A80CA',
   clips: {
-    bg: '#0a0f1e',
+    bg: '#42476E',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
-    accent: '#4A4E69',
-    gradient: 'linear-gradient(135deg, #22223B 0%, #2E3050 35%, #4A4E69 75%, #5A5E7A 100%)',
+    accent: '#5A80CA',
+    gradient: '#5A80CA',
   },
 }
 

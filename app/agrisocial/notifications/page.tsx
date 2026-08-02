@@ -32,12 +32,12 @@ function timeAgo(iso: string) {
 
 const typeMeta: Record<string, { icon: IconName; color: string; verb: (n: Notification) => string }> = {
     like:        { icon: 'heart', color: '#ef4444', verb: () => 'liked your post.' },
-    comment:     { icon: 'comment', color: '#22223B', verb: () => 'commented on your post.' },
+    comment:     { icon: 'comment', color: '#42476E', verb: () => 'commented on your post.' },
     comment_like:{ icon: 'heart', color: '#ef4444', verb: () => 'liked your comment.' },
     follow:      { icon: 'explore', color: '#10b981', verb: () => 'started following you.' },
-    mention:     { icon: 'send', color: '#4A4E69', verb: () => 'mentioned you.' },
+    mention:     { icon: 'send', color: '#5A80CA', verb: () => 'mentioned you.' },
     message:     { icon: 'dm', color: '#f59e0b', verb: () => 'sent you a message.' },
-    story:       { icon: 'reels', color: '#4A4E69', verb: () => 'shared a new post.' },
+    story:       { icon: 'reels', color: '#5A80CA', verb: () => 'shared a new post.' },
 }
 
 export default function AgriSocialNotifications() {
