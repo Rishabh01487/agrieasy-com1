@@ -112,39 +112,39 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (Off-white + Blue-gray + Dark Navy) ────────
-//   Off-white #F6F3ED · Light blue-gray #C2CBD3 · Dark navy #313851
+// ── AgriSocial Palette (Off-white + Blue-gray ONLY) ───────────────
+//   Off-white #F6F3ED · Light blue-gray #C2CBD3
 
 export const SOCIAL = {
   bg: '#F6F3ED',
-  bgSub: '#E8E5DD',
+  bgSub: '#EDEAE0',
   white: SHARED.white,
-  primary: '#313851',
-  primaryHover: '#252A3F',
-  primaryLight: '#D8DDE5',
+  primary: '#C2CBD3',
+  primaryHover: '#A8B5C0',
+  primaryLight: '#E8EDF1',
   primarySoft: '#F6F3ED',
   accent: '#C2CBD3',
-  text: '#1A1F2E',
-  textSecondary: '#4A5266',
-  muted: '#8A92A0',
+  text: '#3A4250',
+  textSecondary: '#6A7280',
+  muted: '#9AA2B0',
   border: '#C2CBD3',
-  borderLight: '#D8DDE5',
+  borderLight: '#E0E5EA',
   card: SHARED.white,
-  green: '#313851',
+  green: '#C2CBD3',
   greenLight: '#F6F3ED',
-  red: '#C05050',
+  red: '#D88080',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, #313851 0%, #4A5266 50%, #C2CBD3 100%)',
-  gradientSoft: 'linear-gradient(135deg, #F6F3ED 0%, #D8DDE5 100%)',
+  gradient: 'linear-gradient(135deg, #C2CBD3 0%, #B0BAC4 50%, #9AA6B2 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F6F3ED 0%, #E0E5EA 100%)',
   gradientRing:
-    'linear-gradient(45deg, #313851 0%, #4A5266 25%, #C2CBD3 50%, #8A92A0 75%, #313851 100%)',
+    'linear-gradient(45deg, #C2CBD3 0%, #B0BAC4 25%, #9AA6B2 50%, #B0BAC4 75%, #C2CBD3 100%)',
   clips: {
     bg: '#0a0f1e',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
     accent: '#C2CBD3',
-    gradient: 'linear-gradient(135deg, #313851 0%, #4A5266 50%, #C2CBD3 100%)',
+    gradient: 'linear-gradient(135deg, #C2CBD3 0%, #B0BAC4 50%, #9AA6B2 100%)',
   },
 }
 
