@@ -219,7 +219,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     {carouselImages.length > 1 && (
                         <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
                             {carouselImages.map((_, i) => (
-                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#3b82f6' : 'rgba(255,255,255,0.5)' }} />
+                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#4A4E69' : 'rgba(255,255,255,0.5)' }} />
                             ))}
                         </div>
                     )}
@@ -256,7 +256,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     style={{ marginLeft: 'auto' }}
                 />
                 {isOwner && (
-                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#94a3b8" />
+                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#867D86" />
                 )}
             </div>
 

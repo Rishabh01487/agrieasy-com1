@@ -112,40 +112,46 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (Dark Navy #313851 + Off-white #F6F3ED) ────
-//   #313851 (dark slate navy — from uploaded reference) for primary/accent/text
-//   #F6F3ED (off-white) for backgrounds/cards/borders
+// ── AgriSocial Palette (5-color: Space cadet + Ultra Violet + Taupe + Dogwood + Timberwolf) ─
+//   #22223B Space cadet  — primary, headings, key buttons (strong contrast)
+//   #4A4E69 Ultra Violet — accent, links, body text (softer secondary)
+//   #867D86 Taupe gray   — muted text (timestamps, captions)
+//   #C2ACA2 Pale Dogwood — borders, dividers (warm visible separator)
+//   #E8DCD6 Timberwolf   — background (soft cream, easy on eyes for scrolling)
 
 export const SOCIAL = {
-  bg: '#F6F3ED',
-  bgSub: '#EDEAE0',
+  bg: '#E8DCD6',
+  bgSub: '#C2ACA2',
   white: SHARED.white,
-  primary: '#313851',
-  primaryHover: '#252A3F',
-  primaryLight: '#313851',
-  primarySoft: '#F6F3ED',
-  accent: '#313851',
-  text: '#313851',
-  textSecondary: '#4A5266',
-  muted: '#6A7280',
-  border: '#313851',
-  borderLight: '#E0DDD4',
+  primary: '#22223B',
+  primaryHover: '#15162B',
+  primaryLight: '#4A4E69',
+  primarySoft: '#E8DCD6',
+  accent: '#4A4E69',
+  text: '#22223B',
+  textSecondary: '#4A4E69',
+  muted: '#867D86',
+  border: '#C2ACA2',
+  borderLight: '#E8DCD6',
   card: SHARED.white,
-  green: '#313851',
-  greenLight: '#F6F3ED',
-  red: '#C05050',
+  green: '#22223B',
+  greenLight: '#E8DCD6',
+  red: '#9B4A4A',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, #313851 0%, #3F4660 50%, #4A5266 100%)',
-  gradientSoft: 'linear-gradient(135deg, #F6F3ED 0%, #EDEAE0 100%)',
+  // Primary gradient: Space cadet → Ultra Violet (rich, professional)
+  gradient: 'linear-gradient(135deg, #22223B 0%, #2E3050 35%, #4A4E69 75%, #5A5E7A 100%)',
+  // Soft gradient: Timberwolf → Pale Dogwood (subtle warmth for surfaces)
+  gradientSoft: 'linear-gradient(135deg, #E8DCD6 0%, #C2ACA2 100%)',
+  // Story ring: full 5-color sweep (Instagram-style)
   gradientRing:
-    'linear-gradient(45deg, #313851 0%, #3F4660 25%, #4A5266 50%, #3F4660 75%, #313851 100%)',
+    'linear-gradient(45deg, #22223B 0%, #4A4E69 25%, #867D86 50%, #C2ACA2 75%, #22223B 100%)',
   clips: {
     bg: '#0a0f1e',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
-    accent: '#313851',
-    gradient: 'linear-gradient(135deg, #313851 0%, #3F4660 50%, #4A5266 100%)',
+    accent: '#4A4E69',
+    gradient: 'linear-gradient(135deg, #22223B 0%, #2E3050 35%, #4A4E69 75%, #5A5E7A 100%)',
   },
 }
 

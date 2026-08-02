@@ -399,7 +399,7 @@ function CreateContent() {
                         {FILTERS.map((f, i) => (
                             <button key={f.name} onClick={() => setSelectedFilter(i)}
                                 style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #6b7280, #374151)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style, transition: 'all 0.2s ease' }} />
+                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #867D86, #4A4E69)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style, transition: 'all 0.2s ease' }} />
                                 <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontWeight: 700 }}>{f.name}</span>
                             </button>
                         ))}
@@ -443,7 +443,7 @@ function CreateContent() {
                             <>
                                 <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
                                     {carouselFiles.map((_, i) => (
-                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#3b82f6' : 'rgba(255,255,255,0.5)' }} />
+                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#4A4E69' : 'rgba(255,255,255,0.5)' }} />
                                     ))}
                                 </div>
                                 {carouselIdx > 0 && (
@@ -475,7 +475,7 @@ function CreateContent() {
                     </div>
 
                     {/* Adjustments */}
-                    <div style={{ background: '#1a1a1a', padding: '12px 20px' }}>
+                    <div style={{ background: '#22223B', padding: '12px 20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Adjust</p>
                             {/* Rotate buttons */}
