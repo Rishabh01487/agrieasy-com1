@@ -112,19 +112,19 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (3-color: Lavender + Blue + Navy — no mixing) ─
-//   #BFB0DF (lavender)  — background only
+// ── AgriSocial Palette (3-color: White bg + Blue + Navy — no mixing) ─
+//   #FFFFFF (white)     — background only
 //   #5A80CA (blue)      — primary, accent, buttons, borders only
 //   #42476E (navy)      — text, headings only
 
 export const SOCIAL = {
-  bg: '#BFB0DF',
-  bgSub: '#BFB0DF',
+  bg: '#FFFFFF',
+  bgSub: '#FFFFFF',
   white: SHARED.white,
   primary: '#5A80CA',
   primaryHover: '#5A80CA',
   primaryLight: '#5A80CA',
-  primarySoft: '#BFB0DF',
+  primarySoft: '#FFFFFF',
   accent: '#5A80CA',
   text: '#42476E',
   textSecondary: '#42476E',
@@ -133,11 +133,11 @@ export const SOCIAL = {
   borderLight: '#5A80CA',
   card: SHARED.white,
   green: '#5A80CA',
-  greenLight: '#BFB0DF',
+  greenLight: '#FFFFFF',
   red: '#5A80CA',
-  redLight: '#BFB0DF',
+  redLight: '#FFFFFF',
   gradient: '#5A80CA',
-  gradientSoft: '#BFB0DF',
+  gradientSoft: '#FFFFFF',
   gradientRing: '#5A80CA',
   clips: {
     bg: '#42476E',
