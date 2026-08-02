@@ -34,7 +34,7 @@ interface Summary {
 
 const typeLabel: Record<string, { label: string; icon: string; color: string }> = {
     bill: { label: 'Bill', icon: '🧾', color: '#f59e0b' },
-    invoice: { label: 'Invoice', icon: '📄', color: '#C05070' },
+    invoice: { label: 'Invoice', icon: '📄', color: '#31372B' },
     earning: { label: 'Earning', icon: '💰', color: '#10b981' },
     expense: { label: 'Expense', icon: '💸', color: '#ef4444' },
 }

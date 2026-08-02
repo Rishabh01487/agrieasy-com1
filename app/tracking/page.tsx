@@ -134,13 +134,13 @@ function TrackingInner() {
         if (booking.driverLocation?.latitude) {
             const mk = L.marker(
                 [booking.driverLocation.latitude, booking.driverLocation.longitude],
-                { icon: makeIcon('🚛', '#AC3B61') }
+                { icon: makeIcon('🚛', '#31372B') }
             ).addTo(m).bindPopup(`<b>Vehicle (Live)</b><br/>Updated: ${new Date(booking.driverLocation.updatedAt).toLocaleTimeString('en-IN')}`)
             newMarkers.push(mk)
         } else if (booking.transporter?.location?.latitude) {
             const mk = L.marker(
                 [booking.transporter.location.latitude, booking.transporter.location.longitude],
-                { icon: makeIcon('🚛', '#AC3B61') }
+                { icon: makeIcon('🚛', '#31372B') }
             ).addTo(m).bindPopup(`<b>Vehicle</b><br/>${booking.transporter.transporterCompanyName || 'Transporter'}`)
             newMarkers.push(mk)
         }
@@ -269,7 +269,7 @@ function TrackingInner() {
 
 export default function TrackingPage() {
     return (
-        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fafbfc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#AC3B61', fontWeight: 700, fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>Loading…</div>}>
+        <Suspense fallback={<div style={{ minHeight: '100vh', background: '#fafbfc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#31372B', fontWeight: 700, fontFamily: "var(--font-poppins), 'Poppins', sans-serif" }}>Loading…</div>}>
             <TrackingInner />
         </Suspense>
     )

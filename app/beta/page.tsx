@@ -110,7 +110,7 @@ export default function BetaPage() {
                         onClick={() => toggleFlag(flag, !enabled)}
                         style={{
                           width: 44, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
-                          background: enabled ? '#AC3B61' : '#cbd5e1', position: 'relative', flexShrink: 0,
+                          background: enabled ? '#31372B' : '#cbd5e1', position: 'relative', flexShrink: 0,
                           transition: 'background 0.2s ease',
                         }}
                       >

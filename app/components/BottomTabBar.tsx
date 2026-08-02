@@ -74,19 +74,19 @@ export default function BottomTabBar() {
           background: 'rgba(255,255,255,0.97)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderTop: '1px solid #EDC7B7',
+          borderTop: '1px solid #E8E4D6',
           display: 'flex',
           justifyContent: 'space-around',
           alignItems: 'stretch',
           padding: '6px 0 calc(8px + env(safe-area-inset-bottom))',
           zIndex: 1000,
           fontFamily: SHARED.font,
-          boxShadow: '0 -2px 16px rgba(172,59,97,0.08)',
+          boxShadow: '0 -2px 16px rgba(49,55,43,0.08)',
         }}
       >
         {tabs.map(tab => {
           const active = isActive(tab)
-          const iconColor = active ? '#AC3B61' : '#BAB2B5'
+          const iconColor = active ? '#31372B' : '#A8A695'
           return (
             <Link
               key={tab.label}
@@ -96,7 +96,7 @@ export default function BottomTabBar() {
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 gap: 3, padding: '4px 2px',
                 textDecoration: 'none',
-                color: active ? '#AC3B61' : '#8E8D8A',
+                color: active ? '#31372B' : '#8E8D8A',
                 transition: 'color 0.15s ease',
                 position: 'relative',
               }}
@@ -105,13 +105,13 @@ export default function BottomTabBar() {
                 <span style={{
                   position: 'absolute', top: 0,
                   width: 32, height: 3, borderRadius: 0,
-                  background: '#AC3B61',
+                  background: '#31372B',
                 }} />
               )}
               <TabIcon name={tab.icon} size={26} color={iconColor} />
               <span style={{
                 fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.02em',
-                color: active ? '#AC3B61' : '#8E8D8A',
+                color: active ? '#31372B' : '#8E8D8A',
               }}>{tab.label}</span>
             </Link>
           )

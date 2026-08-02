@@ -23,62 +23,62 @@ export const SHARED = {
 } as const
 
 // ── Brand palette (Image 1 reference — warm peach + magenta + navy + gold)
-//   Main bg #F5E9E2 · Secondary bg #EDC7B7 · Card #EEE2DC · Muted #BAB2B5
-//   Primary magenta #AC3B61 · Accent navy #123C69 · Gold #D4A574 · White #FFFFFF
+//   Main bg #FAF7EE · Secondary bg #E8E4D6 · Card #EFEBDD · Muted #A8A695
+//   Primary magenta #31372B · Accent navy #31372B · Gold #4A5240 · White #FFFFFF
 
 export const BRAND = {
   // Warm peach ramp (backgrounds)
-  peach50: '#FBF4EF',
-  peach100: '#F5E9E2',   // main background
-  peach200: '#EEE2DC',   // card / neutral
-  peach300: '#EDC7B7',   // secondary background
-  peach400: '#D4A574',   // warm gold accent
-  peach500: '#BAB2B5',   // muted gray
+  peach50: '#FAF7EE',
+  peach100: '#FAF7EE',   // main background
+  peach200: '#EFEBDD',   // card / neutral
+  peach300: '#E8E4D6',   // secondary background
+  peach400: '#4A5240',   // warm gold accent
+  peach500: '#A8A695',   // muted gray
   // Brand magenta ramp
-  magenta50: '#FBEAEE',
-  magenta100: '#F5D2DB',
-  magenta200: '#E8A0B0',
-  magenta300: '#D47890',
-  magenta400: '#C05070',
-  magenta500: '#AC3B61',  // primary brand magenta
-  magenta600: '#8E2D4C',  // hover
-  magenta700: '#6F1F3A',
+  magenta50: '#FAF7EE',
+  magenta100: '#EFEBDD',
+  magenta200: '#4A5240',
+  magenta300: '#4A5240',
+  magenta400: '#31372B',
+  magenta500: '#31372B',  // primary brand magenta
+  magenta600: '#262B20',  // hover
+  magenta700: '#1F2419',
   // Brand navy ramp
-  navy50: '#E6ECF3',
-  navy100: '#C7D2E0',
-  navy200: '#8FA3BF',
-  navy300: '#5A77A0',
-  navy400: '#2E5783',
-  navy500: '#123C69',     // primary dark navy
-  navy600: '#0E2E52',
-  navy700: '#0A213C',
+  navy50: '#FAF7EE',
+  navy100: '#E8E4D6',
+  navy200: '#A8A695',
+  navy300: '#6B6E5A',
+  navy400: '#4A5240',
+  navy500: '#31372B',     // primary dark navy
+  navy600: '#262B20',
+  navy700: '#1F2419',
   // Aliases (for backwards-compat with code that referenced blue50..blue900)
-  blue50: '#FBF4EF',
-  blue100: '#F5E9E2',
-  blue200: '#EEE2DC',
-  blue300: '#EDC7B7',
-  blue400: '#D4A574',
-  blue500: '#AC3B61',
-  blue600: '#AC3B61',
-  blue700: '#8E2D4C',
-  blue800: '#123C69',
-  blue900: '#0A213C',
+  blue50: '#FAF7EE',
+  blue100: '#FAF7EE',
+  blue200: '#EFEBDD',
+  blue300: '#E8E4D6',
+  blue400: '#4A5240',
+  blue500: '#31372B',
+  blue600: '#31372B',
+  blue700: '#262B20',
+  blue800: '#31372B',
+  blue900: '#1F2419',
   // Ink & text
-  ink: '#123C69',
-  inkSoft: '#3D4F6E',
-  muted: '#BAB2B5',
-  border: '#EDC7B7',
-  borderSoft: '#F5E9E2',
-  bg: '#F5E9E2',
-  bgSub: '#EDC7B7',
+  ink: '#31372B',
+  inkSoft: '#6B6E5A',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  borderSoft: '#FAF7EE',
+  bg: '#FAF7EE',
+  bgSub: '#E8E4D6',
   white: '#ffffff',
   // Gradients
-  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
-  gradientDeep: 'linear-gradient(135deg, #8E2D4C 0%, #AC3B61 100%)',
-  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
-  gradientInstagram: 'linear-gradient(135deg, #AC3B61 0%, #C05070 35%, #D4A574 70%, #123C69 100%)',
+  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+  gradientDeep: 'linear-gradient(135deg, #262B20 0%, #31372B 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
+  gradientInstagram: 'linear-gradient(135deg, #31372B 0%, #31372B 35%, #4A5240 70%, #31372B 100%)',
   gradientInstagramRing:
-    'linear-gradient(45deg, #AC3B61 0%, #C05070 25%, #D4A574 50%, #123C69 75%, #AC3B61 100%)',
+    'linear-gradient(45deg, #31372B 0%, #31372B 25%, #4A5240 50%, #31372B 75%, #31372B 100%)',
 } as const
 
 // ── AgriPay Palette (Blue & White) ─────────────────────────────────
@@ -147,17 +147,17 @@ export const SOCIAL = {
 // ── Auth Palette (Image 1 — warm peach + magenta + navy) ──────────
 
 export const AUTH = {
-  bg: '#F5E9E2',
+  bg: '#FAF7EE',
   white: SHARED.white,
-  primary: '#AC3B61',
-  primaryHover: '#8E2D4C',
-  primaryLight: '#F5D2DB',
-  text: '#123C69',
-  muted: '#BAB2B5',
-  border: '#EDC7B7',
-  gradient: 'linear-gradient(135deg, #D47890 0%, #AC3B61 40%, #8E2D4C 100%)',
-  gradientBlob1: 'radial-gradient(circle at 30% 20%, rgba(172,59,97,0.18) 0%, transparent 50%)',
-  gradientBlob2: 'radial-gradient(circle at 80% 80%, rgba(18,60,105,0.14) 0%, transparent 50%)',
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  text: '#31372B',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  gradient: 'linear-gradient(135deg, #4A5240 0%, #31372B 40%, #262B20 100%)',
+  gradientBlob1: 'radial-gradient(circle at 30% 20%, rgba(49,55,43,0.18) 0%, transparent 50%)',
+  gradientBlob2: 'radial-gradient(circle at 80% 80%, rgba(49,55,43,0.14) 0%, transparent 50%)',
 }
 
 // ── Admin Palette (Dark Slate — kept dark for data density) ───────
@@ -193,80 +193,80 @@ export const ADMIN = {
 // ── Buyer Palette (Image 1 — warm peach + magenta + navy) ──────────
 
 export const BUYER = {
-  bg: '#F5E9E2',
-  bgSub: '#EDC7B7',
+  bg: '#FAF7EE',
+  bgSub: '#E8E4D6',
   white: SHARED.white,
-  primary: '#AC3B61',
-  primaryHover: '#8E2D4C',
-  primaryLight: '#F5D2DB',
-  primarySoft: '#FBF4EF',
-  accent: '#123C69',
-  text: '#123C69',
-  textSecondary: '#3D4F6E',
-  muted: '#BAB2B5',
-  border: '#EDC7B7',
-  borderLight: '#F5E9E2',
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  primarySoft: '#FAF7EE',
+  accent: '#31372B',
+  text: '#31372B',
+  textSecondary: '#6B6E5A',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  borderLight: '#FAF7EE',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#D4A574',
-  goldLight: '#FBF4EF',
+  gold: '#4A5240',
+  goldLight: '#FAF7EE',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
-  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
+  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
 }
 
 // ── Farmer Palette (Image 1 — warm peach + magenta + navy) ─────────
 
 export const FARMER = {
-  bg: '#F5E9E2',
-  bgSub: '#EDC7B7',
+  bg: '#FAF7EE',
+  bgSub: '#E8E4D6',
   white: SHARED.white,
-  primary: '#AC3B61',
-  primaryHover: '#8E2D4C',
-  primaryLight: '#F5D2DB',
-  primarySoft: '#FBF4EF',
-  accent: '#123C69',
-  text: '#123C69',
-  textSecondary: '#3D4F6E',
-  muted: '#BAB2B5',
-  border: '#EDC7B7',
-  borderLight: '#F5E9E2',
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  primarySoft: '#FAF7EE',
+  accent: '#31372B',
+  text: '#31372B',
+  textSecondary: '#6B6E5A',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  borderLight: '#FAF7EE',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#D4A574',
-  goldLight: '#FBF4EF',
+  gold: '#4A5240',
+  goldLight: '#FAF7EE',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
-  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
+  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
 }
 
 // ── Transporter Palette (Image 1 — warm peach + magenta + navy) ────
 
 export const TRANSPORTER = {
-  bg: '#F5E9E2',
-  bgSub: '#EDC7B7',
+  bg: '#FAF7EE',
+  bgSub: '#E8E4D6',
   white: SHARED.white,
-  primary: '#AC3B61',
-  primaryHover: '#8E2D4C',
-  primaryLight: '#F5D2DB',
-  primarySoft: '#FBF4EF',
-  accent: '#123C69',
-  text: '#123C69',
-  textSecondary: '#3D4F6E',
-  muted: '#BAB2B5',
-  border: '#EDC7B7',
-  borderLight: '#F5E9E2',
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  primarySoft: '#FAF7EE',
+  accent: '#31372B',
+  text: '#31372B',
+  textSecondary: '#6B6E5A',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  borderLight: '#FAF7EE',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #AC3B61 0%, #C05070 50%, #D47890 100%)',
-  gradientSoft: 'linear-gradient(135deg, #F5E9E2 0%, #EDC7B7 100%)',
+  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
 }
 
 // ── Reusable Style Presets ─────────────────────────────────────────

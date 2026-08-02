@@ -10,16 +10,16 @@ type Card = {
 }
 
 const ROLE_CARDS: Card[] = [
-  { href: '/auth/login?role=farmer', title: 'Farmer/Vyapari', sub: 'Sell your produce', color: '#AC3B61' },
-  { href: '/auth/login?role=buyer', title: 'Buyer', sub: 'Source fresh crops', color: '#123C69' },
-  { href: '/auth/login?role=transporter', title: 'Transporter', sub: 'Deliver goods', color: '#D4A574' },
+  { href: '/auth/login?role=farmer', title: 'Farmer/Vyapari', sub: 'Sell your produce', color: '#31372B' },
+  { href: '/auth/login?role=buyer', title: 'Buyer', sub: 'Source fresh crops', color: '#31372B' },
+  { href: '/auth/login?role=transporter', title: 'Transporter', sub: 'Deliver goods', color: '#4A5240' },
 ]
 
 const FEATURE_CARDS: Card[] = [
-  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#AC3B61' },
+  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#31372B' },
   { href: '/agripay', title: 'AgriPay', sub: 'Pay & transfer', color: '#E98074' },
   { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
-  { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#8E2D4C' },
+  { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
 ]
 
 const FEATURES = ['Zero middlemen', 'Instant UPI payments', 'Real-time tracking', 'Live GPS tracking']
@@ -28,21 +28,21 @@ export default function Home() {
   return (
     <main style={pageStyle}>
       {/* Background blobs — warm magenta + navy glows */}
-      <div aria-hidden style={{ position: 'fixed', top: '-15%', right: '-8%', width: 560, height: 560, borderRadius: '50%', filter: 'blur(70px)', background: 'radial-gradient(circle, rgba(172,59,97,0.10) 0%, transparent 70%)', animation: 'float1 14s ease-in-out infinite', pointerEvents: 'none', zIndex: 0 }} />
-      <div aria-hidden style={{ position: 'fixed', bottom: '-18%', left: '-10%', width: 520, height: 520, borderRadius: '50%', filter: 'blur(70px)', background: 'radial-gradient(circle, rgba(18,60,105,0.07) 0%, transparent 70%)', animation: 'float2 18s ease-in-out infinite', pointerEvents: 'none', zIndex: 0 }} />
+      <div aria-hidden style={{ position: 'fixed', top: '-15%', right: '-8%', width: 560, height: 560, borderRadius: '50%', filter: 'blur(70px)', background: 'radial-gradient(circle, rgba(49,55,43,0.10) 0%, transparent 70%)', animation: 'float1 14s ease-in-out infinite', pointerEvents: 'none', zIndex: 0 }} />
+      <div aria-hidden style={{ position: 'fixed', bottom: '-18%', left: '-10%', width: 520, height: 520, borderRadius: '50%', filter: 'blur(70px)', background: 'radial-gradient(circle, rgba(49,55,43,0.07) 0%, transparent 70%)', animation: 'float2 18s ease-in-out infinite', pointerEvents: 'none', zIndex: 0 }} />
 
       {/* Dotted grid */}
-      <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, backgroundImage: 'radial-gradient(rgba(172,59,97,0.06) 1px, transparent 1px)', backgroundSize: '34px 34px', maskImage: 'radial-gradient(ellipse 70% 60% at 50% 38%, black 20%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 38%, black 20%, transparent 75%)' }} />
+      <div aria-hidden style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 1, backgroundImage: 'radial-gradient(rgba(49,55,43,0.06) 1px, transparent 1px)', backgroundSize: '34px 34px', maskImage: 'radial-gradient(ellipse 70% 60% at 50% 38%, black 20%, transparent 75%)', WebkitMaskImage: 'radial-gradient(ellipse 70% 60% at 50% 38%, black 20%, transparent 75%)' }} />
 
       <div className="fade-up" style={contentStyle}>
         {/* Logo */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
           <div style={{
             width: 88, height: 88, borderRadius: 24,
-            background: 'linear-gradient(135deg, #ffffff, #FBF4EF)',
-            border: '2px solid #AC3B61',
+            background: 'linear-gradient(135deg, #ffffff, #FAF7EE)',
+            border: '2px solid #31372B',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 12px 40px rgba(172,59,97,0.18), inset 0 1px 0 rgba(255,255,255,0.9)',
+            boxShadow: '0 12px 40px rgba(49,55,43,0.18), inset 0 1px 0 rgba(255,255,255,0.9)',
           }}>
             <img src="/icons/icon-192.png" alt="AgriEasy" width={52} height={52} style={{ borderRadius: 13 }} />
           </div>
@@ -52,11 +52,11 @@ export default function Home() {
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: 8,
           background: 'rgba(255,255,255,0.85)',
-          border: '1px solid rgba(172,59,97,0.18)',
+          border: '1px solid rgba(49,55,43,0.18)',
           borderRadius: 100, padding: '6px 18px', marginBottom: 20,
         }}>
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#D4A574', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }} />
-          <span style={{ color: '#AC3B61', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+          <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#4A5240', display: 'inline-block', animation: 'pulse 2s ease-in-out infinite' }} />
+          <span style={{ color: '#31372B', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
             India&apos;s Agricultural Marketplace
           </span>
         </div>
@@ -71,18 +71,18 @@ export default function Home() {
           {/* Decorative leaf sprig above the title */}
           <span aria-hidden style={{
             position: 'absolute', top: '-26px', left: '50%', transform: 'translateX(-50%)',
-            fontSize: '1.4rem', filter: 'drop-shadow(0 2px 4px rgba(212,165,116,0.4))',
+            fontSize: '1.4rem', filter: 'drop-shadow(0 2px 4px rgba(74,82,64,0.4))',
             animation: 'leafSway 4s ease-in-out infinite',
           }}>🌿</span>
 
           {/* "Agri" — bold Poppins with magenta gradient + shine sweep */}
           <span className="hero-agri" style={{
-            background: 'linear-gradient(110deg, #AC3B61 0%, #C05070 35%, #D47890 50%, #C05070 65%, #AC3B61 100%)',
+            background: 'linear-gradient(110deg, #31372B 0%, #31372B 35%, #4A5240 50%, #31372B 65%, #31372B 100%)',
             backgroundSize: '200% auto',
             WebkitBackgroundClip: 'text', backgroundClip: 'text',
             WebkitTextFillColor: 'transparent', color: 'transparent',
             fontWeight: 900,
-            filter: 'drop-shadow(0 3px 10px rgba(172,59,97,0.22))',
+            filter: 'drop-shadow(0 3px 10px rgba(49,55,43,0.22))',
             display: 'inline-block',
             position: 'relative',
           }}>
@@ -101,7 +101,7 @@ export default function Home() {
           {/* "Easy" — elegant Dancing Script italic with navy→gold gradient */}
           <span style={{
             fontFamily: "var(--font-dancing), 'Dancing Script', cursive",
-            background: 'linear-gradient(120deg, #123C69 0%, #2E5783 30%, #D4A574 70%, #C05070 100%)',
+            background: 'linear-gradient(120deg, #31372B 0%, #4A5240 30%, #4A5240 70%, #31372B 100%)',
             backgroundSize: '200% auto',
             WebkitBackgroundClip: 'text', backgroundClip: 'text',
             WebkitTextFillColor: 'transparent', color: 'transparent',
@@ -109,7 +109,7 @@ export default function Home() {
             fontSize: '1.18em',
             transform: 'translateY(-0.04em) rotate(-2deg)',
             display: 'inline-block',
-            filter: 'drop-shadow(0 3px 10px rgba(18,60,105,0.20))',
+            filter: 'drop-shadow(0 3px 10px rgba(49,55,43,0.20))',
             animation: 'gradientFlow 6s ease-in-out infinite',
             marginLeft: '0.04em',
           }}>Easy</span>
@@ -123,11 +123,11 @@ export default function Home() {
           <svg viewBox="0 0 280 18" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
             <defs>
               <linearGradient id="swooshGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#AC3B61" stopOpacity="0" />
-                <stop offset="20%" stopColor="#AC3B61" stopOpacity="0.9" />
-                <stop offset="50%" stopColor="#D4A574" stopOpacity="1" />
-                <stop offset="80%" stopColor="#123C69" stopOpacity="0.9" />
-                <stop offset="100%" stopColor="#123C69" stopOpacity="0" />
+                <stop offset="0%" stopColor="#31372B" stopOpacity="0" />
+                <stop offset="20%" stopColor="#31372B" stopOpacity="0.9" />
+                <stop offset="50%" stopColor="#4A5240" stopOpacity="1" />
+                <stop offset="80%" stopColor="#31372B" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="#31372B" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path d="M 5 10 Q 70 2, 140 9 T 275 10" stroke="url(#swooshGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
@@ -135,22 +135,22 @@ export default function Home() {
           <span style={{
             position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
             fontSize: '0.95rem',
-            background: 'linear-gradient(135deg, #ffffff 0%, #FBF4EF 100%)',
-            border: '1.5px solid #D4A574',
+            background: 'linear-gradient(135deg, #ffffff 0%, #FAF7EE 100%)',
+            border: '1.5px solid #4A5240',
             borderRadius: '50%', width: 22, height: 22,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(212,165,116,0.3)',
+            boxShadow: '0 2px 8px rgba(74,82,64,0.3)',
           }}>🌱</span>
         </div>
 
         {/* Taglines */}
-        <p style={{ color: '#123C69', fontSize: 'clamp(1rem, 2.2vw, 1.2rem)', margin: '0 0 4px', fontWeight: 600 }}>
+        <p style={{ color: '#31372B', fontSize: 'clamp(1rem, 2.2vw, 1.2rem)', margin: '0 0 4px', fontWeight: 600 }}>
           Connecting farmers directly with buyers
         </p>
-        <p style={{ color: '#AC3B61', fontSize: '0.82rem', margin: '0 0 6px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+        <p style={{ color: '#31372B', fontSize: '0.82rem', margin: '0 0 6px', fontWeight: 600, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
           Sow • Grow • Thrive
         </p>
-        <p style={{ color: '#5A77A0', fontSize: '0.8rem', margin: '0 0 20px', fontWeight: 400 }}>
+        <p style={{ color: '#6B6E5A', fontSize: '0.8rem', margin: '0 0 20px', fontWeight: 400 }}>
           End-to-end agricultural trade · Social network · Wallet · Logistics
         </p>
 
@@ -160,10 +160,10 @@ export default function Home() {
             <span key={f} style={{
               display: 'inline-flex', alignItems: 'center', gap: 5,
               padding: '5px 12px', borderRadius: 100,
-              background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(172,59,97,0.15)',
-              color: '#123C69', fontSize: '0.72rem', fontWeight: 600,
+              background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(49,55,43,0.15)',
+              color: '#31372B', fontSize: '0.72rem', fontWeight: 600,
             }}>
-              <span style={{ color: '#D4A574' }}>✓</span> {f}
+              <span style={{ color: '#4A5240' }}>✓</span> {f}
             </span>
           ))}
         </div>
@@ -174,7 +174,7 @@ export default function Home() {
             <Link key={c.title} href={c.href} className="home-card fade-up" style={{
               background: 'rgba(255,255,255,0.8)',
               backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-              border: '1px solid rgba(172,59,97,0.15)',
+              border: '1px solid rgba(49,55,43,0.15)',
               borderRadius: 16, padding: '20px 10px', textAlign: 'center',
               textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
               transition: 'transform .3s, background .25s, border-color .25s',
@@ -189,8 +189,8 @@ export default function Home() {
               }}>
                 <CardIcon name={c.title} size={34} color={c.color} />
               </div>
-              <p style={{ color: '#AC3B61', fontWeight: 800, fontSize: '0.92rem', margin: 0 }}>{c.title}</p>
-              <p style={{ color: '#5A77A0', fontSize: '0.7rem', margin: '3px 0 0' }}>{c.sub}</p>
+              <p style={{ color: '#31372B', fontWeight: 800, fontSize: '0.92rem', margin: 0 }}>{c.title}</p>
+              <p style={{ color: '#6B6E5A', fontSize: '0.7rem', margin: '3px 0 0' }}>{c.sub}</p>
             </Link>
           ))}
         </div>
@@ -199,9 +199,9 @@ export default function Home() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 28, maxWidth: 560, width: '100%' }}>
           {FEATURE_CARDS.map((c, i) => (
             <Link key={c.title} href={c.href} className={`home-card-sm fade-up${c.title === 'Bill Calculator' ? ' home-card-feat' : ''}`} style={{
-              background: c.title === 'Bill Calculator' ? 'linear-gradient(135deg, rgba(172,59,97,0.10), rgba(212,165,116,0.10))' : 'rgba(255,255,255,0.55)',
+              background: c.title === 'Bill Calculator' ? 'linear-gradient(135deg, rgba(49,55,43,0.10), rgba(74,82,64,0.10))' : 'rgba(255,255,255,0.55)',
               backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-              border: c.title === 'Bill Calculator' ? '1.5px solid rgba(172,59,97,0.35)' : '1px solid rgba(172,59,97,0.10)',
+              border: c.title === 'Bill Calculator' ? '1.5px solid rgba(49,55,43,0.35)' : '1px solid rgba(49,55,43,0.10)',
               borderRadius: 12, padding: '14px 8px', textAlign: 'center',
               textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
               transition: 'transform .3s, background .2s, box-shadow .2s',
@@ -209,7 +209,7 @@ export default function Home() {
               position: 'relative',
             }}>
               {c.title === 'Bill Calculator' && (
-                <span style={{ position: 'absolute', top: -7, right: -3, background: '#AC3B61', color: '#fff', fontSize: '0.56rem', fontWeight: 800, padding: '2px 6px', borderRadius: 100, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: '0 2px 6px rgba(172,59,97,0.3)' }}>NEW</span>
+                <span style={{ position: 'absolute', top: -7, right: -3, background: '#31372B', color: '#fff', fontSize: '0.56rem', fontWeight: 800, padding: '2px 6px', borderRadius: 100, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: '0 2px 6px rgba(49,55,43,0.3)' }}>NEW</span>
               )}
               <div style={{
                 width: 44, height: 44, borderRadius: 12, marginBottom: 6,
@@ -218,8 +218,8 @@ export default function Home() {
               }}>
                 <CardIcon name={c.title} size={28} color={c.color} />
               </div>
-              <p style={{ color: '#AC3B61', fontWeight: 700, fontSize: '0.78rem', margin: 0 }}>{c.title}</p>
-              <p style={{ color: '#5A77A0', fontSize: '0.64rem', opacity: 0.75, margin: '2px 0 0' }}>{c.sub}</p>
+              <p style={{ color: '#31372B', fontWeight: 700, fontSize: '0.78rem', margin: 0 }}>{c.title}</p>
+              <p style={{ color: '#6B6E5A', fontSize: '0.64rem', opacity: 0.75, margin: '2px 0 0' }}>{c.sub}</p>
             </Link>
           ))}
         </div>
@@ -227,20 +227,20 @@ export default function Home() {
         {/* Quote */}
         <div className="fade-up" style={{
           margin: '0 auto 22px', padding: '16px 28px', maxWidth: 440,
-          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(172,59,97,0.10)',
+          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(49,55,43,0.10)',
           borderRadius: 14, textAlign: 'center', animationDelay: '0.45s',
         }}>
           <p style={{
             fontSize: 'clamp(0.95rem, 2.5vw, 1.2rem)', fontWeight: 800, letterSpacing: '0.1em',
             margin: 0, textTransform: 'uppercase',
-            background: 'linear-gradient(90deg, #D4A574, #C05070, #AC3B61, #C05070, #D4A574)',
+            background: 'linear-gradient(90deg, #4A5240, #31372B, #31372B, #31372B, #4A5240)',
             backgroundSize: '200% auto', WebkitBackgroundClip: 'text', backgroundClip: 'text',
             WebkitTextFillColor: 'transparent', color: 'transparent',
             animation: 'shimmer 5s linear infinite',
           }}>
             &ldquo;Jai Jawan, Jai Kisan&rdquo;
           </p>
-          <p style={{ color: '#5A77A0', fontSize: '0.72rem', margin: '6px 0 0' }}>
+          <p style={{ color: '#6B6E5A', fontSize: '0.72rem', margin: '6px 0 0' }}>
             — Lal Bahadur Shastri, 2nd Prime Minister of India
           </p>
         </div>
@@ -248,11 +248,11 @@ export default function Home() {
         {/* CTA */}
         <Link href="/auth/register" className="home-cta fade-up" style={{
           display: 'inline-flex', alignItems: 'center', gap: 8, padding: '13px 28px',
-          background: 'linear-gradient(135deg, #AC3B61 0%, #8E2D4C 50%, #6F1F3A 100%)',
+          background: 'linear-gradient(135deg, #31372B 0%, #262B20 50%, #1F2419 100%)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          border: '1px solid rgba(172,59,97,0.3)', borderRadius: 100,
+          border: '1px solid rgba(49,55,43,0.3)', borderRadius: 100,
           textDecoration: 'none', color: '#fff', fontSize: '0.9rem', fontWeight: 600,
-          boxShadow: '0 8px 28px rgba(172,59,97,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
+          boxShadow: '0 8px 28px rgba(49,55,43,0.35), inset 0 1px 0 rgba(255,255,255,0.2)',
           transition: 'transform .3s, box-shadow .3s',
           animationDelay: '0.55s',
         }}>
@@ -260,7 +260,7 @@ export default function Home() {
         </Link>
 
         {/* Footer */}
-        <p className="fade-up" style={{ marginTop: 22, color: '#5A77A0', fontSize: '0.7rem', opacity: 0.7, animationDelay: '0.65s' }}>
+        <p className="fade-up" style={{ marginTop: 22, color: '#6B6E5A', fontSize: '0.7rem', opacity: 0.7, animationDelay: '0.65s' }}>
           Trusted by farmers, buyers &amp; transporters across India 🇮🇳
         </p>
       </div>
@@ -298,14 +298,14 @@ export default function Home() {
 
         .home-card::after {
           content: ''; position: absolute; top: 0; left: 0; width: 50%; height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(212,165,116,0.10), transparent);
+          background: linear-gradient(90deg, transparent, rgba(74,82,64,0.10), transparent);
           transform: translateX(-160%) skewX(-20deg); pointer-events: none;
         }
         .home-card:hover {
           transform: translateY(-5px);
           background: rgba(255,255,255,1) !important;
-          border-color: rgba(172,59,97,0.3) !important;
-          box-shadow: 0 16px 44px rgba(172,59,97,0.15) !important;
+          border-color: rgba(49,55,43,0.3) !important;
+          box-shadow: 0 16px 44px rgba(49,55,43,0.15) !important;
         }
         .home-card:hover::after { animation: shine 0.8s ease-out; }
 
@@ -315,14 +315,14 @@ export default function Home() {
         }
         .home-card-feat:hover {
           transform: translateY(-4px) !important;
-          background: linear-gradient(135deg, rgba(172,59,97,0.18), rgba(212,165,116,0.18)) !important;
-          box-shadow: 0 12px 32px rgba(172,59,97,0.2) !important;
-          border-color: rgba(172,59,97,0.55) !important;
+          background: linear-gradient(135deg, rgba(49,55,43,0.18), rgba(74,82,64,0.18)) !important;
+          box-shadow: 0 12px 32px rgba(49,55,43,0.2) !important;
+          border-color: rgba(49,55,43,0.55) !important;
         }
 
         .home-cta:hover {
           transform: translateY(-2px);
-          box-shadow: 0 14px 36px rgba(172,59,97,0.4) !important;
+          box-shadow: 0 14px 36px rgba(49,55,43,0.4) !important;
         }
 
         @media (max-width: 480px) {
@@ -340,7 +340,7 @@ export default function Home() {
 
 const pageStyle: CSSProperties = {
   minHeight: '100vh',
-  background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(172,59,97,0.08) 0%, transparent 60%), linear-gradient(180deg, #F5E9E2 0%, #FBF4EF 40%, #F5E9E2 100%)',
+  background: 'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(49,55,43,0.08) 0%, transparent 60%), linear-gradient(180deg, #FAF7EE 0%, #FAF7EE 40%, #FAF7EE 100%)',
   fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, -apple-system, sans-serif",
   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
   padding: '40px 16px', position: 'relative', overflow: 'hidden',

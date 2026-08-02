@@ -206,7 +206,7 @@ export default function FarmerDashboard() {
         {/* Stat cards — 2 columns on mobile, 4 on desktop */}
         <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(240px, 1fr))', gap: isMobile ? 8 : 14, marginBottom: isMobile ? 16 : 24 }}>
           <StatCard icon="🏪" label="Nearby Buyers" value={nearbyCount} sub={isMobile ? undefined : 'Demand listings within 50 km'} href="/farmer/search-buyers" isMobile={isMobile} />
-          <StatCard icon="⚖️" label="Total Demand" value={`${totalDemand.toLocaleString('en-IN')} kg`} sub={isMobile ? undefined : 'Across nearby buyers'} accent="#C05070" isMobile={isMobile} />
+          <StatCard icon="⚖️" label="Total Demand" value={`${totalDemand.toLocaleString('en-IN')} kg`} sub={isMobile ? undefined : 'Across nearby buyers'} accent="#31372B" isMobile={isMobile} />
           <StatCard icon="📈" label="Top Price" value={`₹${topPrice}`} sub={isMobile ? undefined : 'Highest offer nearby'} accent="#10b981" isMobile={isMobile} />
           <StatCard icon="🚚" label="My Bookings" value="→" sub={isMobile ? undefined : 'Track deliveries'} href="/farmer/my-bookings" accent="#f59e0b" isMobile={isMobile} />
         </div>
@@ -215,7 +215,7 @@ export default function FarmerDashboard() {
         <div style={{ marginBottom: isMobile ? 20 : 28 }}>
           <h2 style={{ color: FARMER.text, fontSize: isMobile ? '0.95rem' : '1.05rem', fontWeight: 800, margin: '0 0 10px' }}>Quick actions</h2>
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: isMobile ? 8 : 10 }}>
-            <QuickAction icon="🔍" label="Search Buyers" href="/farmer/search-buyers" color="#C05070" />
+            <QuickAction icon="🔍" label="Search Buyers" href="/farmer/search-buyers" color="#31372B" />
             <QuickAction icon="🚚" label="My Bookings" href="/farmer/my-bookings" color="#10b981" />
             <QuickAction icon="📍" label="Location" href="/farmer/setup-location" color="#f59e0b" />
             <QuickAction icon="📒" label="Ledger" href="/ledger" color="#dc2626" />

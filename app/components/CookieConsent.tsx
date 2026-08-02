@@ -51,7 +51,7 @@ export default function CookieConsent() {
         <button
           onClick={accept}
           style={{
-            flex: 1, padding: '10px 16px', background: '#AC3B61', color: '#fff',
+            flex: 1, padding: '10px 16px', background: '#31372B', color: '#fff',
             border: 'none', borderRadius: 10, fontSize: '0.86rem', fontWeight: 700, cursor: 'pointer',
           }}
         >
