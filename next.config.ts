@@ -55,6 +55,20 @@ const nextConfig: NextConfig = {
 
   async redirects() {
     return [
+      // Redirect any .vercel.app preview/production URL to the main custom domain
+      // Preserves the path — e.g. /agrisocial → /agrisocial
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'agrieasy-com1-steel.vercel.app' }],
+        destination: 'https://agrieasy.site/:path*',
+        permanent: false,
+      },
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'agrieasy-com1.vercel.app' }],
+        destination: 'https://agrieasy.site/:path*',
+        permanent: false,
+      },
       {
         source: '/dashboard',
         destination: '/auth/login',
