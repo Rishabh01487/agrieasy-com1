@@ -352,17 +352,26 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                                 setFollowLoading(false)
                             }}
                             style={{
-                                background: following ? 'rgba(255,255,255,0.15)' : 'rgba(123,167,217,0.85)',
-                                border: following ? '1px solid rgba(255,255,255,0.4)' : 'none',
+                                // Glass effect on dark clips background: semi-transparent + blur
+                                background: following
+                                    ? 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06))'
+                                    : 'linear-gradient(135deg, rgba(123,167,217,0.55), rgba(123,167,217,0.35))',
+                                border: following
+                                    ? '1px solid rgba(255,255,255,0.3)'
+                                    : '1px solid rgba(123,167,217,0.5)',
                                 borderRadius: '100px',
-                                padding: '3px 12px',
+                                padding: '4px 14px',
                                 color: SOCIAL.clips.text,
                                 fontSize: '0.72rem',
                                 fontWeight: 800,
                                 cursor: followLoading ? 'wait' : 'pointer',
-                                transition: 'all 0.2s ease',
-                                backdropFilter: 'blur(4px)',
-                                WebkitBackdropFilter: 'blur(4px)',
+                                transition: 'all 0.25s ease',
+                                backdropFilter: 'blur(8px) saturate(180%)',
+                                WebkitBackdropFilter: 'blur(8px) saturate(180%)',
+                                boxShadow: following
+                                    ? 'inset 0 1px 0 rgba(255,255,255,0.2), 0 1px 3px rgba(0,0,0,0.2)'
+                                    : 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(0,0,0,0.3)',
+                                textShadow: '0 1px 2px rgba(0,0,0,0.2)',
                             }}
                         >
                             {!viewerId ? '+ Follow' : following ? 'Following' : '+ Follow'}

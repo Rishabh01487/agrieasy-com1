@@ -213,18 +213,27 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                                     setFollowLoading(false)
                                 }}
                                 style={{
-                                    background: following ? 'rgba(123,167,217,0.15)' : 'rgba(123,167,217,0.85)',
+                                    // Glass effect: semi-transparent blue + blur + subtle border + shadow
+                                    background: following
+                                        ? 'linear-gradient(135deg, rgba(123,167,217,0.12), rgba(123,167,217,0.06))'
+                                        : 'linear-gradient(135deg, rgba(123,167,217,0.55), rgba(123,167,217,0.35))',
                                     color: following ? SOCIAL.primary : '#fff',
-                                    border: following ? `1px solid ${SOCIAL.border}` : 'none',
+                                    border: following
+                                        ? '1px solid rgba(123,167,217,0.3)'
+                                        : '1px solid rgba(123,167,217,0.5)',
                                     borderRadius: '100px',
-                                    padding: '3px 12px',
+                                    padding: '4px 14px',
                                     fontSize: '0.68rem',
                                     fontWeight: 800,
                                     cursor: followLoading ? 'wait' : 'pointer',
-                                    transition: 'all 0.2s ease',
+                                    transition: 'all 0.25s ease',
                                     flexShrink: 0,
-                                    backdropFilter: 'blur(4px)',
-                                    WebkitBackdropFilter: 'blur(4px)',
+                                    backdropFilter: 'blur(8px) saturate(180%)',
+                                    WebkitBackdropFilter: 'blur(8px) saturate(180%)',
+                                    boxShadow: following
+                                        ? 'inset 0 1px 0 rgba(255,255,255,0.5), 0 1px 3px rgba(123,167,217,0.15)'
+                                        : 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(123,167,217,0.25)',
+                                    textShadow: following ? 'none' : '0 1px 2px rgba(0,0,0,0.1)',
                                 }}
                             >
                                 {!viewerId ? '+ Follow' : following ? 'Following' : '+ Follow'}
