@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { useIsMobile } from '@/lib/use-is-mobile'
+import { Icon } from '@/lib/icons'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number }
@@ -33,6 +34,8 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [showPicZoom, setShowPicZoom] = useState(false)
     const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
     const longPressFiredRef = useRef(false)
+    const touchStartX = useRef(0)
+    const touchStartY = useRef(0)
 
     // Long-press handlers for profile picture zoom (Fix: Issue 4 — Instagram-style)
     const startPress = () => {
@@ -56,6 +59,23 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
             return
         }
         router.push(`/agrisocial/stories/${profileId}`)
+    }
+
+    // Swipe-to-switch-tab handlers (Fix: Issue 5 — Instagram-style swipe between Posts/Clips/Saved)
+    const handleTouchStart = (e: React.TouchEvent) => {
+        touchStartX.current = e.touches[0].clientX
+        touchStartY.current = e.touches[0].clientY
+    }
+    const handleTouchEnd = (e: React.TouchEvent) => {
+        const dx = e.changedTouches[0].clientX - touchStartX.current
+        const dy = e.changedTouches[0].clientY - touchStartY.current
+        // Only treat as horizontal swipe if |dx| > |dy| and |dx| > 50px
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+            const tabs = isOwn ? ['posts', 'clips', 'saved'] : ['posts', 'clips']
+            const i = tabs.indexOf(tab)
+            const next = dx < 0 ? Math.min(tabs.length - 1, i + 1) : Math.max(0, i - 1)
+            setTab(tabs[next] as 'posts' | 'clips' | 'saved')
+        }
     }
     const [highlights, setHighlights] = useState<any[]>([])
     const isMobile = useIsMobile()
@@ -257,18 +277,24 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
 
                 {/* Tabs */}
                 <div style={{ display: 'flex', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 6 }}>
-                    {([['posts', `📷 Posts`], ['clips', `🎬 Clips`], ...(isOwn ? [['saved', `🔖 Saved`] as const] : [])] as const).map(([k, l]) => (
+                    {([
+                        ['posts', '📷', 'Posts'],
+                        ['clips', '🎬', 'Clips'],
+                        ...(isOwn ? [['saved', 'bookmark', 'Saved'] as const] : []),
+                    ] as const).map(([k, icon, label]) => (
                         <button key={k} onClick={() => setTab(k as 'posts' | 'clips' | 'saved')}
-                            style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? SOCIAL.primary : 'transparent'}`, fontWeight: 700, fontSize: '0.82rem', color: tab === k ? SOCIAL.primary : SOCIAL.muted, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {l}
+                            style={{ flex: 1, padding: '12px', background: 'none', border: 'none', borderBottom: `2px solid ${tab === k ? SOCIAL.primary : 'transparent'}`, fontWeight: 700, fontSize: '0.82rem', color: tab === k ? SOCIAL.primary : SOCIAL.muted, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                            {icon === 'bookmark' ? <Icon name="bookmark" size={16} color={tab === k ? SOCIAL.primary : SOCIAL.muted} filled={tab === k} /> : <span>{icon}</span>}
+                            {label}
                         </button>
                     ))}
                 </div>
 
-                {/* Grid */}
+                {/* Grid — with swipe-to-switch-tab (Fix: Issue 5) */}
+                <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
                 {displayPosts.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 60 }}>
-                        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>{tab === 'posts' ? '📷' : tab === 'clips' ? '🎬' : '🔖'}</div>
+                        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>{tab === 'posts' ? '📷' : tab === 'clips' ? '🎬' : <Icon name="bookmark" size={36} color={SOCIAL.muted} />}</div>
                         <p style={{ color: SOCIAL.muted }}>{isOwn ? (tab === 'saved' ? 'Save posts to see them here' : 'Share your first post!') : 'No posts yet'}</p>
                         {isOwn && tab !== 'saved' && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 12, fontSize: '0.86rem' }}>+ Create</Link>}
                     </div>
@@ -318,6 +344,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         })}
                     </div>
                 )}
+                </div>
             </div>
 
             {/* Profile Picture Zoom Overlay (long-press to zoom — Instagram-style) */}
