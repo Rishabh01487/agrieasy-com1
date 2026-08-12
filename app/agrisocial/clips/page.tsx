@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Spinner, InlineLoader } from '@/app/components/Spinner'
 import { Icon } from '@/lib/icons'
 import BottomSheet from '@/app/components/BottomSheet'
 
@@ -46,11 +47,35 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const lastTapRef = useRef<number>(0)
     const videoRef = useRef<HTMLVideoElement>(null)
     const viewRecordedRef = useRef(false)
+    const cardRef = useRef<HTMLDivElement>(null)
+
+    // Backup IntersectionObserver — self-pause when card scrolls out of view
+    // This is a safety net in case the parent's activeIdx doesn't update reliably
+    useEffect(() => {
+        const card = cardRef.current
+        if (!card) return
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (!e.isIntersecting && videoRef.current) {
+                    // Clip scrolled out of view — pause immediately
+                    videoRef.current.pause()
+                    videoRef.current.currentTime = 0
+                }
+            })
+        }, { threshold: 0.5 })
+        observer.observe(card)
+        return () => observer.disconnect()
+    }, [])
 
     useEffect(() => {
         if (videoRef.current) {
-            if (isActive && !paused) { videoRef.current.play().catch(() => null) }
-            else { videoRef.current.pause() }
+            if (isActive && !paused) {
+                videoRef.current.play().catch(() => null)
+            } else {
+                // Aggressive pause: stop playback + reset to beginning + clear audio
+                videoRef.current.pause()
+                videoRef.current.currentTime = 0
+            }
         }
     }, [isActive, paused])
 
@@ -180,7 +205,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const ytId = clip.mediaUrl ? (clip.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
 
     return (
-        <div style={{ position: 'relative', height: '100vh', width: '100%', background: SOCIAL.clips.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start', flexShrink: 0 }}>
+        <div ref={cardRef} style={{ position: 'relative', height: '100vh', width: '100%', background: SOCIAL.clips.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start', flexShrink: 0 }}>
             {/* Media */}
             {ytId ? (
                 <iframe key={`${ytId}-${isActive ? 'active' : 'inactive'}`} src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&loop=1&playlist=${ytId}`}
@@ -329,7 +354,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             {/* Comment bottom sheet — slides up like Instagram Reels */}
             <BottomSheet open={showComments} onClose={() => setShowComments(false)} title="Comments" height="tall">
                 {loadingComments ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: SOCIAL.muted, fontSize: '0.86rem' }}>Loading comments…</div>
+                    <div style={{ textAlign: 'center', padding: 40 }}><Spinner size={24} color={SOCIAL.muted} /></div>
                 ) : comments.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 40, color: SOCIAL.muted, fontSize: '0.86rem' }}>
                         <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>💬</div>
@@ -464,8 +489,8 @@ export default function KrishiClips() {
             <div ref={containerRef} style={{ height: '100vh', overflowY: 'scroll', scrollSnapType: 'y mandatory', scrollbarWidth: 'none' }}>
                 {loading ? (
                     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', color: SOCIAL.clips.text }}>
-                        <span style={{ fontSize: '3rem' }}>🎬</span>
-                        <p style={{ fontWeight: 700 }}>Loading KrishiClips…</p>
+                        <Spinner size={36} color="#fff" />
+                        <p style={{ fontWeight: 700, fontSize: '0.85rem', opacity: 0.8 }}>Loading KrishiClips…</p>
                     </div>
                 ) : clips.length === 0 ? (
                     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', color: SOCIAL.clips.text, textAlign: 'center', padding: '24px' }}>
@@ -482,8 +507,9 @@ export default function KrishiClips() {
                 {/* Infinite scroll sentinel */}
                 <div ref={sentinelRef} style={{ height: 1, scrollSnapAlign: 'none' }} />
                 {loadingMore && (
-                    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.clips.text }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Loading more clips…</span>
+                    <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.clips.text, gap: 12 }}>
+                        <Spinner size={24} color="#fff" />
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', opacity: 0.8 }}>Loading more clips…</span>
                     </div>
                 )}
             </div>
