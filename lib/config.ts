@@ -24,8 +24,8 @@ const envSchema = z.object({
   // sets the env var. We log a loud warning at config init.
   ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY should be ≥32 chars').optional(),
 
-  // Auth
-  NEXTAUTH_URL: z.string().url().optional(),
+  // Auth — NEXTAUTH_URL validated as string (not strict URL) because some Vercel setups set it without https://
+  NEXTAUTH_URL: z.string().optional(),
   NEXTAUTH_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
@@ -46,7 +46,7 @@ const envSchema = z.object({
   FAST2SMS_API_KEY: z.string().optional(),
 
   // Redis (Upstash)
-  UPSTASH_REDIS_REST_URL: z.string().url().optional(),
+  UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 
   // Cloudinary
