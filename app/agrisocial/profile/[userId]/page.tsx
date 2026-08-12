@@ -328,10 +328,12 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                             <p style={{ color: '#fff', fontSize: '0.62rem', margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
                                         </div>
                                     )}
-                                    {/* Play icon overlay for video clips (shown on top of video thumbnail) */}
+                                    {/* Play icon overlay for video clips (YouTube-style red circle) */}
                                     {isVideo && (
-                                        <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                            <span style={{ color: '#fff', fontSize: '0.6rem' }}>▶️</span>
+                                        <div style={{ position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
+                                            <svg width="9" height="9" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}>
+                                                <path d="M8 5v14l11-7z" />
+                                            </svg>
                                         </div>
                                     )}
                                     {/* Likes + comments + views footer */}
