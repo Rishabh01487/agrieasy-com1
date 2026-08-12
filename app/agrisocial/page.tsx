@@ -529,6 +529,7 @@ export default function AgriSocialFeed() {
             setHasMore(newPosts.length > 0 && (append ? (posts.length + newPosts.length < total) : (newPosts.length < total)))
             pageRef.current = pageNum
         } catch {
+            // Friendly error message — don't alarm users with "MongoDB Atlas paused" etc.
             if (!append) { setError('Could not load posts. Please check your connection.'); setPosts([]) }
         } finally {
             setLoading(false)
@@ -706,9 +707,9 @@ export default function AgriSocialFeed() {
                         </div>
                     ) : error ? (
                         <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📡</div>
-                            <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Could not connect to server</h3>
-                            <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>MongoDB Atlas might be paused. Check your connection.</p>
+                            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔄</div>
+                            <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Couldn&apos;t load posts</h3>
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>A temporary network issue occurred. Please try again.</p>
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <button onClick={() => { pageRef.current = 1; setHasMore(true); fetchPosts(userId, category, feed, 1, false) }} style={{ padding: '10px 20px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Try Again</button>
                                 <Link href="/agrisocial/create" style={{ padding: '10px 20px', background: SOCIAL.primaryLight, color: SOCIAL.textSecondary, border: `1px solid ${SOCIAL.border}`, borderRadius: '10px', fontWeight: 700, textDecoration: 'none' }}>+ Create Post</Link>
