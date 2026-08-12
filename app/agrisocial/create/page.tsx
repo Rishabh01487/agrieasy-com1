@@ -63,6 +63,14 @@ function CreateContent() {
 
     useEffect(() => () => { stopCamera(); if (timerRef.current) clearInterval(timerRef.current) }, [stopCamera])
 
+    // Sync postType with URL ?type= param on client-side navigation (Fix: Issue 1)
+    // Without this, navigating between /create and /create?type=krishiclip doesn't update postType
+    useEffect(() => {
+        if (typeParam === 'krishiclip') setPostType('krishiclip')
+        else if (typeParam === 'story') setPostType('story')
+        else setPostType('post')
+    }, [typeParam])
+
     useEffect(() => {
         if (mode === 'camera' && streamRef.current && videoRef.current) {
             videoRef.current.srcObject = streamRef.current

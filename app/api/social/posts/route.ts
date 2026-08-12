@@ -131,6 +131,15 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Invalidate clips + explore cache so newly uploaded krishiclips appear immediately (Fix: Issue 1)
+        if (post.type === 'krishiclip') {
+            try {
+                const { invalidateByPrefix } = await import('@/lib/cache')
+                await invalidateByPrefix('clips')
+                await invalidateByPrefix('explore')
+            } catch { /* cache invalidation is best-effort */ }
+        }
+
         return NextResponse.json({ post }, { status: 201 })
     } catch (e) {
         console.error(e)
