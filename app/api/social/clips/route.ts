@@ -42,11 +42,8 @@ export async function GET(req: NextRequest) {
         // displayed views count at a stale value for the entire cache window.
 
         return NextResponse.json({ success: true, data: { clips }, meta: paginationMeta(page, limit, total) })
-    } catch (e: any) {
+    } catch (e) {
         console.error('Clips API error:', e)
-        return NextResponse.json(
-            { error: 'Failed to fetch clips', detail: e?.message || String(e), stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined },
-            { status: 500 }
-        )
+        return NextResponse.json({ error: 'Failed to fetch clips' }, { status: 500 })
     }
 }
