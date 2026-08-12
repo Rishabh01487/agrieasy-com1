@@ -35,14 +35,10 @@ export async function GET(req: NextRequest) {
         const cached = await cacheGet(cacheKey, fetchClips, { ttl: 15, prefix: 'clips' })
         const { clips, total } = cached ?? await fetchClips()
 
-        // Increment views in DB, then reflect the updated count in the response
-        // (Fix: Issue 3 — previously incremented AFTER fetch, so displayed value was always stale by 1)
-        const ids = clips.map(c => c._id)
-        if (ids.length > 0) {
-            await Post.updateMany({ _id: { $in: ids } }, { $inc: { views: 1 } })
-            // Reflect the increment in the response (avoid stale display)
-            clips.forEach(c => { c.views = (c.views || 0) + 1 })
-        }
+        // NOTE: Per-clip view increment has been moved to a dedicated endpoint
+        // POST /api/social/clips/[id]/view — called from the client when a clip becomes active.
+        // This fixes Issue 3 where the bulk increment here fought with the cache, freezing the
+        // displayed views count at a stale value for the entire cache window.
 
         return NextResponse.json({ success: true, data: { clips }, meta: paginationMeta(page, limit, total) })
     } catch (e) {
