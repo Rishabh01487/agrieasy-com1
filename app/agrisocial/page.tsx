@@ -65,6 +65,8 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [liked, setLiked] = useState(viewerId ? post.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(post.likesCount || 0)
     const [saved, setSaved] = useState(viewerId ? post.savedBy?.includes(viewerId) : false)
+    const [following, setFollowing] = useState(false)
+    const [followLoading, setFollowLoading] = useState(false)
     const [showComments, setShowComments] = useState(false)
     const [commentText, setCommentText] = useState('')
     const [comments, setComments] = useState<Comment[]>(post.comments || [])
@@ -188,9 +190,43 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     <Avatar name={authorName} size={38} src={!isDeletedUser ? (post.userId as User).profilePic : undefined} />
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {makeHandle(authorName)}
-                    </Link>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {makeHandle(authorName)}
+                        </Link>
+                        {viewerId && !isOwner && authorId && (
+                            <button
+                                onClick={async () => {
+                                    if (followLoading) return
+                                    setFollowLoading(true)
+                                    const prev = following
+                                    setFollowing(!prev)
+                                    try {
+                                        await authFetch('/api/social/follow', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ followerId: viewerId, followingId: authorId }),
+                                        })
+                                    } catch { setFollowing(prev) }
+                                    setFollowLoading(false)
+                                }}
+                                style={{
+                                    background: following ? SOCIAL.primaryLight : SOCIAL.primary,
+                                    color: following ? SOCIAL.primary : '#fff',
+                                    border: 'none',
+                                    borderRadius: '100px',
+                                    padding: '2px 10px',
+                                    fontSize: '0.68rem',
+                                    fontWeight: 800,
+                                    cursor: followLoading ? 'wait' : 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    flexShrink: 0,
+                                }}
+                            >
+                                {following ? 'Following' : '+ Follow'}
+                            </button>
+                        )}
+                    </div>
                     <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {roleLabel[authorRole || ''] || 'User'}
                         {post.location ? ` · 📍 ${post.location}` : ''}
