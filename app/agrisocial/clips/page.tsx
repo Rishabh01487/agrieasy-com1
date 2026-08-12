@@ -57,15 +57,39 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (!e.isIntersecting && videoRef.current) {
-                    // Clip scrolled out of view — pause immediately
+                    // Clip scrolled out of view — pause immediately + reset
                     videoRef.current.pause()
                     videoRef.current.currentTime = 0
+                    setPaused(false)  // reset paused state so next play starts fresh
                 }
             })
         }, { threshold: 0.5 })
         observer.observe(card)
         return () => observer.disconnect()
     }, [])
+
+    // Global event listener: when any clip becomes active, all OTHER clips pause
+    // This is the most reliable approach — uses a custom event broadcast
+    useEffect(() => {
+        const handleActiveChange = (e: Event) => {
+            const activeClipId = (e as CustomEvent).detail?.clipId
+            if (activeClipId !== clip._id && videoRef.current) {
+                // This is NOT the active clip — pause immediately
+                videoRef.current.pause()
+                videoRef.current.currentTime = 0
+                setPaused(false)
+            }
+        }
+        window.addEventListener('agrieasy-active-clip-change', handleActiveChange as EventListener)
+        return () => window.removeEventListener('agrieasy-active-clip-change', handleActiveChange as EventListener)
+    }, [clip._id])
+
+    // When THIS clip becomes active, broadcast the event so all other clips pause
+    useEffect(() => {
+        if (isActive) {
+            window.dispatchEvent(new CustomEvent('agrieasy-active-clip-change', { detail: { clipId: clip._id } }))
+        }
+    }, [isActive, clip._id])
 
     useEffect(() => {
         if (videoRef.current) {
@@ -346,9 +370,14 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
             </div>
 
-            {/* KrishiClips badge */}
-            <div style={{ position: 'absolute', top: '60px', left: '16px', background: 'rgba(234,88,12,0.85)', borderRadius: '100px', padding: '4px 12px', backdropFilter: 'blur(8px)' }}>
-                <span style={{ color: SOCIAL.clips.text, fontSize: '0.72rem', fontWeight: 800 }}>🎬 KrishiClip</span>
+            {/* YouTube-style play button badge (replaces 🎬 KrishiClip emoji) */}
+            <div style={{ position: 'absolute', top: '60px', left: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 2 }}>
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                </div>
+                <span style={{ color: SOCIAL.clips.text, fontSize: '0.72rem', fontWeight: 800, background: 'rgba(0,0,0,0.5)', borderRadius: '100px', padding: '3px 10px', backdropFilter: 'blur(8px)' }}>KrishiClip</span>
             </div>
 
             {/* Comment bottom sheet — slides up like Instagram Reels */}
@@ -471,7 +500,14 @@ export default function KrishiClips() {
             {/* Top bar */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button onClick={() => router.push('/agrisocial')} style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '10px', padding: '8px 12px', color: SOCIAL.clips.text, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>← Back</button>
-                <div style={{ flex: 1, fontWeight: 900, fontSize: '1.1rem', color: SOCIAL.clips.text }}>🎬 KrishiClips</div>
+                <div style={{ flex: 1, fontWeight: 900, fontSize: '1.1rem', color: SOCIAL.clips.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}>
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </div>
+                    KrishiClips
+                </div>
                 <button onClick={() => router.push('/agrisocial/create?type=krishiclip')} style={{ background: `${SOCIAL.clips.accent}d9`, border: 'none', borderRadius: '10px', padding: '8px 14px', color: SOCIAL.clips.text, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>+ Create</button>
             </div>
 
