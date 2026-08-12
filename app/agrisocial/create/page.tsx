@@ -426,7 +426,7 @@ function CreateContent() {
                         {FILTERS.map((f, i) => (
                             <button key={f.name} onClick={() => setSelectedFilter(i)}
                                 style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #42476E, #5A80CA)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style, transition: 'all 0.2s ease' }} />
+                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #42476E, #7BA7D9)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style, transition: 'all 0.2s ease' }} />
                                 <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontWeight: 700 }}>{f.name}</span>
                             </button>
                         ))}
@@ -473,7 +473,7 @@ function CreateContent() {
                             <>
                                 <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
                                     {carouselFiles.map((_, i) => (
-                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#5A80CA' : 'rgba(255,255,255,0.5)' }} />
+                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#7BA7D9' : 'rgba(255,255,255,0.5)' }} />
                                     ))}
                                 </div>
                                 {carouselIdx > 0 && (

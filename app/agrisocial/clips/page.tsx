@@ -295,7 +295,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.sharedCount || 0}</span>
                 </button>
                 <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
-                    <Icon name="bookmark" size={32} color={saved ? '#5A80CA' : '#fff'} filled={saved} />
+                    <Icon name="bookmark" size={32} color={saved ? '#7BA7D9' : '#fff'} filled={saved} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{saved ? 'Saved' : 'Save'}</span>
                 </button>
                 {isOwner && (
