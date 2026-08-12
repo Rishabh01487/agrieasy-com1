@@ -30,6 +30,9 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [liked, setLiked] = useState(viewerId ? clip.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(clip.likesCount || 0)
     const [saved, setSaved] = useState(viewerId ? clip.savedBy?.includes(viewerId) : false)
+    const [viewsCount, setViewsCount] = useState(clip.views || 0)
+    const [following, setFollowing] = useState(false)
+    const [followLoading, setFollowLoading] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [shareCopied, setShareCopied] = useState(false)
     const [muted, setMuted] = useState(false)
@@ -42,6 +45,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [loadingComments, setLoadingComments] = useState(false)
     const lastTapRef = useRef<number>(0)
     const videoRef = useRef<HTMLVideoElement>(null)
+    const viewRecordedRef = useRef(false)
 
     useEffect(() => {
         if (videoRef.current) {
@@ -49,6 +53,22 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             else { videoRef.current.pause() }
         }
     }, [isActive, paused])
+
+    // Record a view when this clip becomes active (Fix: Issue 3 — per-clip view tracking)
+    // Uses a ref to ensure we only record ONE view per active session (not on every re-render)
+    useEffect(() => {
+        if (isActive && viewerId && !viewRecordedRef.current) {
+            viewRecordedRef.current = true
+            // Optimistically increment local count for instant feedback
+            setViewsCount(c => c + 1)
+            // Fire-and-forget API call to record the view server-side
+            authFetch(`/api/social/clips/${clip._id}/view`, { method: 'POST' }).catch(() => null)
+        }
+        if (!isActive) {
+            // Reset so next time this clip becomes active, we record another view
+            viewRecordedRef.current = false
+        }
+    }, [isActive, viewerId, clip._id])
 
     const handleVideoTap = () => {
         const now = Date.now()
@@ -163,7 +183,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         <div style={{ position: 'relative', height: '100vh', width: '100%', background: SOCIAL.clips.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start', flexShrink: 0 }}>
             {/* Media */}
             {ytId ? (
-                <iframe src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&loop=1&playlist=${ytId}`}
+                <iframe key={`${ytId}-${isActive ? 'active' : 'inactive'}`} src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&loop=1&playlist=${ytId}`}
                     style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} allowFullScreen title="KrishiClip" allow="autoplay" />
             ) : clip.mediaUrl && clip.mediaType === 'video' ? (
                 <video ref={videoRef} src={clip.mediaUrl} loop muted={muted} playsInline controls={false}
@@ -237,7 +257,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 )}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text }}>
                     <Icon name="eye" size={32} color="#fff" />
-                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.views || 0}</span>
+                    <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{viewsCount}</span>
                 </div>
             </div>
 
@@ -261,9 +281,42 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
 
             {/* Bottom info */}
             <div style={{ position: 'absolute', bottom: '16px', left: '16px', right: '72px' }}>
-                <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ color: SOCIAL.clips.text, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none', display: 'block', marginBottom: '4px' }}>
-                    @{(authorName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')} · {roleLabel[authorRole || ''] || 'Member'}
-                </Link>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ color: SOCIAL.clips.text, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none' }}>
+                        @{(authorName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')} · {roleLabel[authorRole || ''] || 'Member'}
+                    </Link>
+                    {viewerId && !isOwner && authorId && (
+                        <button
+                            onClick={async () => {
+                                if (followLoading) return
+                                setFollowLoading(true)
+                                const prev = following
+                                setFollowing(!prev)
+                                try {
+                                    await authFetch('/api/social/follow', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ followerId: viewerId, followingId: authorId }),
+                                    })
+                                } catch { setFollowing(prev) }
+                                setFollowLoading(false)
+                            }}
+                            style={{
+                                background: following ? 'rgba(255,255,255,0.15)' : SOCIAL.clips.accent,
+                                border: following ? '1px solid rgba(255,255,255,0.4)' : 'none',
+                                borderRadius: '100px',
+                                padding: '3px 12px',
+                                color: SOCIAL.clips.text,
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                cursor: followLoading ? 'wait' : 'pointer',
+                                transition: 'all 0.2s ease',
+                            }}
+                        >
+                            {following ? 'Following' : '+ Follow'}
+                        </button>
+                    )}
+                </div>
                 {clip.caption && <p style={{ color: 'rgba(245,245,245,0.9)', fontSize: '0.85rem', margin: '0 0 4px', lineHeight: 1.4 }}>{clip.caption}</p>}
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
             </div>
@@ -373,8 +426,17 @@ export default function KrishiClips() {
         const container = containerRef.current
         if (!container) return
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach(e => { if (e.isIntersecting) { const idx = parseInt((e.target as HTMLElement).dataset.idx || '0'); setActiveIdx(idx) } })
-        }, { threshold: 0.6 })
+            entries.forEach(e => {
+                const idx = parseInt((e.target as HTMLElement).dataset.idx || '0')
+                if (e.isIntersecting) {
+                    setActiveIdx(idx)
+                } else {
+                    // Explicitly pause clips that scroll out of view (Fix: Issue 2 — safety net)
+                    const video = e.target.querySelector('video')
+                    if (video && !video.paused) video.pause()
+                }
+            })
+        }, { root: container, threshold: 0.6 })
         container.querySelectorAll('.clip-item').forEach(el => observer.observe(el))
         return () => observer.disconnect()
     }, [clips])
