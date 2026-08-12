@@ -31,12 +31,17 @@ export async function GET(req: NextRequest) {
             return { clips, total }
         }
 
-        const cached = await cacheGet(cacheKey, fetchClips, { ttl: 120, prefix: 'clips' })
+        // Reduce cache TTL from 120s to 15s so views count updates faster (Fix: Issue 3)
+        const cached = await cacheGet(cacheKey, fetchClips, { ttl: 15, prefix: 'clips' })
         const { clips, total } = cached ?? await fetchClips()
 
+        // Increment views in DB, then reflect the updated count in the response
+        // (Fix: Issue 3 — previously incremented AFTER fetch, so displayed value was always stale by 1)
         const ids = clips.map(c => c._id)
         if (ids.length > 0) {
             await Post.updateMany({ _id: { $in: ids } }, { $inc: { views: 1 } })
+            // Reflect the increment in the response (avoid stale display)
+            clips.forEach(c => { c.views = (c.views || 0) + 1 })
         }
 
         return NextResponse.json({ success: true, data: { clips }, meta: paginationMeta(page, limit, total) })
