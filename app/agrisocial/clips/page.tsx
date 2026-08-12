@@ -337,7 +337,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     {viewerId !== authorId && authorId && (
                         <button
                             onClick={async () => {
-                                if (!viewerId) { router.push('/auth/login'); return }
+                                if (!viewerId) { window.location.href = '/auth/login'; return }
                                 if (followLoading) return
                                 setFollowLoading(true)
                                 const prev = following

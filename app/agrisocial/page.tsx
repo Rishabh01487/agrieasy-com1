@@ -198,7 +198,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                         {viewerId !== authorId && authorId && (
                             <button
                                 onClick={async () => {
-                                    if (!viewerId) { router.push('/auth/login'); return }
+                                    if (!viewerId) { window.location.href = '/auth/login'; return }
                                     if (followLoading) return
                                     setFollowLoading(true)
                                     const prev = following
