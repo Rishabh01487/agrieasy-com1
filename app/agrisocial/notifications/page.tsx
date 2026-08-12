@@ -36,9 +36,9 @@ const typeMeta: Record<string, { icon: IconName; color: string; verb: (n: Notifi
     comment:     { icon: 'comment', color: '#42476E', verb: () => 'commented on your post.' },
     comment_like:{ icon: 'heart', color: '#ef4444', verb: () => 'liked your comment.' },
     follow:      { icon: 'explore', color: '#10b981', verb: () => 'started following you.' },
-    mention:     { icon: 'send', color: '#E87B7B', verb: () => 'mentioned you.' },
+    mention:     { icon: 'send', color: '#D9534F', verb: () => 'mentioned you.' },
     message:     { icon: 'dm', color: '#f59e0b', verb: () => 'sent you a message.' },
-    story:       { icon: 'reels', color: '#E87B7B', verb: () => 'shared a new post.' },
+    story:       { icon: 'reels', color: '#D9534F', verb: () => 'shared a new post.' },
 }
 
 export default function AgriSocialNotifications() {

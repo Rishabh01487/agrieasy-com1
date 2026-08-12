@@ -18,8 +18,8 @@ export default function AgriSocialError({ error, reset }: { error: Error & { dig
         )}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
           <button onClick={reset} style={{ padding: '10px 22px', background: '#42476E', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>Try Again</button>
-          <Link href="/agrisocial/explore" style={{ padding: '10px 22px', background: '#FFFFFF', color: '#42476E', border: '1.5px solid #E87B7B', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.88rem' }}>Explore Posts</Link>
-          <Link href="/" style={{ padding: '10px 22px', background: '#FFFFFF', color: '#42476E', border: '1.5px solid #E87B7B', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.88rem' }}>Go Home</Link>
+          <Link href="/agrisocial/explore" style={{ padding: '10px 22px', background: '#FFFFFF', color: '#42476E', border: '1.5px solid #D9534F', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.88rem' }}>Explore Posts</Link>
+          <Link href="/" style={{ padding: '10px 22px', background: '#FFFFFF', color: '#42476E', border: '1.5px solid #D9534F', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.88rem' }}>Go Home</Link>
         </div>
       </div>
     </div>

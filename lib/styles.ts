@@ -114,40 +114,40 @@ export const AGRI = {
 
 // ── AgriSocial Palette (Glass Blue — frosted translucent throughout) ─
 //   #FFFFFF (white)        — background
-//   #E87B7B (glass blue)   — primary, accent, all interactive elements
-//   #5A2A2A (navy)         — text, headings
+//   #D9534F (glass blue)   — primary, accent, all interactive elements
+//   #4A2020 (navy)         — text, headings
 //   Glass effect applied everywhere via rgba + backdrop-filter
 
 export const SOCIAL = {
   bg: '#FFFFFF',
   bgSub: '#FCF0F0',
   white: SHARED.white,
-  primary: '#E87B7B',
-  primaryHover: '#D96B6B',
-  primaryLight: 'rgba(232,123,123,0.15)',
-  primarySoft: 'rgba(232,123,123,0.08)',
-  accent: '#E87B7B',
-  text: '#5A2A2A',
-  textSecondary: '#7A5050',
-  muted: '#9A7070',
-  border: 'rgba(232,123,123,0.3)',
-  borderLight: 'rgba(232,123,123,0.15)',
+  primary: '#D9534F',
+  primaryHover: '#B8423F',
+  primaryLight: 'rgba(217,83,79,0.15)',
+  primarySoft: 'rgba(217,83,79,0.08)',
+  accent: '#D9534F',
+  text: '#4A2020',
+  textSecondary: '#6A4040',
+  muted: '#8A6060',
+  border: 'rgba(217,83,79,0.3)',
+  borderLight: 'rgba(217,83,79,0.15)',
   card: SHARED.white,
-  green: '#E87B7B',
-  greenLight: 'rgba(232,123,123,0.1)',
-  red: '#E87B7B',
+  green: '#D9534F',
+  greenLight: 'rgba(217,83,79,0.1)',
+  red: '#D9534F',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, rgba(232,123,123,0.55), rgba(232,123,123,0.35))',
-  gradientSoft: 'linear-gradient(135deg, rgba(232,123,123,0.12), rgba(232,123,123,0.06))',
+  gradient: 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))',
+  gradientSoft: 'linear-gradient(135deg, rgba(217,83,79,0.12), rgba(217,83,79,0.06))',
   gradientRing:
-    'linear-gradient(45deg, #E87B7B 0%, #D96B6B 25%, #F09B9B 50%, #D96B6B 75%, #E87B7B 100%)',
+    'linear-gradient(45deg, #D9534F 0%, #B8423F 25%, #E87B7B 50%, #B8423F 75%, #D9534F 100%)',
   clips: {
-    bg: '#5A2A2A',
+    bg: '#4A2020',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
-    accent: '#E87B7B',
-    gradient: 'linear-gradient(135deg, #E87B7B 0%, #D96B6B 50%, #F09B9B 100%)',
+    accent: '#D9534F',
+    gradient: 'linear-gradient(135deg, #D9534F 0%, #B8423F 50%, #E87B7B 100%)',
   },
 }
 

@@ -295,7 +295,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.sharedCount || 0}</span>
                 </button>
                 <button onClick={handleSave} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
-                    <Icon name="bookmark" size={32} color={saved ? '#E87B7B' : '#fff'} filled={saved} />
+                    <Icon name="bookmark" size={32} color={saved ? '#D9534F' : '#fff'} filled={saved} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{saved ? 'Saved' : 'Save'}</span>
                 </button>
                 {isOwner && (
@@ -355,10 +355,10 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                                 // Glass effect on dark clips background: semi-transparent + blur
                                 background: following
                                     ? 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06))'
-                                    : 'linear-gradient(135deg, rgba(232,123,123,0.55), rgba(232,123,123,0.35))',
+                                    : 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))',
                                 border: following
                                     ? '1px solid rgba(255,255,255,0.3)'
-                                    : '1px solid rgba(232,123,123,0.5)',
+                                    : '1px solid rgba(217,83,79,0.5)',
                                 borderRadius: '100px',
                                 padding: '4px 14px',
                                 color: SOCIAL.clips.text,

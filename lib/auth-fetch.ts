@@ -15,7 +15,8 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
   }
 
   const key = getRequestKey(url, options)
-  if (key && inflightRequests.has(key)) {
+  // Don't deduplicate if a signal is provided (abort controller needs unique requests)
+  if (key && !options.signal && inflightRequests.has(key)) {
     return inflightRequests.get(key)!
   }
 
@@ -25,7 +26,7 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
     credentials: 'include',
   })
 
-  if (key) {
+  if (key && !options.signal) {
     inflightRequests.set(key, promise)
     promise.finally(() => inflightRequests.delete(key))
   }
