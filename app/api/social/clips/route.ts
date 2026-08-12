@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
+import '@/lib/models/User'  // Import User model so .populate('userId') works in serverless
 import { parsePagination, paginationMeta } from '@/lib/api-response'
 import { SOCIAL } from '@/lib/config'
 import { get as cacheGet } from '@/lib/cache'
