@@ -184,7 +184,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const ytId = post.mediaUrl ? (post.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
 
     return (
-        <div className="fade-in-up" style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', boxShadow: SHARED.shadowMd }}>
+        <div className="fade-in-up" style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(123,167,217,0.2)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', boxShadow: SHARED.shadowMd }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
                 <Link href={`/agrisocial/profile/${authorId}`} style={{ textDecoration: 'none' }}>
@@ -474,7 +474,7 @@ function SuggestedSidebar({ users, viewerId }: { users: SuggestedUser[]; viewerI
     if (users.length === 0) return null
 
     return (
-        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '16px', boxShadow: SHARED.shadowMd }}>
+        <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(123,167,217,0.2)', borderRadius: '12px', padding: '16px', boxShadow: SHARED.shadowMd }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <h3 style={{ color: SOCIAL.muted, fontSize: '0.84rem', fontWeight: 700, margin: 0 }}>Suggested for you</h3>
                 <Link href="/agrisocial/search" style={{ color: SOCIAL.text, fontSize: '0.74rem', fontWeight: 700, textDecoration: 'none' }}>Find more</Link>
@@ -677,7 +677,7 @@ export default function AgriSocialFeed() {
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto' }} className="no-scrollbar">
                         {([['following', 'Following'], ['ranked', '🔥 Top'], ['latest', '⏱ Latest']] as const).map(([k, label]) => (
                             <button key={k} onClick={() => setFeed(k)}
-                                style={{ padding: '7px 16px', background: feed === k ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${feed === k ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === k ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                style={{ padding: '7px 16px', background: feed === k ? 'linear-gradient(135deg, rgba(123,167,217,0.55), rgba(123,167,217,0.35))' : 'rgba(255,255,255,0.6)', border: `1.5px solid ${feed === k ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === k ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                 {label}
                             </button>
                         ))}
@@ -687,7 +687,7 @@ export default function AgriSocialFeed() {
                     <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '14px', marginBottom: '6px' }} className="no-scrollbar">
                         {CATEGORIES.map(c => (
                             <button key={c.key} onClick={() => setCategory(c.key)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', background: category === c.key ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${category === c.key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: category === c.key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', background: category === c.key ? 'linear-gradient(135deg, rgba(123,167,217,0.55), rgba(123,167,217,0.35))' : 'rgba(255,255,255,0.6)', border: `1.5px solid ${category === c.key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: category === c.key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                 {c.icon} {c.label}
                             </button>
                         ))}
@@ -695,7 +695,7 @@ export default function AgriSocialFeed() {
 
                     {/* Create post CTA */}
                     <div onClick={() => router.push('/agrisocial/create')}
-                        style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', boxShadow: SHARED.shadowMd }}>
+                        style={{ background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(123,167,217,0.2)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', boxShadow: SHARED.shadowMd }}>
                         <Avatar name={userId || '🌾'} size={36} />
                         <div style={{ flex: 1, padding: '9px 14px', background: SOCIAL.bg, borderRadius: '100px', color: SOCIAL.muted, fontSize: '0.86rem' }}>What&apos;s happening on your farm today?</div>
                         <div style={{ display: 'flex', gap: '6px' }}>
@@ -718,7 +718,7 @@ export default function AgriSocialFeed() {
                             ))}
                         </div>
                     ) : error ? (
-                        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
+                        <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(123,167,217,0.2)', borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
                             <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔄</div>
                             <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Couldn&apos;t load posts</h3>
                             <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>A temporary network issue occurred. Please try again.</p>
@@ -728,7 +728,7 @@ export default function AgriSocialFeed() {
                             </div>
                         </div>
                     ) : posts.length === 0 ? (
-                        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '48px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
+                        <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(123,167,217,0.2)', borderRadius: '12px', padding: '48px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
                             <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>{category === 'all' ? '🌾' : catIcon[category] || '📢'}</div>
                             <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>{category === 'all' ? 'No posts yet!' : `No ${category} posts yet`}</h3>
                             <p style={{ color: SOCIAL.muted, fontSize: '0.9rem', margin: '0 0 20px' }}>
@@ -768,7 +768,7 @@ export default function AgriSocialFeed() {
                 {/* Right sidebar (desktop only) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {userId && (
-                        <Link href={`/agrisocial/profile/${userId}`} style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', boxShadow: SHARED.shadowMd }}>
+                        <Link href={`/agrisocial/profile/${userId}`} style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(123,167,217,0.2)', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', boxShadow: SHARED.shadowMd }}>
                             <Avatar name="You" size={44} />
                             <div>
                                 <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', margin: 0 }}>My Profile</p>

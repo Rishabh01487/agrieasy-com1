@@ -112,41 +112,42 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (3-color: White bg + Glass Blue + Navy — no mixing) ─
-//   #FFFFFF (white)        — background only
-//   #7BA7D9 (glass blue)   — primary, accent, buttons, borders only
-//   #42476E (navy)         — text, headings only
-//   Glass effect: rgba(123,167,217,0.85) with backdrop-filter: blur
+// ── AgriSocial Palette (Glass Blue — frosted translucent throughout) ─
+//   #FFFFFF (white)        — background
+//   #7BA7D9 (glass blue)   — primary, accent, all interactive elements
+//   #42476E (navy)         — text, headings
+//   Glass effect applied everywhere via rgba + backdrop-filter
 
 export const SOCIAL = {
   bg: '#FFFFFF',
-  bgSub: '#FFFFFF',
+  bgSub: '#F0F6FC',
   white: SHARED.white,
   primary: '#7BA7D9',
   primaryHover: '#6A97C9',
-  primaryLight: '#E8F0FA',
-  primarySoft: '#FFFFFF',
+  primaryLight: 'rgba(123,167,217,0.15)',
+  primarySoft: 'rgba(123,167,217,0.08)',
   accent: '#7BA7D9',
   text: '#42476E',
-  textSecondary: '#42476E',
-  muted: '#42476E',
-  border: '#7BA7D9',
-  borderLight: '#7BA7D9',
+  textSecondary: '#5A6E94',
+  muted: '#7A8BA0',
+  border: 'rgba(123,167,217,0.3)',
+  borderLight: 'rgba(123,167,217,0.15)',
   card: SHARED.white,
   green: '#7BA7D9',
-  greenLight: '#FFFFFF',
-  red: '#7BA7D9',
-  redLight: '#FFFFFF',
-  gradient: '#7BA7D9',
-  gradientSoft: '#FFFFFF',
-  gradientRing: '#7BA7D9',
+  greenLight: 'rgba(123,167,217,0.1)',
+  red: '#E87B7B',
+  redLight: '#fef2f2',
+  gradient: 'linear-gradient(135deg, rgba(123,167,217,0.55), rgba(123,167,217,0.35))',
+  gradientSoft: 'linear-gradient(135deg, rgba(123,167,217,0.12), rgba(123,167,217,0.06))',
+  gradientRing:
+    'linear-gradient(45deg, #7BA7D9 0%, #6A97C9 25%, #8AB7E9 50%, #6A97C9 75%, #7BA7D9 100%)',
   clips: {
     bg: '#42476E',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
     accent: '#7BA7D9',
-    gradient: '#7BA7D9',
+    gradient: 'linear-gradient(135deg, #7BA7D9 0%, #6A97C9 50%, #8AB7E9 100%)',
   },
 }
 
