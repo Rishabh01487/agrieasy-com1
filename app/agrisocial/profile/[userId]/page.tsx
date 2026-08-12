@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, use } from 'react'
+import { useEffect, useState, useRef, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
@@ -8,7 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { useIsMobile } from '@/lib/use-is-mobile'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
-interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[] }
+interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number }
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 
@@ -30,6 +30,33 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [listModal, setListModal] = useState<'followers' | 'following' | null>(null)
     const [listUsers, setListUsers] = useState<any[]>([])
     const [listLoading, setListLoading] = useState(false)
+    const [showPicZoom, setShowPicZoom] = useState(false)
+    const pressTimerRef = useRef<NodeJS.Timeout | null>(null)
+    const longPressFiredRef = useRef(false)
+
+    // Long-press handlers for profile picture zoom (Fix: Issue 4 — Instagram-style)
+    const startPress = () => {
+        if (!data?.user?.profilePic) return  // no zoom for avatar fallback
+        longPressFiredRef.current = false
+        pressTimerRef.current = setTimeout(() => {
+            longPressFiredRef.current = true
+            setShowPicZoom(true)
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(15)
+        }, 500)  // 500ms = Instagram-style long-press
+    }
+    const cancelPress = () => {
+        if (pressTimerRef.current) {
+            clearTimeout(pressTimerRef.current)
+            pressTimerRef.current = null
+        }
+    }
+    const handlePicClick = () => {
+        if (longPressFiredRef.current) {
+            longPressFiredRef.current = false  // reset, swallow the click after long-press
+            return
+        }
+        router.push(`/agrisocial/stories/${profileId}`)
+    }
     const [highlights, setHighlights] = useState<any[]>([])
     const isMobile = useIsMobile()
 
@@ -96,8 +123,14 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     <>
                         {/* Row 1: profile pic + stats */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
-                            <div className="story-ring" style={{ width: 82, height: 82, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
-                                onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
+                            <div className="story-ring" style={{ width: 82, height: 82, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+                                onClick={handlePicClick}
+                                onTouchStart={startPress}
+                                onTouchEnd={cancelPress}
+                                onTouchMove={cancelPress}
+                                onMouseDown={startPress}
+                                onMouseUp={cancelPress}
+                                onMouseLeave={cancelPress}>
                                 {user.profilePic ? (
                                     <img src={user.profilePic} alt={name} style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: '3px solid #fff' }} />
                                 ) : (
@@ -148,8 +181,14 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 ) : (
                     /* Desktop layout — original */
                     <div style={{ display: 'flex', gap: 32, alignItems: 'center', marginBottom: 24, flexWrap: 'wrap' }}>
-                        <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                            onClick={() => router.push(`/agrisocial/stories/${profileId}`)}>
+                        <div className="story-ring" style={{ width: 152, height: 152, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
+                            onClick={handlePicClick}
+                            onTouchStart={startPress}
+                            onTouchEnd={cancelPress}
+                            onTouchMove={cancelPress}
+                            onMouseDown={startPress}
+                            onMouseUp={cancelPress}
+                            onMouseLeave={cancelPress}>
                             {user.profilePic ? (
                                 <img src={user.profilePic} alt={name} style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
                             ) : (
@@ -235,25 +274,80 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 2 : 4 }}>
-                        {displayPosts.map(p => (
-                            <Link key={p._id} href={`/agrisocial/post/${p._id}`}
-                                style={{ position: 'relative', aspectRatio: '1', background: p.mediaUrl && p.mediaType === 'image' ? `url(${p.mediaUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 2, overflow: 'hidden', textDecoration: 'none' }}>
-                                {(!p.mediaUrl || p.mediaType !== 'image') && (
-                                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 6, textAlign: 'center' }}>
-                                        <span style={{ fontSize: '1.2rem' }}>{p.type === 'krishiclip' ? '🎬' : '📢'}</span>
-                                        <p style={{ color: '#fff', fontSize: '0.62rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
+                        {displayPosts.map(p => {
+                            // Determine the thumbnail URL based on media type (Fix: Issue 2 — was only showing image type)
+                            const ytId = p.mediaUrl?.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]
+                            const isVideo = p.mediaType === 'video' || p.type === 'krishiclip'
+                            const isImage = p.mediaType === 'image' && p.mediaUrl
+                            const isYoutube = p.mediaType === 'youtube' || ytId
+                            const thumbUrl = isImage
+                                ? p.mediaUrl
+                                : ytId
+                                    ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+                                    : null  // video / text → use <video> element or fallback gradient
+                            return (
+                                <Link key={p._id} href={`/agrisocial/post/${p._id}`}
+                                    style={{ position: 'relative', aspectRatio: '1', background: thumbUrl ? `url(${thumbUrl}) center/cover` : `linear-gradient(135deg, ${SOCIAL.primary}cc, ${SOCIAL.textSecondary})`, display: 'block', borderRadius: 2, overflow: 'hidden', textDecoration: 'none' }}>
+                                    {/* For video clips, render a <video> with preload="metadata" so the first frame shows as thumbnail */}
+                                    {!thumbUrl && isVideo && p.mediaUrl && (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <video src={p.mediaUrl} preload="metadata" muted playsInline
+                                            style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', inset: 0 }} />
+                                    )}
+                                    {/* Overlay icon for video/youtube/text posts (only when no thumbnail image) */}
+                                    {!thumbUrl && !isVideo && (
+                                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: 6, textAlign: 'center' }}>
+                                            <span style={{ fontSize: '1.5rem', filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }}>{isYoutube ? '▶️' : '📢'}</span>
+                                            <p style={{ color: '#fff', fontSize: '0.62rem', margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
+                                        </div>
+                                    )}
+                                    {/* Play icon overlay for video clips (shown on top of video thumbnail) */}
+                                    {isVideo && (
+                                        <div style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.6)', borderRadius: 4, padding: '2px 6px', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                            <span style={{ color: '#fff', fontSize: '0.6rem' }}>▶️</span>
+                                        </div>
+                                    )}
+                                    {/* Likes + comments + views footer */}
+                                    <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)', padding: '6px 6px 4px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                        <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>❤️ {p.likesCount}</span>
+                                        <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>💬 {p.commentsCount}</span>
+                                        {p.type === 'krishiclip' && <span style={{ color: '#fff', fontSize: '0.6rem', fontWeight: 700, marginLeft: 'auto' }}>👁 {p.views || 0}</span>}
                                     </div>
-                                )}
-                                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)', padding: '6px 6px 4px', display: 'flex', gap: 8 }}>
-                                    <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>❤️ {p.likesCount}</span>
-                                    <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>💬 {p.commentsCount}</span>
-                                    {p.type === 'krishiclip' && <span style={{ color: '#fff', fontSize: '0.6rem', fontWeight: 800, marginLeft: 'auto' }}>🎬</span>}
-                                </div>
-                            </Link>
-                        ))}
+                                </Link>
+                            )
+                        })}
                     </div>
                 )}
             </div>
+
+            {/* Profile Picture Zoom Overlay (long-press to zoom — Instagram-style) */}
+            {showPicZoom && data?.user?.profilePic && (
+                <div
+                    onClick={() => setShowPicZoom(false)}
+                    onTouchStart={(e) => { e.stopPropagation(); setShowPicZoom(false) }}
+                    style={{
+                        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.92)',
+                        zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'zoom-out', backdropFilter: 'blur(8px)', animation: 'agrieasyFadeIn 0.2s ease-out'
+                    }}
+                >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                        src={data.user.profilePic}
+                        alt={data.user.farmerName || data.user.firmName || 'Profile'}
+                        style={{
+                            maxWidth: '90vw', maxHeight: '90vh', borderRadius: '50%',
+                            objectFit: 'cover', border: '4px solid #fff',
+                            boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                            animation: 'agrieasyScaleIn 0.2s ease-out'
+                        }}
+                    />
+                </div>
+            )}
+            <style>{`
+                @keyframes agrieasyFadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes agrieasyScaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+            `}</style>
 
             {/* Followers/Following List Modal */}
             {listModal && (
