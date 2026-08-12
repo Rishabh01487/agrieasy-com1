@@ -31,6 +31,7 @@ function CreateContent() {
         typeParam === 'story' ? 'story' : 'post'
 
     const [postType, setPostType] = useState<'post' | 'krishiclip' | 'story'>(defaultPostType)
+    const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
     const [mode, setMode] = useState<Mode>('choose')
     const [mediaFile, setMediaFile] = useState<MediaFile | null>(null)
     const [carouselFiles, setCarouselFiles] = useState<MediaFile[]>([])
@@ -83,7 +84,7 @@ function CreateContent() {
         setMode('camera')
         await new Promise(r => setTimeout(r, 100))
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: postType === 'krishiclip' })
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: postType === 'krishiclip' })
             streamRef.current = stream
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
         } catch (e) {
@@ -91,6 +92,24 @@ function CreateContent() {
             stopCamera()
             setMode('choose')
             setCamError('Camera access denied. Please allow camera permission in your browser settings, or use "Upload from Gallery" instead.')
+        }
+    }
+
+    // Flip between front (user) and back (environment) camera
+    const flipCamera = async () => {
+        const next = facingMode === 'environment' ? 'user' : 'environment'
+        setFacingMode(next)
+        stopCamera()
+        await new Promise(r => setTimeout(r, 50))
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: next } }, audio: postType === 'krishiclip' })
+            streamRef.current = stream
+            if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
+        } catch (e) {
+            console.error(e)
+            stopCamera()
+            setMode('choose')
+            setCamError('Could not switch camera. Your device may not have a front camera.')
         }
     }
 
@@ -390,7 +409,7 @@ function CreateContent() {
             {/* ── CAMERA MODE ── */}
             {mode === 'camera' && (
                 <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString() }} />
+                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }} />
 
                     {/* Recording timer */}
                     {isRecording && (
@@ -428,7 +447,10 @@ function CreateContent() {
                                 {isRecording ? <span style={{ display: 'block', width: '22px', height: '22px', borderRadius: '4px', background: '#fff' }} /> : null}
                             </button>
                         )}
-                        <div style={{ width: '44px', height: '44px' }} />
+                        <button onClick={flipCamera} title="Flip camera"
+                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease' }}>
+                            🔄
+                        </button>
                     </div>
                     <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
                     <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
