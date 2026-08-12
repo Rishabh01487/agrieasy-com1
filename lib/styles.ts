@@ -114,40 +114,40 @@ export const AGRI = {
 
 // ── AgriSocial Palette (Glass Blue — frosted translucent throughout) ─
 //   #FFFFFF (white)        — background
-//   #7BA7D9 (glass blue)   — primary, accent, all interactive elements
-//   #42476E (navy)         — text, headings
+//   #E87B7B (glass blue)   — primary, accent, all interactive elements
+//   #5A2A2A (navy)         — text, headings
 //   Glass effect applied everywhere via rgba + backdrop-filter
 
 export const SOCIAL = {
   bg: '#FFFFFF',
-  bgSub: '#F0F6FC',
+  bgSub: '#FCF0F0',
   white: SHARED.white,
-  primary: '#7BA7D9',
-  primaryHover: '#6A97C9',
-  primaryLight: 'rgba(123,167,217,0.15)',
-  primarySoft: 'rgba(123,167,217,0.08)',
-  accent: '#7BA7D9',
-  text: '#42476E',
-  textSecondary: '#5A6E94',
-  muted: '#7A8BA0',
-  border: 'rgba(123,167,217,0.3)',
-  borderLight: 'rgba(123,167,217,0.15)',
+  primary: '#E87B7B',
+  primaryHover: '#D96B6B',
+  primaryLight: 'rgba(232,123,123,0.15)',
+  primarySoft: 'rgba(232,123,123,0.08)',
+  accent: '#E87B7B',
+  text: '#5A2A2A',
+  textSecondary: '#7A5050',
+  muted: '#9A7070',
+  border: 'rgba(232,123,123,0.3)',
+  borderLight: 'rgba(232,123,123,0.15)',
   card: SHARED.white,
-  green: '#7BA7D9',
-  greenLight: 'rgba(123,167,217,0.1)',
+  green: '#E87B7B',
+  greenLight: 'rgba(232,123,123,0.1)',
   red: '#E87B7B',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, rgba(123,167,217,0.55), rgba(123,167,217,0.35))',
-  gradientSoft: 'linear-gradient(135deg, rgba(123,167,217,0.12), rgba(123,167,217,0.06))',
+  gradient: 'linear-gradient(135deg, rgba(232,123,123,0.55), rgba(232,123,123,0.35))',
+  gradientSoft: 'linear-gradient(135deg, rgba(232,123,123,0.12), rgba(232,123,123,0.06))',
   gradientRing:
-    'linear-gradient(45deg, #7BA7D9 0%, #6A97C9 25%, #8AB7E9 50%, #6A97C9 75%, #7BA7D9 100%)',
+    'linear-gradient(45deg, #E87B7B 0%, #D96B6B 25%, #F09B9B 50%, #D96B6B 75%, #E87B7B 100%)',
   clips: {
-    bg: '#42476E',
+    bg: '#5A2A2A',
     card: '#111827',
     text: '#f8fafc',
     muted: '#94a3b8',
-    accent: '#7BA7D9',
-    gradient: 'linear-gradient(135deg, #7BA7D9 0%, #6A97C9 50%, #8AB7E9 100%)',
+    accent: '#E87B7B',
+    gradient: 'linear-gradient(135deg, #E87B7B 0%, #D96B6B 50%, #F09B9B 100%)',
   },
 }
 

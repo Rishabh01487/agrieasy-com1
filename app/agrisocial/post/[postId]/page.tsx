@@ -177,7 +177,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                                 <>
                                     <div style={{ position: 'absolute', top: 12, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
                                         {carouselImages.map((_, i) => (
-                                            <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#7BA7D9' : 'rgba(255,255,255,0.5)' }} />
+                                            <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#E87B7B' : 'rgba(255,255,255,0.5)' }} />
                                         ))}
                                     </div>
                                     {carouselIdx > 0 && <button onClick={() => setCarouselIdx(i => Math.max(0, i - 1))} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.85)', border: 'none', borderRadius: '50%', width: 36, height: 36, cursor: 'pointer', fontSize: '1.4rem' }}>‹</button>}
