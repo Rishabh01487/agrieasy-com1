@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Spinner } from '@/app/components/Spinner'
 import { useIsMobile } from '@/lib/use-is-mobile'
 
 const CATEGORIES = [
@@ -168,7 +169,7 @@ function AgriSocialExploreInner() {
                     </div>
                     {/* Infinite scroll sentinel */}
                     <div ref={sentinelRef} style={{ height: 1 }} />
-                    {loadingMore && <div style={{ textAlign: 'center', padding: 20, color: SOCIAL.muted, fontSize: '0.82rem' }}>Loading more…</div>}
+                    {loadingMore && <div style={{ textAlign: 'center', padding: 20, display: 'flex', justifyContent: 'center' }}><Spinner size={24} color={SOCIAL.primary} /></div>}
                     {!hasMore && posts.length > 0 && <div style={{ textAlign: 'center', padding: 20, color: SOCIAL.muted, fontSize: '0.82rem' }}>You're all caught up ✨</div>}
                     </>
                 )}

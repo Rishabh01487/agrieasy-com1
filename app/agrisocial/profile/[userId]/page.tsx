@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { useIsMobile } from '@/lib/use-is-mobile'
 import { Icon } from '@/lib/icons'
+import { LoadingScreen, InlineLoader } from '@/app/components/Spinner'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number }
@@ -120,7 +121,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
         router.push(`/agrisocial/dm?userId=${profileId}`)
     }
 
-    if (loading) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.primary, fontWeight: 700, fontFamily: SHARED.font }}>Loading profile…</div>
+    if (loading) return <LoadingScreen color={SOCIAL.primary} background={SOCIAL.bg} label="Loading profile…" />
     if (!data?.user) return <div style={{ minHeight: '100vh', background: SOCIAL.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: SOCIAL.muted, fontFamily: SHARED.font }}>Profile not found</div>
 
     const { user, posts, clips, saved, stats, isOwnProfile } = data
@@ -398,7 +399,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                             <button onClick={() => setListModal(null)} style={{ background: 'none', border: 'none', color: SOCIAL.muted, cursor: 'pointer', fontSize: '1.3rem' }}>✕</button>
                         </div>
                         {listLoading ? (
-                            <div style={{ padding: 40, textAlign: 'center', color: SOCIAL.muted, fontSize: '0.86rem' }}>Loading…</div>
+                            <InlineLoader color={SOCIAL.primary} />
                         ) : listUsers.length === 0 ? (
                             <div style={{ padding: 40, textAlign: 'center', color: SOCIAL.muted, fontSize: '0.86rem' }}>No {listModal} yet</div>
                         ) : (

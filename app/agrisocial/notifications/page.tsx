@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Spinner } from '@/app/components/Spinner'
 import { Icon, type IconName } from '@/lib/icons'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
@@ -165,7 +166,7 @@ export default function AgriSocialNotifications() {
                 </div>
 
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: 60, color: SOCIAL.muted }}>Loading activity…</div>
+                    <div style={{ textAlign: 'center', padding: 60 }}><Spinner size={28} color={SOCIAL.primary} /></div>
                 ) : filtered.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: 60, color: SOCIAL.muted }}>
                         <div style={{ fontSize: '3rem', marginBottom: 12 }}>🔔</div>

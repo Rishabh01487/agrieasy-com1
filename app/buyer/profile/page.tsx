@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { BUYER, SHARED, inputStyle, labelStyle, cardStyle, navStyle } from '@/lib/styles'
+import { LoadingScreen } from '@/app/components/Spinner'
 
 interface BuyerProfile {
   _id: string
@@ -253,11 +254,7 @@ export default function BuyerProfilePage() {
   const lbl = labelStyle(BUYER)
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', background: BUYER.bg, fontFamily: SHARED.font, display: 'flex', alignItems: 'center', justifyContent: 'center', color: BUYER.primary, fontWeight: 700 }}>
-        Loading profile…
-      </div>
-    )
+    return <LoadingScreen color={BUYER.primary} background={BUYER.bg} label="Loading profile…" />
   }
 
   return (

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import { Spinner } from '@/app/components/Spinner'
 import { Icon, IconButton } from '@/lib/icons'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
@@ -732,8 +733,8 @@ export default function AgriSocialFeed() {
                             {/* Infinite scroll sentinel + loading spinner */}
                             <div ref={sentinelRef} style={{ height: 1 }} />
                             {loadingMore && (
-                                <div style={{ textAlign: 'center', padding: '20px 0', color: SOCIAL.muted, fontSize: '0.84rem' }}>
-                                    Loading more posts…
+                                <div style={{ textAlign: 'center', padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
+                                    <Spinner size={24} color={SOCIAL.primary} />
                                 </div>
                             )}
                             {!hasMore && posts.length > 0 && (
