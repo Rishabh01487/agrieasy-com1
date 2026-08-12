@@ -112,10 +112,11 @@ export const AGRI = {
   gradientCard: 'linear-gradient(145deg, #021F94 0%, #1A3AAA 100%)',
 }
 
-// ── AgriSocial Palette (3-color: White bg + Light Blue + Navy — no mixing) ─
-//   #FFFFFF (white)      — background only
-//   #7BA7D9 (light blue) — primary, accent, buttons, borders only (lighter shade)
-//   #42476E (navy)       — text, headings only
+// ── AgriSocial Palette (3-color: White bg + Glass Blue + Navy — no mixing) ─
+//   #FFFFFF (white)        — background only
+//   #7BA7D9 (glass blue)   — primary, accent, buttons, borders only
+//   #42476E (navy)         — text, headings only
+//   Glass effect: rgba(123,167,217,0.85) with backdrop-filter: blur
 
 export const SOCIAL = {
   bg: '#FFFFFF',

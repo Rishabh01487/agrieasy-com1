@@ -195,9 +195,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                         <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {makeHandle(authorName)}
                         </Link>
-                        {viewerId && !isOwner && authorId && (
+                        {viewerId !== authorId && authorId && (
                             <button
                                 onClick={async () => {
+                                    if (!viewerId) { router.push('/auth/login'); return }
                                     if (followLoading) return
                                     setFollowLoading(true)
                                     const prev = following
@@ -212,19 +213,21 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                                     setFollowLoading(false)
                                 }}
                                 style={{
-                                    background: following ? SOCIAL.primaryLight : SOCIAL.primary,
+                                    background: following ? 'rgba(123,167,217,0.15)' : 'rgba(123,167,217,0.85)',
                                     color: following ? SOCIAL.primary : '#fff',
-                                    border: 'none',
+                                    border: following ? `1px solid ${SOCIAL.border}` : 'none',
                                     borderRadius: '100px',
-                                    padding: '2px 10px',
+                                    padding: '3px 12px',
                                     fontSize: '0.68rem',
                                     fontWeight: 800,
                                     cursor: followLoading ? 'wait' : 'pointer',
                                     transition: 'all 0.2s ease',
                                     flexShrink: 0,
+                                    backdropFilter: 'blur(4px)',
+                                    WebkitBackdropFilter: 'blur(4px)',
                                 }}
                             >
-                                {following ? 'Following' : '+ Follow'}
+                                {!viewerId ? '+ Follow' : following ? 'Following' : '+ Follow'}
                             </button>
                         )}
                     </div>

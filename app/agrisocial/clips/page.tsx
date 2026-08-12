@@ -334,9 +334,10 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ color: SOCIAL.clips.text, fontWeight: 800, fontSize: '0.95rem', textDecoration: 'none' }}>
                         @{(authorName || 'user').toLowerCase().replace(/[^a-z0-9]/g, '')} · {roleLabel[authorRole || ''] || 'Member'}
                     </Link>
-                    {viewerId && !isOwner && authorId && (
+                    {viewerId !== authorId && authorId && (
                         <button
                             onClick={async () => {
+                                if (!viewerId) { router.push('/auth/login'); return }
                                 if (followLoading) return
                                 setFollowLoading(true)
                                 const prev = following
@@ -351,7 +352,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                                 setFollowLoading(false)
                             }}
                             style={{
-                                background: following ? 'rgba(255,255,255,0.15)' : SOCIAL.clips.accent,
+                                background: following ? 'rgba(255,255,255,0.15)' : 'rgba(123,167,217,0.85)',
                                 border: following ? '1px solid rgba(255,255,255,0.4)' : 'none',
                                 borderRadius: '100px',
                                 padding: '3px 12px',
@@ -360,9 +361,11 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                                 fontWeight: 800,
                                 cursor: followLoading ? 'wait' : 'pointer',
                                 transition: 'all 0.2s ease',
+                                backdropFilter: 'blur(4px)',
+                                WebkitBackdropFilter: 'blur(4px)',
                             }}
                         >
-                            {following ? 'Following' : '+ Follow'}
+                            {!viewerId ? '+ Follow' : following ? 'Following' : '+ Follow'}
                         </button>
                     )}
                 </div>
