@@ -101,7 +101,11 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
 
     // ── Step 3: Parse OCR text to extract commodities, bags, and weights ──
     const commodities = parseBillText(rawText)
-    if (commodities.length === 0) throw new Error('Could not identify any commodities in the bill. Please try a clearer photo.')
+    if (commodities.length === 0) {
+        // Show what OCR read so the user can see if it's a Tesseract issue
+        const preview = rawText.slice(0, 200).trim()
+        throw new Error(`OCR read text but couldn't identify commodities. Try a clearer photo with better lighting.\n\nText detected:\n${preview}`)
+    }
 
     return {
         commodities,
@@ -113,19 +117,30 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
 
 // ── Parser: Extract commodities, bag counts, and weights from OCR text ──
 const COMMODITY_NAMES: Record<string, string> = {
-    'गेहूँ': 'Wheat', 'गेहूं': 'Wheat', 'wheat': 'Wheat',
-    'चावल': 'Rice', 'rice': 'Rice',
-    'बाजरा': 'Bajra', 'bajra': 'Bajra',
-    'मक्का': 'Maize', 'maize': 'Maize', 'corn': 'Maize',
-    'अरहर': 'Arhar', 'arhar': 'Arhar', 'tur': 'Arhar',
+    'गेहूँ': 'Wheat', 'गेहूं': 'Wheat', 'गेहू': 'Wheat', 'wheat': 'Wheat',
+    'चावल': 'Rice', 'rice': 'Rice', 'चावल': 'Rice', 'अनाज': 'Grain',
+    'बाजरा': 'Bajra', 'bajra': 'Bajra', 'बाजरा': 'Bajra',
+    'मक्का': 'Maize', 'maize': 'Maize', 'corn': 'Maize', 'मक्का': 'Maize',
+    'अरहर': 'Arhar', 'arhar': 'Arhar', 'tur': 'Arhar', 'तूर': 'Arhar',
     'चना': 'Chickpea', 'chana': 'Chickpea', 'gram': 'Chickpea',
-    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'mustard': 'Mustard',
-    'ज्वार': 'Jowar', 'jowar': 'Jowar', 'sorghum': 'Jowar',
-    'उड़द': 'Urad', 'urad': 'Urad',
-    'मूंग': 'Mung', 'mung': 'Mung', 'moong': 'Mung',
-    'सोयाबीन': 'Soybean', 'soybean': 'Soybean',
+    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'mustard': 'Mustard', 'सरसो': 'Mustard',
+    'ज्वार': 'Jowar', 'jowar': 'Jowar', 'sorghum': 'Jowar', 'जुअर': 'Jowar',
+    'उड़द': 'Urad', 'urad': 'Urad', 'उडद': 'Urad',
+    'मूंग': 'Mung', 'mung': 'Mung', 'moong': 'Mung', 'मूग': 'Mung',
+    'सोयाबीन': 'Soybean', 'soybean': 'Soybean', 'सोया': 'Soybean',
     'राजमा': 'Rajma', 'rajma': 'Rajma',
     'जई': 'Oats', 'oats': 'Oats', 'जौ': 'Barley', 'barley': 'Barley',
+    'दाल': 'Dal', 'dal': 'Dal',
+    'प्याज': 'Onion', 'onion': 'Onion',
+    'आलू': 'Potato', 'potato': 'Potato',
+    'टमाटर': 'Tomato', 'tomato': 'Tomato',
+    'कपास': 'Cotton', 'cotton': 'Cotton',
+    'गन्ना': 'Sugarcane', 'sugarcane': 'Sugarcane', 'sugar': 'Sugarcane',
+    'सब्ज़ी': 'Vegetable', 'vegetable': 'Vegetable',
+    'बाजरी': 'Bajra',
+    'खाद्य': 'Food Grain',
+    'अनाज': 'Grain',
+    'फसल': 'Crop',
 }
 
 function parseBillText(text: string): CommodityGroup[] {
@@ -141,12 +156,15 @@ function parseBillText(text: string): CommodityGroup[] {
         const modernLine = toModern(line)
         let foundCommodity: string | null = null
         let foundNameEn: string | null = null
+
+        // Check if line contains a known commodity name
         for (const [hindi, english] of Object.entries(COMMODITY_NAMES)) {
             if (modernLine.toLowerCase().includes(hindi.toLowerCase()) || modernLine.toLowerCase().includes(english.toLowerCase())) {
                 foundCommodity = hindi; foundNameEn = english; break
             }
         }
 
+        // Extract all numbers from the line
         const numberMatches = modernLine.match(/(\d+(?:[.,]\d+)?(?:½|¼|¾)?)/g) || []
         const numbers = numberMatches.map(n => {
             let cleaned = n.replace(/,/g, '')
@@ -155,24 +173,45 @@ function parseBillText(text: string): CommodityGroup[] {
         }).filter(n => !isNaN(n) && n > 0)
 
         if (foundCommodity) {
+            // Found a known commodity — start tracking it
             if (currentCommodity) commodities.push(currentCommodity)
             currentCommodity = { name: foundCommodity, nameEn: foundNameEn || foundCommodity, batches: [], totalBags: 0, totalWeight: 0 }
+        } else if (!currentCommodity && numbers.length >= 2) {
+            // No commodity name found yet, but this line has 2+ numbers (bags + weight)
+            // Create a generic commodity entry — better than returning nothing
+            currentCommodity = { name: 'Unknown Commodity', nameEn: 'Unknown', batches: [], totalBags: 0, totalWeight: 0 }
         }
 
+        // If we have a current commodity and numbers on this line, add as a batch
         if (currentCommodity && numbers.length >= 1) {
             if (numbers.length >= 2) {
-                const bagCount = Math.round(numbers[0]); const weight = numbers[1]
-                if (bagCount <= 100 && weight > 0) currentCommodity.batches.push({ bagCount, weight })
-            } else if (numbers.length === 1 && numbers[0] > 50) {
-                currentCommodity.batches.push({ bagCount: 1, weight: numbers[0] })
+                // Two numbers: first is bag count, second is weight
+                const bagCount = Math.round(numbers[0])
+                const weight = numbers[1]
+                // Sanity check: bagCount should be small (1-200), weight should be reasonable
+                if (bagCount <= 200 && weight > 0) {
+                    currentCommodity.batches.push({ bagCount, weight })
+                }
+            } else if (numbers.length === 1) {
+                // Single number — if it's > 20, treat as weight with 1 bag
+                // If it's <= 20, it might be a bag count on its own line
+                if (numbers[0] > 20) {
+                    currentCommodity.batches.push({ bagCount: 1, weight: numbers[0] })
+                }
             }
         }
     }
+
+    // Push the last commodity
     if (currentCommodity) commodities.push(currentCommodity)
+
+    // Calculate totals
     for (const c of commodities) {
         c.totalBags = c.batches.reduce((s, b) => s + b.bagCount, 0)
         c.totalWeight = Number(c.batches.reduce((s, b) => s + b.weight, 0).toFixed(3))
     }
+
+    // Filter out commodities with no batches
     return commodities.filter(c => c.batches.length > 0)
 }
 /**
