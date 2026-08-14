@@ -185,14 +185,13 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
  *   }
  */
 export async function POST(req: NextRequest) {
+    // Auth is OPTIONAL — works with or without login (so the bill calculator
+    // is accessible to everyone, even logged-out users testing the app)
     const auth = authenticateRequest(req)
-    if (!auth) return unauthorized()
-
-    const rl = await rateLimitByUser(auth.user.userId, {
-        windowMs: 60_000,
-        max: 10,
-        message: 'Too many bill-calculator requests. Please wait a minute.',
-    })
+    // Rate limit by IP if not logged in, by userId if logged in
+    const rl = auth
+        ? await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many bill-calculator requests. Please wait a minute.' })
+        : null
     if (rl) return rl
 
     let imageUrl: string | undefined
