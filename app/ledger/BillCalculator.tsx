@@ -150,6 +150,9 @@ function parseBillText(text: string): CommodityGroup[] {
     const toModern = (s: string): string => s.replace(/[०-९]/g, d => devDigits[d] || d)
     const fractions: Record<string, string> = { '½': '.5', '¼': '.25', '¾': '.75', '1½': '1.5', '2½': '2.5' }
 
+    // Track if we're in "individual bag" mode (one weight per line)
+    let individualBagMode = false
+
     for (const line of lines) {
         const modernLine = toModern(line)
         let foundCommodity: string | null = null
@@ -161,6 +164,10 @@ function parseBillText(text: string): CommodityGroup[] {
                 foundCommodity = hindi; foundNameEn = english; break
             }
         }
+
+        // Check for "bags" keyword (e.g. "5 Bags", "10 bag", "बैग")
+        const bagsMatch = modernLine.match(/(\d+)\s*(?:bags?|बैग|बस्ता|बोरी)/i)
+        const hasBagsKeyword = !!bagsMatch
 
         // Extract all numbers from the line
         const numberMatches = modernLine.match(/(\d+(?:[.,]\d+)?(?:½|¼|¾)?)/g) || []
@@ -174,29 +181,59 @@ function parseBillText(text: string): CommodityGroup[] {
             // Found a known commodity — start tracking it
             if (currentCommodity) commodities.push(currentCommodity)
             currentCommodity = { name: foundCommodity, nameEn: foundNameEn || foundCommodity, batches: [], totalBags: 0, totalWeight: 0 }
-        } else if (!currentCommodity && numbers.length >= 2) {
-            // No commodity name found yet, but this line has 2+ numbers (bags + weight)
-            // Create a generic commodity entry — better than returning nothing
+
+            // If the line also says "5 Bags" — set individual bag mode
+            // (means each subsequent number is a single bag's weight)
+            if (hasBagsKeyword && bagsMatch) {
+                individualBagMode = true
+                // The number before "Bags" is the total bag count
+                // Don't add it as a weight — it's a count, not a weight
+            }
+        } else if (!currentCommodity && numbers.length >= 1) {
+            // No commodity name found yet, but this line has numbers
+            // Create a generic commodity entry
             currentCommodity = { name: 'Unknown Commodity', nameEn: 'Unknown', batches: [], totalBags: 0, totalWeight: 0 }
         }
 
-        // If we have a current commodity and numbers on this line, add as a batch
+        // Process numbers based on mode
         if (currentCommodity && numbers.length >= 1) {
-            if (numbers.length >= 2) {
-                // Two numbers: first is bag count, second is weight
+            if (individualBagMode && !foundCommodity && !hasBagsKeyword) {
+                // INDIVIDUAL BAG MODE: each number on its own line = weight of 1 bag
+                for (const num of numbers) {
+                    if (num > 0 && num < 10000) {
+                        currentCommodity.batches.push({ bagCount: 1, weight: num })
+                    }
+                }
+            } else if (numbers.length >= 2 && !hasBagsKeyword) {
+                // BATCH MODE: two numbers = bagCount + weight
                 const bagCount = Math.round(numbers[0])
                 const weight = numbers[1]
-                // Sanity check: bagCount should be small (1-200), weight should be reasonable
                 if (bagCount <= 200 && weight > 0) {
                     currentCommodity.batches.push({ bagCount, weight })
                 }
-            } else if (numbers.length === 1) {
-                // Single number — if it's > 20, treat as weight with 1 bag
-                // If it's <= 20, it might be a bag count on its own line
-                if (numbers[0] > 20) {
+            } else if (numbers.length >= 2 && hasBagsKeyword) {
+                // Line has "N Bags" + a weight number
+                // e.g. "wheat 5 Bags 285" → 5 bags, 285 kg total
+                const bagCount = bagsMatch ? parseInt(bagsMatch[1]) : Math.round(numbers[0])
+                // Find the weight number (the one that's NOT the bag count)
+                const weightNum = numbers.find(n => n !== bagCount) || numbers[numbers.length - 1]
+                if (bagCount <= 200 && weightNum > 0) {
+                    currentCommodity.batches.push({ bagCount, weight: weightNum })
+                    individualBagMode = false // batch mode for this commodity
+                }
+            } else if (numbers.length === 1 && !hasBagsKeyword) {
+                // Single number — if > 10, treat as weight with 1 bag
+                if (numbers[0] > 10) {
                     currentCommodity.batches.push({ bagCount: 1, weight: numbers[0] })
                 }
             }
+        }
+
+        // Check for price rate (e.g. "x 2530/kg" or "rate 2530")
+        const rateMatch = modernLine.match(/(?:x|×|rate| ₹)\s*(\d+)\s*\/?\s*(?:kg|kilo|किग्रा|किलो)/i)
+        if (rateMatch && currentCommodity) {
+            // Store the rate as a note (not a batch) — we could use it later
+            // For now, just skip it so it doesn't get counted as a weight
         }
     }
 
