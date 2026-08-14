@@ -86,7 +86,8 @@ async function callZaiVision(imageBase64: string, mimeType: string): Promise<any
 
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
-      throw new Error(`ZAI_${res.status}`)
+      console.error(`[bill-calc-proxy] Z-AI returned ${res.status}: ${errText.slice(0, 200)}`)
+      throw new Error(`ZAI_${res.status}: ${errText.slice(0, 100)}`)
     }
 
     return await res.json()
@@ -149,9 +150,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Generic fallback — NEVER expose internal error details
+    // Generic fallback — expose error for debugging (temporary)
+    const debugMsg = err instanceof Error ? err.message : String(err)
     return NextResponse.json(
-      { error: 'Could not scan the bill. Please try again with a clearer photo.' },
+      { error: `Could not scan the bill. Please try again with a clearer photo.`, debug: debugMsg },
       { status: 500 },
     )
   }
