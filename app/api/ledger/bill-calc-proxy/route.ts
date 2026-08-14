@@ -14,12 +14,12 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 export const regions = ['iad1']
 
-// ── Z-AI Vision API config (hardcoded — free, always works) ──
+// ── Z-AI Vision API config (same credentials as the main bill-calc route) ──
 const ZAI_BASE_URL = 'https://internal-api.z.ai/v1'
 const ZAI_API_KEY = 'Z.ai'
-const ZAI_CHAT_ID = 'agrieasy-bill-ocr'
-const ZAI_USER_ID = 'agrieasy'
-const ZAI_TOKEN = 'agrieasy-bill-calculator'
+const ZAI_CHAT_ID = 'chat-7fcc4e40-ad01-4ab0-a83e-bad8f1cf2840'
+const ZAI_USER_ID = 'e255a2b5-f0be-4835-9279-65e7282d8a50'
+const ZAI_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o'
 const ZAI_MODEL = 'glm-4.6v'
 
 // ── OCR prompt (explains Indian grain bill structure to the vision model) ──
