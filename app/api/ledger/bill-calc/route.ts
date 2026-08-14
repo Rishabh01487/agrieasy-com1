@@ -148,14 +148,28 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
         thinking: { type: 'disabled' },
     }
 
-    const res = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-    })
+    // Strategy 1: Direct call (works on local dev)
+    let res: Response
+    try {
+        res = await fetch(url, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(20000),
+        })
+    } catch {
+        // Direct call failed (Vercel can't reach internal-api.z.ai)
+        // Strategy 2: Route through CORS proxy
+        const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+        res = await fetch(proxyUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(25000),
+        })
+    }
     if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(`Z-AI vision API returned ${res.status}: ${errText.slice(0, 800)}`)
+        throw new Error(`Z-AI vision API returned ${res.status}`)
     }
     return await res.json()
 }
