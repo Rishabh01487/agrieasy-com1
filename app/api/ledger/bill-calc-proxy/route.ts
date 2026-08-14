@@ -9,10 +9,9 @@ import { NextRequest, NextResponse } from 'next/server'
  * Error messages are user-friendly — never exposes internal API errors.
  */
 
-export const runtime = 'edge'
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
-export const regions = ['iad1']
+export const maxDuration = 60
 
 // ── Z-AI Vision API config (same credentials as the main bill-calc route) ──
 const ZAI_BASE_URL = 'https://internal-api.z.ai/v1'
