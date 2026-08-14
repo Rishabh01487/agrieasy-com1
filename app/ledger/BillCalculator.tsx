@@ -107,8 +107,20 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
     const commodities = parseBillText(rawText)
     if (commodities.length === 0) {
         // Show what OCR read so the user can see if it's a Tesseract issue
-        const preview = rawText.slice(0, 200).trim()
-        throw new Error(`OCR read text but couldn't identify commodities. Try a clearer photo with better lighting.\n\nText detected:\n${preview}`)
+        const preview = rawText.slice(0, 300).trim()
+        throw new Error(`Couldn't identify any commodity in the bill. This usually means one of:
+
+1. The photo is blurry or poorly lit — Tesseract returned garbled text.
+2. The bill mentions a commodity we don't recognize yet (we support 100+ Hindi/English names — wheat, rice, onion, potato, tomato, brinjal, chili, mustard, etc.).
+3. The commodity name was hand-written in a script Tesseract couldn't read.
+
+Try one of:
+• Re-take the photo with better lighting and the bill laid flat.
+• Use the "Add Commodity Manually" button below to enter the commodity yourself.
+• Send us the photo so we can add the missing commodity to our dictionary.
+
+OCR text detected (first 300 chars):
+${preview}`)
     }
 
     return {
@@ -143,28 +155,149 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
 //      "315 4.1"), allow catch-up so the rest of the sequence isn't lost.
 
 const COMMODITY_NAMES: Record<string, string> = {
-    'गेहूँ': 'Wheat', 'गेहूं': 'Wheat', 'गेहू': 'Wheat', 'wheat': 'Wheat',
-    'चावल': 'Rice', 'rice': 'Rice', 'अनाज': 'Grain',
-    'बाजरा': 'Bajra', 'bajra': 'Bajra', 'बाजरी': 'Bajra',
-    'मक्का': 'Maize', 'maize': 'Maize', 'corn': 'Maize',
-    'अरहर': 'Arhar', 'arhar': 'Arhar', 'tur': 'Arhar', 'तूर': 'Arhar',
-    'चना': 'Chickpea', 'chana': 'Chickpea', 'gram': 'Chickpea',
-    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'mustard': 'Mustard',
-    'ज्वार': 'Jowar', 'jowar': 'Jowar', 'sorghum': 'Jowar', 'जुअर': 'Jowar',
-    'उड़द': 'Urad', 'urad': 'Urad', 'उडद': 'Urad',
-    'मूंग': 'Mung', 'mung': 'Mung', 'moong': 'Mung', 'मूग': 'Mung',
+    // ── Grains & cereals ──
+    'गेहूँ': 'Wheat', 'गेहूं': 'Wheat', 'गेहू': 'Wheat', 'गहूँ': 'Wheat', 'गहूं': 'Wheat', 'गहू': 'Wheat', 'wheat': 'Wheat',
+    'चावल': 'Rice', 'rice': 'Rice', 'अनाज': 'Grain', 'chawal': 'Rice',
+    'बाजरा': 'Bajra', 'bajra': 'Bajra', 'बाजरी': 'Bajra', 'बाजरि': 'Bajra',
+    'मक्का': 'Maize', 'मकई': 'Maize', 'maize': 'Maize', 'corn': 'Maize',
+    'ज्वार': 'Jowar', 'jowar': 'Jowar', 'sorghum': 'Jowar', 'जुअर': 'Jowar', 'ज्वारी': 'Jowar',
+    'जौ': 'Barley', 'barley': 'Barley',
+    'जई': 'Oats', 'oats': 'Oats',
+    'रागी': 'Ragi', 'ragi': 'Ragi', 'मंडुआ': 'Ragi',
+    'कोदो': 'Kodo Millet', 'कुटकी': 'Kodo Millet',
+    'सांवा': 'Sanwa Millet', 'सामक': 'Sanwa Millet',
+    'चीना': 'Proso Millet',
+    // ── Pulses & lentils (दालें) ──
+    'अरहर': 'Arhar', 'arhar': 'Arhar', 'tur': 'Arhar', 'तूर': 'Arhar', 'तुअर': 'Arhar', 'toor': 'Arhar',
+    'चना': 'Chickpea', 'chana': 'Chickpea', 'gram': 'Chickpea', 'काबुली': 'Chickpea',
+    'उड़द': 'Urad', 'urad': 'Urad', 'उडद': 'Urad', 'माश': 'Urad', 'udid': 'Urad',
+    'मूंग': 'Mung', 'mung': 'Mung', 'moong': 'Mung', 'मूग': 'Mung', 'मुंग': 'Mung',
     'सोयाबीन': 'Soybean', 'soybean': 'Soybean', 'सोया': 'Soybean',
-    'राजमा': 'Rajma', 'rajma': 'Rajma',
-    'जई': 'Oats', 'oats': 'Oats', 'जौ': 'Barley', 'barley': 'Barley',
-    'दाल': 'Dal', 'dal': 'Dal',
-    'प्याज': 'Onion', 'onion': 'Onion',
-    'आलू': 'Potato', 'potato': 'Potato',
-    'टमाटर': 'Tomato', 'tomato': 'Tomato',
-    'कपास': 'Cotton', 'cotton': 'Cotton',
-    'गन्ना': 'Sugarcane', 'sugarcane': 'Sugarcane', 'sugar': 'Sugarcane',
-    'सब्ज़ी': 'Vegetable', 'vegetable': 'Vegetable',
+    'राजमा': 'Rajma', 'rajma': 'Rajma', 'राजमे': 'Rajma',
+    'मसूर': 'Lentil', 'मसूरी': 'Lentil', 'lentil': 'Lentil', 'masoor': 'Lentil',
+    'खेसारी': 'Khesari', 'खेसरी': 'Khesari',
+    'मटर': 'Peas', 'matar': 'Peas', 'peas': 'Peas',
+    'लोबिया': 'Cowpea', 'cowpea': 'Cowpea', 'chawli': 'Cowpea',
+    'दाल': 'Dal', 'dal': 'Dal', 'pulse': 'Dal', 'pulses': 'Dal',
+    // ── Oilseeds ──
+    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'सरसौं': 'Mustard', 'mustard': 'Mustard', 'rai': 'Mustard',
+    'तिल': 'Sesame', 'sesame': 'Sesame', 'til': 'Sesame',
+    'मूंगफली': 'Groundnut', 'मूंगफलि': 'Groundnut', 'groundnut': 'Groundnut', 'peanut': 'Groundnut', 'मुंगफली': 'Groundnut',
+    'सूरजमुखी': 'Sunflower', 'sunflower': 'Sunflower',
+    'अलसी': 'Linseed', 'linseed': 'Linseed', 'तीसी': 'Linseed',
+    // ── Vegetables ──
+    'प्याज': 'Onion', 'प्याज़': 'Onion', 'onion': 'Onion', 'pyaaz': 'Onion',
+    'आलू': 'Potato', 'potato': 'Potato', 'aaloo': 'Potato', 'आलु': 'Potato',
+    'टमाटर': 'Tomato', 'टमाटे': 'Tomato', 'tomato': 'Tomato', 'tamatar': 'Tomato',
+    'बैंगन': 'Brinjal', 'baingan': 'Brinjal', 'eggplant': 'Brinjal', 'भंटा': 'Brinjal',
+    'भिंडी': 'Okra', 'भिण्डी': 'Okra', 'bhindi': 'Okra', 'okra': 'Okra',
+    'मिर्च': 'Chili', 'मिर्ची': 'Chili', 'chili': 'Chili', 'chilli': 'Chili', 'mirch': 'Chili',
+    'तरबूज': 'Watermelon', 'tarbuj': 'Watermelon', 'watermelon': 'Watermelon',
+    'खरबूज': 'Muskmelon', 'kharbuj': 'Muskmelon', 'muskmelon': 'Muskmelon',
+    'ककड़ी': 'Cucumber', 'cucumber': 'Cucumber', 'kakdi': 'Cucumber',
+    'लौकी': 'Bottle Gourd', 'lauki': 'Bottle Gourd', 'ghiya': 'Bottle Gourd', 'घीया': 'Bottle Gourd',
+    'तोरई': 'Ridge Gourd', 'tori': 'Ridge Gourd', 'तोरी': 'Ridge Gourd',
+    'पालक': 'Spinach', 'spinach': 'Spinach', 'palak': 'Spinach',
+    'गोभी': 'Cabbage', 'फूलगोभी': 'Cauliflower', 'cabbage': 'Cabbage', 'cauliflower': 'Cauliflower', 'panchgobhi': 'Cauliflower',
+    'गाजर': 'Carrot', 'carrot': 'Carrot', 'gajar': 'Carrot',
+    'मूली': 'Radish', 'radish': 'Radish', 'mooli': 'Radish',
+    'शलजम': 'Turnip', 'turnip': 'Turnip', 'shaljam': 'Turnip',
+    'अदरक': 'Ginger', 'ginger': 'Ginger', 'adrak': 'Ginger',
+    'लहसुन': 'Garlic', 'garlic': 'Garlic', 'lehsun': 'Garlic',
+    'पुदीना': 'Mint', 'pudina': 'Mint', 'mint': 'Mint',
+    'धनिया': 'Coriander', 'dhaniya': 'Coriander', 'coriander': 'Coriander',
+    'मेथी': 'Fenugreek', 'methi': 'Fenugreek', 'fenugreek': 'Fenugreek',
+    'करेला': 'Bitter Gourd', 'karela': 'Bitter Gourd',
+    'शिमला': 'Capsicum', 'शिमलामिर्च': 'Capsicum', 'capsicum': 'Capsicum', 'pepper': 'Capsicum',
+    'मक्केकेभुट्टे': 'Corn Cob',
+    'सब्ज़ी': 'Vegetable', 'sabzi': 'Vegetable', 'vegetable': 'Vegetable',
+    // ── Fruits ──
+    'सेब': 'Apple', 'apple': 'Apple',
+    'केला': 'Banana', 'banana': 'Banana', 'kela': 'Banana',
+    'आम': 'Mango', 'mango': 'Mango', 'aam': 'Mango',
+    'अंगूर': 'Grapes', 'grapes': 'Grapes', 'angoor': 'Grapes',
+    'संतरा': 'Orange', 'नारंगी': 'Orange', 'orange': 'Orange', 'santra': 'Orange',
+    'नींबू': 'Lemon', 'lemon': 'Lemon', 'nimbu': 'Lemon',
+    'अनानास': 'Pineapple', 'pineapple': 'Pineapple',
+    'अनार': 'Pomegranate', 'pomegranate': 'Pomegranate', 'anar': 'Pomegranate',
+    'पपीता': 'Papaya', 'papaya': 'Papaya', 'papeeta': 'Papaya',
+    'बेर': 'Ber', 'ber': 'Ber',
+    'जामुन': 'Jamun', 'jamun': 'Jamun',
+    'लीची': 'Litchi', 'litchi': 'Litchi',
+    'चीकू': 'Sapodilla', 'chikoo': 'Sapodilla',
+    'कटहल': 'Jackfruit', 'kathal': 'Jackfruit',
+    // ── Cash crops & others ──
+    'कपास': 'Cotton', 'cotton': 'Cotton', 'kapas': 'Cotton',
+    'गन्ना': 'Sugarcane', 'sugarcane': 'Sugarcane', 'sugar': 'Sugarcane', 'ganna': 'Sugarcane',
+    'जूट': 'Jute', 'jute': 'Jute',
+    'चाय': 'Tea', 'tea': 'Tea',
+    'कॉफी': 'Coffee', 'coffee': 'Coffee',
+    'रबड़': 'Rubber', 'rubber': 'Rubber',
+    'तंबाकू': 'Tobacco', 'tobacco': 'Tobacco', 'बीड़ी': 'Tobacco',
+    // ── Spices & condiments ──
+    'जीरा': 'Cumin', 'jeera': 'Cumin', 'cumin': 'Cumin',
+    'हल्दी': 'Turmeric', 'haldi': 'Turmeric', 'turmeric': 'Turmeric',
+    'धनिया-बीज': 'Coriander Seed',
+    'सौंफ': 'Fennel', 'saunf': 'Fennel', 'fennel': 'Fennel',
+    'इलायची': 'Cardamom', 'elaichi': 'Cardamom', 'cardamom': 'Cardamom',
+    'लौंग': 'Clove', 'laung': 'Clove', 'clove': 'Clove',
+    'दालचीनी': 'Cinnamon', 'dalchini': 'Cinnamon', 'cinnamon': 'Cinnamon',
+    'कलौंजी': 'Nigella', 'kalaunji': 'Nigella',
+    'अजवायन': 'Ajwain', 'ajwain': 'Ajwain',
     'खाद्य': 'Food Grain',
     'फसल': 'Crop',
+}
+
+// ── Fuzzy matching for OCR-garbled commodity names ──
+// Tesseract often mis-reads Devanagari — e.g. "गेहूँ" might come out as
+// "गहूँ", "गेहू", "गहूं", "गेहुँ", etc. The dictionary above covers the most
+// common variants, but fuzzy matching catches the rest.
+//
+// Algorithm: Levenshtein distance ≤ 2 against all dictionary keys (Hindi only,
+// since English misspellings are less predictable). Only triggered when no
+// exact match is found on a line that has Devanagari characters.
+function levenshtein(a: string, b: string): number {
+    const m = a.length, n = b.length
+    if (m === 0) return n
+    if (n === 0) return m
+    const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+    for (let i = 0; i <= m; i++) dp[i][0] = i
+    for (let j = 0; j <= n; j++) dp[0][j] = j
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (a[i - 1] === b[j - 1]) dp[i][j] = dp[i - 1][j - 1]
+            else dp[i][j] = 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1])
+        }
+    }
+    return dp[m][n]
+}
+
+// Extract Devanagari tokens (potential commodity names) from a line
+function extractHindiTokens(line: string): string[] {
+    // Match sequences of Devanagari characters (including anusvara, visarga, nukta, virama, matras)
+    const matches = line.match(/[\u0900-\u097F]+/g) || []
+    // Filter out very short tokens (1 char) and very long ones (>15 chars — likely garbage)
+    return matches.filter(t => t.length >= 2 && t.length <= 15)
+}
+
+// Try to find a fuzzy match for a Hindi token against the commodity dictionary
+function fuzzyMatchCommodity(token: string): { hindi: string; english: string } | null {
+    const hindiKeys = Object.keys(COMMODITY_NAMES).filter(k => /[\u0900-\u097F]/.test(k))
+    let bestMatch: { hindi: string; english: string; dist: number } | null = null
+    for (const key of hindiKeys) {
+        const dist = levenshtein(token, key)
+        // Allow up to 2 edits OR 30% of the longer string, whichever is larger
+        const maxAllowed = Math.max(2, Math.floor(Math.max(token.length, key.length) * 0.3))
+        if (dist <= maxAllowed) {
+            if (!bestMatch || dist < bestMatch.dist) {
+                bestMatch = { hindi: key, english: COMMODITY_NAMES[key], dist }
+            }
+        }
+    }
+    if (bestMatch && bestMatch.dist > 0) {
+        return { hindi: bestMatch.hindi, english: bestMatch.english }
+    }
+    return null
 }
 
 // Lines that match any of these patterns are skipped entirely (header/footer/divider)
@@ -362,10 +495,27 @@ function parseBillText(text: string): CommodityGroup[] {
         let foundCommodity: string | null = null
         let foundNameEn: string | null = null
 
-        // Check if line contains a known commodity name
+        // Check if line contains a known commodity name (exact match)
         for (const [hindi, english] of Object.entries(COMMODITY_NAMES)) {
             if (modernLine.toLowerCase().includes(hindi.toLowerCase()) || modernLine.toLowerCase().includes(english.toLowerCase())) {
                 foundCommodity = hindi; foundNameEn = english; break
+            }
+        }
+
+        // FUZZY MATCH FALLBACK — if no exact match found but the line has
+        // Devanagari tokens, try Levenshtein distance ≤ 2 against all Hindi
+        // commodity names. This catches OCR mis-reads like "गहूँ" → "गेहूँ".
+        if (!foundCommodity) {
+            const tokens = extractHindiTokens(modernLine)
+            for (const token of tokens) {
+                // Skip tokens that are clearly not commodity names (very common words)
+                // — we don't have a stoplist, so rely on the dictionary + distance threshold
+                const fuzzy = fuzzyMatchCommodity(token)
+                if (fuzzy) {
+                    foundCommodity = fuzzy.hindi
+                    foundNameEn = fuzzy.english
+                    break
+                }
             }
         }
 
@@ -1285,8 +1435,48 @@ Generated by AgriEasy · Jai Jawan, Jai Kisan 🇮🇳`
             )}
 
             {error && (
-                <div style={{ marginTop: 12, padding: '12px 14px', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 10, color: '#991b1b', fontSize: '0.86rem' }}>
+                <div style={{ marginTop: 12, padding: '12px 14px', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 10, color: '#991b1b', fontSize: '0.86rem', whiteSpace: 'pre-wrap' }}>
                     ⚠️ {error}
+                </div>
+            )}
+
+            {/* ── "Add Commodity Manually" fallback ──
+                 When OCR fails to identify any commodity (or returns zero), the
+                 user can click this to bypass OCR and enter the commodity + bags
+                 + weight + rate manually. The result is identical to a successful
+                 OCR run — same editable UI, same Save/Print/Share buttons. */}
+            {error && file && !result && !loading && (
+                <div style={{ marginTop: 12, padding: 14, background: palette.white, border: `1.5px dashed ${palette.primary}`, borderRadius: 12 }}>
+                    <p style={{ margin: '0 0 10px', color: palette.text, fontSize: '0.9rem', fontWeight: 700 }}>
+                        🖊️ Add commodity manually
+                    </p>
+                    <p style={{ margin: '0 0 12px', color: palette.muted, fontSize: '0.78rem' }}>
+                        Skip OCR and enter the commodity yourself. You can add multiple commodities and edit bags/weight just like after a successful OCR run.
+                    </p>
+                    <button
+                        onClick={() => {
+                            const fallbackResult = {
+                                commodities: [{
+                                    name: 'Manual Entry',
+                                    nameEn: 'Manual',
+                                    batches: [{ bagCount: 1, weight: 0 }],
+                                    totalBags: 1,
+                                    totalWeight: 0,
+                                }] as any[],
+                                grandTotalBags: 1,
+                                grandTotalWeight: 0,
+                                rawText: '(manual entry — no OCR)',
+                            }
+                            setResult(fallbackResult)
+                            setRates({ 0: { rate: '', unit: 'kg' as const } })
+                            setError('')
+                        }}
+                        style={{
+                            padding: '10px 18px', background: palette.primary, color: '#fff',
+                            border: 'none', borderRadius: 8, fontSize: '0.86rem', fontWeight: 700,
+                            cursor: 'pointer',
+                        }}
+                    >+ Add Commodity Manually</button>
                 </div>
             )}
 
