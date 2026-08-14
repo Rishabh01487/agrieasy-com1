@@ -82,146 +82,99 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
         reader.readAsDataURL(compressedBlob)
     })
 
-    // ── Step 2: Call our Edge proxy with the base64 image + OCR prompt ──
-    const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
+    // ── Step 2: Run OCR using Tesseract.js (100% client-side, free, no server needed) ──
+    const Tesseract = (await import('tesseract.js')).default
 
-The uploaded image is a photo of a handwritten bill from a grain merchant. The bill may be written in:
-- Hindi (Devanagari) script with Devanagari digits (० १ २ ३ ४ ५ ६ ७ ८ ९)
-- English script with regular digits
-- Mixed (Hindi commodity names + English digits, or vice versa)
-- Weights may use fractions like ½, ¼, ¾, ½ kg written as "5½" or "५ ½"
-
-CRITICAL — HOW INDIAN GRAIN BILLS WORK:
-The buyer weighs bags in BATCHES, not one at a time. They put ~10 bags on the scale at once
-and write down two numbers per batch: (a) the number of bags in that batch, and (b) the total
-weight of those bags. For example, for 25 bags of maize, the bill shows 3 batch rows:
-  - batch 1: 10 bags, 510 kg
-  - batch 2: 10 bags, 505 kg
-  - batch 3:  5 bags, 258 kg
-The last batch is often smaller (the remainder). So each "weight" on the bill is the COMBINED
-weight of multiple bags, NOT a single bag's weight.
-
-CRITICAL — READ THE NUMBERS CAREFULLY:
-- A typical batch of 10 bags weighs between 400-700 kg (NOT 4000-7000 kg).
-- If you see "551" written, it means 551 kg, NOT 5510 kg. Do NOT add extra zeros.
-- If you see "51" written, it means 51 kg, NOT 510 kg.
-- Read EXACTLY what is written — do not infer or pad with zeros.
-- Each commodity has its OWN list of weights — do NOT copy weights from one commodity to another.
-
-YOUR JOB:
-1. Identify each commodity on the bill (e.g. गेहूँ, चावल, बाजरा, मक्का, अरहर, चना, सरसो, ज्वार, उड़द, मूंग, etc.).
-2. For each commodity, extract every BATCH row as a {bagCount, weight} pair:
-   - bagCount = number of bags weighed together in that batch (usually 10, sometimes 5, 3, 2, 1, etc.)
-   - weight = total weight of those bags in kg (decimal, modern numerals — convert 5½ → 5.5, ¼ → 0.25, etc.)
-   - If the bill shows ONLY a weight with no bag count visible, assume bagCount = 1 (single bag).
-   - If the bill shows ONLY a bag count with no weight visible, skip that row.
-3. Convert ALL numbers to modern decimal numerals (NOT Devanagari). Convert fractions: ½ = 0.5, ¼ = 0.25, ¾ = 0.75, 1½ = 1.5, etc.
-4. For each commodity, compute totalBags = sum of batch.bagCount, totalWeight = sum of batch.weight.
-5. Compute the grand total: sum of all commodities' totalBags and totalWeight.
-6. Also provide a best-effort English transliteration of each commodity name (e.g. गेहूँ → Wheat, चावल → Rice, बाजरा → Bajra/Pearl Millet, मक्का → Maize, अरहर → Arhar/Pigeon Pea, चना → Chickpea/Gram, सरसो → Mustard, ज्वार → Jowar/Sorghum, उड़द → Urad/Black Gram, मूंग → Mung/Green Gram).
-
-IMPORTANT: Read each commodity's weights SEPARATELY. Do NOT copy data from one commodity to another.
-Each commodity has its own list of batch weights — read them carefully from the section of the bill
-that belongs to that commodity.
-
-If the image is unclear or no commodities can be identified, return an empty commodities array with a note in rawText.
-
-Return ONLY valid JSON in this exact shape (no markdown, no commentary):
-{
-  "commodities": [
-    {
-      "name": "मक्का",
-      "nameEn": "Maize",
-      "batches": [
-        { "bagCount": 10, "weight": 510.5 },
-        { "bagCount": 10, "weight": 505.0 },
-        { "bagCount": 5,  "weight": 258.25 }
-      ],
-      "totalBags": 25,
-      "totalWeight": 1273.75
-    }
-  ],
-  "grandTotalBags": 25,
-  "grandTotalWeight": 1273.75,
-  "rawText": "Brief description of what was readable on the bill"
-}`
-
-    const proxyRes = await fetch('/api/ledger/bill-calc', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: b64, mimeType: 'image/jpeg', prompt }),
+    const img = new Image()
+    img.src = `data:image/jpeg;base64,${b64}`
+    await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('Could not load image for OCR'))
     })
 
-    if (!proxyRes.ok) {
-        // Use the user-friendly error message from the proxy (already sanitized)
-        let errMsg = 'Could not scan the bill. Please try a clearer photo.'
-        try {
-            const errJson = await proxyRes.json()
-            // The proxy now returns clean error messages — use them directly
-            if (errJson?.error) errMsg = errJson.error
-        } catch { /* not JSON — use default */ }
-        throw new Error(errMsg)
-    }
+    const result = await Tesseract.recognize(img, 'hin+eng', {
+        logger: (m: any) => { if (m.status === 'recognizing text') console.log(`[OCR] ${Math.round(m.progress * 100)}%`) }
+    })
 
-    const proxyJson = await proxyRes.json()
-    const content = proxyJson.choices?.[0]?.message?.content || ''
+    const rawText = result.data.text || ''
+    if (!rawText.trim()) throw new Error('No text could be read from the bill. Please try a clearer photo with better lighting.')
 
-    // Parse JSON from the response
-    let parsed: any = null
-    try {
-        parsed = JSON.parse(content)
-    } catch {
-        const match = content.match(/\{[\s\S]*\}/)
-        if (match) {
-            try { parsed = JSON.parse(match[0]) } catch { /* fall through */ }
-        }
-    }
-    if (!parsed || typeof parsed !== 'object') {
-        throw new Error('Could not parse OCR result. Please try a clearer photo.')
-    }
-
-    // Normalize + validate
-    const commodities: CommodityGroup[] = (parsed.commodities || [])
-        .filter((c: any) => c && (c.name || c.nameEn))
-        .map((c: any) => {
-            let batches: Batch[] = []
-            if (Array.isArray(c.batches) && c.batches.length > 0) {
-                batches = c.batches
-                    .filter((b: any) => b && (typeof b.weight === 'number' || typeof b.bagCount === 'number'))
-                    .map((b: any) => ({
-                        bagCount: typeof b.bagCount === 'number' && !isNaN(b.bagCount) && b.bagCount > 0 ? Math.round(b.bagCount) : 1,
-                        weight: typeof b.weight === 'number' && !isNaN(b.weight) ? Number(b.weight.toFixed(3)) : 0,
-                    }))
-            } else if (Array.isArray(c.weights) && c.weights.length > 0) {
-                batches = c.weights.map((w: number) => ({ bagCount: 1, weight: typeof w === 'number' && !isNaN(w) ? Number(w.toFixed(3)) : 0 }))
-            } else {
-                return null
-            }
-            if (batches.length === 0) return null
-            const totalBags = batches.reduce((s: number, b: Batch) => s + b.bagCount, 0)
-            const totalWeight = Number(batches.reduce((s: number, b: Batch) => s + b.weight, 0).toFixed(3))
-            return {
-                name: (c.name || c.nameEn || 'Unknown').trim(),
-                nameEn: (c.nameEn || '').trim(),
-                batches,
-                totalBags,
-                totalWeight,
-            }
-        })
-        .filter((c: CommodityGroup | null): c is CommodityGroup => c !== null)
-
-    if (commodities.length === 0) {
-        throw new Error(parsed.rawText || 'No commodities could be identified in the bill. Try a clearer photo.')
-    }
+    // ── Step 3: Parse OCR text to extract commodities, bags, and weights ──
+    const commodities = parseBillText(rawText)
+    if (commodities.length === 0) throw new Error('Could not identify any commodities in the bill. Please try a clearer photo.')
 
     return {
         commodities,
         grandTotalBags: commodities.reduce((s, c) => s + c.totalBags, 0),
         grandTotalWeight: Number(commodities.reduce((s, c) => s + c.totalWeight, 0).toFixed(3)),
-        rawText: parsed.rawText || '',
+        rawText,
     }
 }
 
+// ── Parser: Extract commodities, bag counts, and weights from OCR text ──
+const COMMODITY_NAMES: Record<string, string> = {
+    'गेहूँ': 'Wheat', 'गेहूं': 'Wheat', 'wheat': 'Wheat',
+    'चावल': 'Rice', 'rice': 'Rice',
+    'बाजरा': 'Bajra', 'bajra': 'Bajra',
+    'मक्का': 'Maize', 'maize': 'Maize', 'corn': 'Maize',
+    'अरहर': 'Arhar', 'arhar': 'Arhar', 'tur': 'Arhar',
+    'चना': 'Chickpea', 'chana': 'Chickpea', 'gram': 'Chickpea',
+    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'mustard': 'Mustard',
+    'ज्वार': 'Jowar', 'jowar': 'Jowar', 'sorghum': 'Jowar',
+    'उड़द': 'Urad', 'urad': 'Urad',
+    'मूंग': 'Mung', 'mung': 'Mung', 'moong': 'Mung',
+    'सोयाबीन': 'Soybean', 'soybean': 'Soybean',
+    'राजमा': 'Rajma', 'rajma': 'Rajma',
+    'जई': 'Oats', 'oats': 'Oats', 'जौ': 'Barley', 'barley': 'Barley',
+}
+
+function parseBillText(text: string): CommodityGroup[] {
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+    const commodities: CommodityGroup[] = []
+    let currentCommodity: CommodityGroup | null = null
+
+    const devDigits: Record<string, string> = { '०': '0', '१': '1', '२': '2', '३': '3', '४': '4', '५': '5', '६': '6', '७': '7', '८': '8', '९': '9' }
+    const toModern = (s: string): string => s.replace(/[०-९]/g, d => devDigits[d] || d)
+    const fractions: Record<string, string> = { '½': '.5', '¼': '.25', '¾': '.75', '1½': '1.5', '2½': '2.5' }
+
+    for (const line of lines) {
+        const modernLine = toModern(line)
+        let foundCommodity: string | null = null
+        let foundNameEn: string | null = null
+        for (const [hindi, english] of Object.entries(COMMODITY_NAMES)) {
+            if (modernLine.toLowerCase().includes(hindi.toLowerCase()) || modernLine.toLowerCase().includes(english.toLowerCase())) {
+                foundCommodity = hindi; foundNameEn = english; break
+            }
+        }
+
+        const numberMatches = modernLine.match(/(\d+(?:[.,]\d+)?(?:½|¼|¾)?)/g) || []
+        const numbers = numberMatches.map(n => {
+            let cleaned = n.replace(/,/g, '')
+            for (const [frac, dec] of Object.entries(fractions)) { if (cleaned.includes(frac)) cleaned = cleaned.replace(frac, dec) }
+            return parseFloat(cleaned)
+        }).filter(n => !isNaN(n) && n > 0)
+
+        if (foundCommodity) {
+            if (currentCommodity) commodities.push(currentCommodity)
+            currentCommodity = { name: foundCommodity, nameEn: foundNameEn || foundCommodity, batches: [], totalBags: 0, totalWeight: 0 }
+        }
+
+        if (currentCommodity && numbers.length >= 1) {
+            if (numbers.length >= 2) {
+                const bagCount = Math.round(numbers[0]); const weight = numbers[1]
+                if (bagCount <= 100 && weight > 0) currentCommodity.batches.push({ bagCount, weight })
+            } else if (numbers.length === 1 && numbers[0] > 50) {
+                currentCommodity.batches.push({ bagCount: 1, weight: numbers[0] })
+            }
+        }
+    }
+    if (currentCommodity) commodities.push(currentCommodity)
+    for (const c of commodities) {
+        c.totalBags = c.batches.reduce((s, b) => s + b.bagCount, 0)
+        c.totalWeight = Number(c.batches.reduce((s, b) => s + b.weight, 0).toFixed(3))
+    }
+    return commodities.filter(c => c.batches.length > 0)
+}
 /**
  * Compress an image File to a Blob (for upload to Cloudinary).
  * Resizes to maxDim on the longest side, re-encodes as JPEG at the given quality.
