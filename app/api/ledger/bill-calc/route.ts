@@ -159,8 +159,8 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
         })
     } catch {
         // Direct call failed (Vercel can't reach internal-api.z.ai)
-        // Strategy 2: Route through CORS proxy
-        const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(url)}`
+        // Strategy 2: Route through allorigins proxy (passes headers)
+        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
         res = await fetch(proxyUrl, {
             method: 'POST',
             headers,
