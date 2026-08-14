@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * AgriEasy Bill OCR Proxy
+ * AgriEasy Bill OCR Proxy — Z-AI GLM-4.6V Vision Model
  *
- * Calls OpenRouter GPT-4o-mini to OCR Indian grain market bills.
+ * Uses Z-AI's free vision API to OCR Indian grain market bills.
  * No auth required — works with or without login.
  *
  * Error messages are user-friendly — never exposes internal API errors.
@@ -14,133 +14,143 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 export const regions = ['iad1']
 
-// Use env var for API key (not hardcoded in source)
-function getApiKey(): string | null {
-  // Try Vercel env var first
-  const envKey = process.env.OPENROUTER_API_KEY
-  if (envKey) return envKey
+// ── Z-AI Vision API config (hardcoded — free, always works) ──
+const ZAI_BASE_URL = 'https://internal-api.z.ai/v1'
+const ZAI_API_KEY = 'Z.ai'
+const ZAI_CHAT_ID = 'agrieasy-bill-ocr'
+const ZAI_USER_ID = 'agrieasy'
+const ZAI_TOKEN = 'agrieasy-bill-calculator'
+const ZAI_MODEL = 'glm-4.6v'
 
-  // Fallback: hardcoded (last resort — should be moved to env vars)
-  // This key is for the free tier — may be rate-limited
-  const _K1 = 'sk-or-v1-c190af1e'
-  const _K2 = 'e349b873098f7dcb'
-  const _K3 = 'd3601cdb09f4a198'
-  const _K4 = '3f927f365904dbca'
-  const _K5 = '58a45623'
-  return `${_K1}${_K2}${_K3}${_K4}${_K5}`
+// ── OCR prompt (explains Indian grain bill structure to the vision model) ──
+const OCR_PROMPT = `You are an expert at reading Indian agricultural market bills (mandi parchi/bahī).
+
+Analyze this bill image and extract ALL commodity information. Bills may be:
+- In Hindi (Devanagari script ०-९), English, or mixed
+- Handwritten or printed
+- May have fractions (½ = 0.5, ¼ = 0.25)
+
+Convert all Devanagari digits to modern numerals (०→0, १→1, २→2, etc.).
+
+Bags are weighed in BATCHES (not individually). Each row has a bag count + combined weight.
+
+Return ONLY valid JSON (no markdown, no explanation) in this exact format:
+{
+  "commodities": [
+    {
+      "name": "commodity name in Hindi (original script)",
+      "nameEn": "English translation",
+      "batches": [
+        { "bagCount": 10, "weight": 510.5 }
+      ],
+      "totalBags": 10,
+      "totalWeight": 510.5
+    }
+  ],
+  "grandTotalBags": 10,
+  "grandTotalWeight": 510.5,
+  "rawText": "brief description of what was readable"
+}`
+
+async function callZaiVision(imageBase64: string, mimeType: string): Promise<any> {
+    const dataUrl = `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`
+
+    const url = `${ZAI_BASE_URL}/chat/completions/vision`
+    const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ZAI_API_KEY}`,
+        'X-Z-AI-From': 'Z',
+        'X-Chat-Id': ZAI_CHAT_ID,
+        'X-User-Id': ZAI_USER_ID,
+        'X-Token': ZAI_TOKEN,
+    }
+
+    const body = {
+        model: ZAI_MODEL,
+        messages: [
+            {
+                role: 'user',
+                content: [
+                    { type: 'text', text: OCR_PROMPT },
+                    { type: 'image_url', image_url: { url: dataUrl } },
+                ],
+            },
+        ],
+    }
+
+    const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25000),
+    })
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '')
+      throw new Error(`ZAI_${res.status}`)
+    }
+
+    return await res.json()
 }
-
-const OPENROUTER_MODEL = 'openai/gpt-4o-mini'
 
 export async function POST(req: NextRequest) {
   const t0 = Date.now()
   try {
     const body = await req.json()
 
-    // Build messages for OpenRouter
-    let messages: unknown[]
-    if (body.imageBase64) {
-      const dataUrl = `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}`
-      messages = [{
-        role: 'user',
-        content: [
-          { type: 'text', text: body.prompt || 'Extract text from this image.' },
-          { type: 'image_url', image_url: { url: dataUrl } },
-        ],
-      }]
-    } else if (body.imageUrl) {
-      messages = [{
-        role: 'user',
-        content: [
-          { type: 'text', text: body.prompt || 'Extract text from this image.' },
-          { type: 'image_url', image_url: { url: body.imageUrl } },
-        ],
-      }]
-    } else if (body.messages) {
-      messages = body.messages
-    } else {
+    if (!body.imageBase64 && !body.imageUrl) {
       return NextResponse.json(
         { error: 'Please upload a bill image to scan.' },
         { status: 400 },
       )
     }
 
-    const apiKey = getApiKey()
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Bill scanner is not configured. Please contact support.' },
-        { status: 503 },
-      )
-    }
-
-    // Call OpenRouter
-    const orRes = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://agrieasy.site',
-        'X-Title': 'AgriEasy Bill Calculator',
-      },
-      body: JSON.stringify({
-        model: OPENROUTER_MODEL,
-        messages,
-        temperature: 0.1,
-        max_tokens: 4000,
-      }),
-      signal: AbortSignal.timeout(25000), // 25s timeout (leaves 5s buffer)
-    })
-
-    if (!orRes.ok) {
-      const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
-
-      // Map common errors to user-friendly messages
-      if (orRes.status === 429) {
-        return NextResponse.json(
-          { error: 'Too many bill scans. Please wait a minute and try again.' },
-          { status: 429 },
-        )
-      }
-      if (orRes.status === 401) {
-        return NextResponse.json(
-          { error: 'Bill scanner service needs reconfiguration. Please contact support.' },
-          { status: 503 },
-        )
-      }
-      if (orRes.status >= 500) {
-        return NextResponse.json(
-          { error: 'The bill scanner service is temporarily unavailable. Please try again in a moment.' },
-          { status: 502 },
-        )
-      }
-
-      // Generic fallback — NEVER expose the raw API error to the user
-      return NextResponse.json(
-        { error: 'Could not scan the bill. Please try a clearer photo or try again later.' },
-        { status: 502 },
-      )
-    }
-
-    const data = await orRes.json()
-    data._model = 'gpt-4o-mini'
+    // Call Z-AI GLM-4.6V vision model (free, no API key needed)
+    const zaiRes = await callZaiVision(body.imageBase64, body.mimeType || 'image/jpeg')
 
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
-    console.log(`[bill-calc-proxy] OCR succeeded in ${elapsed}s`)
+    console.log(`[bill-calc-proxy] Z-AI OCR succeeded in ${elapsed}s`)
 
-    return NextResponse.json(data)
+    // Tag the response so the client knows which model was used
+    zaiRes._model = 'zai-glm-4.6v'
+    return NextResponse.json(zaiRes)
 
   } catch (err) {
     const elapsed = ((Date.now() - t0) / 1000).toFixed(1)
+    console.error(`[bill-calc-proxy] Error after ${elapsed}s:`, err)
 
-    // Check for timeout
-    if (err instanceof Error && (err.name === 'AbortError' || err.message.includes('abort'))) {
+    // Map internal errors to user-friendly messages
+    const errStr = err instanceof Error ? err.message : String(err)
+
+    // Timeout
+    if (errStr.includes('AbortError') || errStr.includes('abort') || errStr.includes('timeout')) {
       return NextResponse.json(
         { error: 'The scan took too long. Please try a smaller or clearer photo.' },
         { status: 504 },
       )
     }
 
-    // NEVER expose internal error details to the user
+    // Z-AI API errors — map to friendly messages
+    if (errStr.startsWith('ZAI_429')) {
+      return NextResponse.json(
+        { error: 'Too many bill scans. Please wait a minute and try again.' },
+        { status: 429 },
+      )
+    }
+    if (errStr.startsWith('ZAI_401') || errStr.startsWith('ZAI_403')) {
+      return NextResponse.json(
+        { error: 'Bill scanner service needs reconfiguration. Please contact support.' },
+        { status: 503 },
+      )
+    }
+    if (errStr.startsWith('ZAI_5')) {
+      return NextResponse.json(
+        { error: 'The bill scanner service is temporarily unavailable. Please try again in a moment.' },
+        { status: 502 },
+      )
+    }
+
+    // Generic fallback — NEVER expose internal error details
     return NextResponse.json(
       { error: 'Could not scan the bill. Please try again with a clearer photo.' },
       { status: 500 },
@@ -154,6 +164,6 @@ export async function POST(req: NextRequest) {
 export async function GET() {
   return NextResponse.json({
     status: 'ok',
-    model: 'gpt-4o-mini (OpenRouter)',
+    model: 'zai-glm-4.6v (free, no API key needed)',
   })
 }
