@@ -153,12 +153,13 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
     })
 
     if (!proxyRes.ok) {
-        let errMsg = `Proxy returned ${proxyRes.status}`
+        // Use the user-friendly error message from the proxy (already sanitized)
+        let errMsg = 'Could not scan the bill. Please try a clearer photo.'
         try {
             const errJson = await proxyRes.json()
-            errMsg = errJson?.error || errMsg
-            if (errJson?.detail) errMsg += ` — ${errJson.detail}`
-        } catch { /* not JSON */ }
+            // The proxy now returns clean error messages — use them directly
+            if (errJson?.error) errMsg = errJson.error
+        } catch { /* not JSON — use default */ }
         throw new Error(errMsg)
     }
 
