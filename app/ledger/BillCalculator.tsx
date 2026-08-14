@@ -118,12 +118,12 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
 // ── Parser: Extract commodities, bag counts, and weights from OCR text ──
 const COMMODITY_NAMES: Record<string, string> = {
     'गेहूँ': 'Wheat', 'गेहूं': 'Wheat', 'गेहू': 'Wheat', 'wheat': 'Wheat',
-    'चावल': 'Rice', 'rice': 'Rice', 'चावल': 'Rice', 'अनाज': 'Grain',
-    'बाजरा': 'Bajra', 'bajra': 'Bajra', 'बाजरा': 'Bajra',
-    'मक्का': 'Maize', 'maize': 'Maize', 'corn': 'Maize', 'मक्का': 'Maize',
+    'चावल': 'Rice', 'rice': 'Rice', 'अनाज': 'Grain',
+    'बाजरा': 'Bajra', 'bajra': 'Bajra', 'बाजरी': 'Bajra',
+    'मक्का': 'Maize', 'maize': 'Maize', 'corn': 'Maize',
     'अरहर': 'Arhar', 'arhar': 'Arhar', 'tur': 'Arhar', 'तूर': 'Arhar',
     'चना': 'Chickpea', 'chana': 'Chickpea', 'gram': 'Chickpea',
-    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'mustard': 'Mustard', 'सरसो': 'Mustard',
+    'सरसो': 'Mustard', 'सरसों': 'Mustard', 'mustard': 'Mustard',
     'ज्वार': 'Jowar', 'jowar': 'Jowar', 'sorghum': 'Jowar', 'जुअर': 'Jowar',
     'उड़द': 'Urad', 'urad': 'Urad', 'उडद': 'Urad',
     'मूंग': 'Mung', 'mung': 'Mung', 'moong': 'Mung', 'मूग': 'Mung',
@@ -137,9 +137,7 @@ const COMMODITY_NAMES: Record<string, string> = {
     'कपास': 'Cotton', 'cotton': 'Cotton',
     'गन्ना': 'Sugarcane', 'sugarcane': 'Sugarcane', 'sugar': 'Sugarcane',
     'सब्ज़ी': 'Vegetable', 'vegetable': 'Vegetable',
-    'बाजरी': 'Bajra',
     'खाद्य': 'Food Grain',
-    'अनाज': 'Grain',
     'फसल': 'Crop',
 }
 
