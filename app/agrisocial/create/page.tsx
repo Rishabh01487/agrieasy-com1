@@ -41,6 +41,7 @@ function CreateContent() {
     const [category, setCategory] = useState('farming')
     const [location, setLocation] = useState('')
     const [submitting, setSubmitting] = useState(false)
+    const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState('')
     const [camError, setCamError] = useState('')
     const [isRecording, setIsRecording] = useState(false)
@@ -142,7 +143,9 @@ function CreateContent() {
         if (!streamRef.current) return
         chunksRef.current = []
         const mimeType = getSupportedMimeType()
-        const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : {})
+        // Limit video bitrate to 2.5 Mbps — keeps 2-min video under ~37MB instead of 100MB+
+        // This is the #1 fix for slow uploads — smaller files upload 4x faster
+        const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 } : { videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 })
         mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
         mr.onstop = () => {
             const blobMime = mimeType || 'video/webm'
@@ -154,14 +157,27 @@ function CreateContent() {
             setIsRecording(false)
             if (timerRef.current) clearInterval(timerRef.current)
         }
-        mr.start(100)
+        mr.start(100) // collect data in 100ms chunks
         mediaRecorderRef.current = mr
         setIsRecording(true)
         setRecordingTime(0)
-        timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
+        timerRef.current = setInterval(() => {
+            setRecordingTime(t => {
+                // Auto-stop at 3 minutes (180 seconds) — prevents huge files
+                if (t + 1 >= 180) {
+                    stopRecording()
+                    return 180
+                }
+                return t + 1
+            })
+        }, 1000)
     }
 
-    const stopRecording = () => { mediaRecorderRef.current?.stop() }
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop()
+        }
+    }
 
     const compressImage = async (blob: Blob): Promise<Blob> => {
         const img = new Image()
@@ -245,6 +261,7 @@ function CreateContent() {
                     return
                 }
 
+                setUploadProgress(0)
                 for (const file of filesToUpload) {
                     if (!file.blob) continue
                     const resourceType = file.type === 'video' ? 'video' : 'image'
@@ -254,17 +271,50 @@ function CreateContent() {
                     fd.append('timestamp', sig.timestamp.toString())
                     fd.append('signature', sig.signature)
                     fd.append('folder', sig.folder)
-                    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
-                    const cld = await cldRes.json()
-                    if (cldRes.ok && cld.secure_url) {
-                        allMediaUrls.push(cld.secure_url)
-                    } else {
-                        const cldMsg = cld?.error?.message || `Cloudinary HTTP ${cldRes.status}`
-                        setError('Upload failed: ' + cldMsg)
+
+                    // Use XMLHttpRequest instead of fetch — gives us upload progress tracking
+                    const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`
+                    const cld = await new Promise<any>((resolve, reject) => {
+                        const xhr = new XMLHttpRequest()
+                        xhr.open('POST', uploadUrl)
+
+                        // Track upload progress
+                        xhr.upload.onprogress = (e) => {
+                            if (e.lengthComputable) {
+                                const pct = Math.round((e.loaded / e.total) * 100)
+                                setUploadProgress(pct)
+                            }
+                        }
+
+                        xhr.onload = () => {
+                            try {
+                                const res = JSON.parse(xhr.responseText)
+                                if (xhr.status >= 200 && xhr.status < 300 && res.secure_url) {
+                                    resolve(res)
+                                } else {
+                                    reject(new Error(res?.error?.message || `Cloudinary HTTP ${xhr.status}`))
+                                }
+                            } catch {
+                                reject(new Error(`Cloudinary HTTP ${xhr.status}`))
+                            }
+                        }
+
+                        xhr.onerror = () => reject(new Error('Network error during upload. Check your connection.'))
+                        xhr.ontimeout = () => reject(new Error('Upload timed out. Try a shorter video or check your connection.'))
+                        xhr.timeout = 120000 // 2 minute timeout for large videos
+                        xhr.send(fd)
+                    }).catch(e => {
+                        const msg = e instanceof Error ? e.message : 'Upload failed'
+                        setError(msg)
                         setSubmitting(false)
-                        return
-                    }
+                        setUploadProgress(0)
+                        return null
+                    })
+
+                    if (!cld) return
+                    allMediaUrls.push(cld.secure_url)
                 }
+                setUploadProgress(100)
                 if (allMediaUrls.length > 0) {
                     mediaUrl = allMediaUrls[0]
                     mediaType = filesToUpload[0].type
@@ -347,7 +397,7 @@ function CreateContent() {
                     {mode === 'choose' ? (postType === 'story' ? 'New Story' : postType === 'krishiclip' ? 'New KrishiClip' : 'New Post') : mode === 'camera' ? (isRecording ? '🔴 Recording' : '📷 Camera') : mode === 'preview' ? '✨ Filters' : '📝 Details'}
                 </span>
                 {mode === 'preview' && <button onClick={() => setMode('details')} style={{ background: SOCIAL.primary, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>Next →</button>}
-                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? 'Posting…' : '✓ Share'}</button>}
+                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? (uploadProgress > 0 && uploadProgress < 100 ? `⏳ ${uploadProgress}%` : '⏳…') : '✓ Share'}</button>}
             </nav>
 
             {/* ── CHOOSE MODE ── */}
@@ -583,8 +633,15 @@ function CreateContent() {
 
                         <button onClick={handlePost} disabled={submitting}
                             style={{ width: '100%', padding: '14px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                            {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
+                            {submitting ? (uploadProgress > 0 && uploadProgress < 100 ? `⏳ Uploading… ${uploadProgress}%` : '⏳ Sharing…') : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
                         </button>
+
+                        {/* Upload progress bar */}
+                        {submitting && uploadProgress > 0 && uploadProgress < 100 && (
+                            <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.1)', borderRadius: '100px', marginTop: '8px', overflow: 'hidden' }}>
+                                <div style={{ width: `${uploadProgress}%`, height: '100%', background: SOCIAL.primary, borderRadius: '100px', transition: 'width 0.3s ease' }} />
+                            </div>
+                        )}
                     </div>
 
                     {/* Bottom nav link */}
