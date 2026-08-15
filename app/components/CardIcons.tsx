@@ -83,24 +83,11 @@ export function LedgerIcon({ size = 32, color = '#31372B', style }: IconProps) {
     )
 }
 
-// ── Home: house with roof ──
+// ── Home: logo image ──
 export function HomeIcon({ size = 24, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Roof */}
-            <path d="M6 22 L24 8 L42 22" stroke={color} strokeWidth="2.5" fill="#31372B" />
-            {/* House body */}
-            <rect x="10" y="22" width="28" height="20" stroke={color} strokeWidth="2.5" fill="#fff" />
-            {/* Door */}
-            <rect x="20" y="30" width="8" height="12" stroke={color} strokeWidth="2" fill={color} />
-            {/* Door knob */}
-            <circle cx="26" cy="36" r="1" fill="#4A5240" />
-            {/* Window */}
-            <rect x="13" y="26" width="5" height="5" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            <rect x="30" y="26" width="5" height="5" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            {/* Chimney */}
-            <rect x="30" y="10" width="4" height="8" stroke={color} strokeWidth="2" fill="#E8E4D6" />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-home.png" alt="Home" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
@@ -119,27 +106,11 @@ export function SearchIcon({ size = 24, color = '#31372B', style }: IconProps) {
     )
 }
 
-// ── Calendar: booking date ──
+// ── Calendar/Bookings: logo image ──
 export function CalendarIcon({ size = 24, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Calendar body */}
-            <rect x="8" y="10" width="32" height="32" rx="3" stroke={color} strokeWidth="2.5" fill="#fff" />
-            {/* Top bar */}
-            <rect x="8" y="10" width="32" height="8" rx="3" stroke={color} strokeWidth="2.5" fill="#31372B" />
-            {/* Rings */}
-            <line x1="16" y1="6" x2="16" y2="14" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-            <line x1="32" y1="6" x2="32" y2="14" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-            {/* Date grid dots */}
-            <circle cx="16" cy="24" r="2" fill={color} />
-            <circle cx="24" cy="24" r="2" fill={color} />
-            <circle cx="32" cy="24" r="2" fill={color} />
-            <circle cx="16" cy="31" r="2" fill="#4A5240" />
-            <circle cx="24" cy="31" r="2.5" fill="#31372B" />
-            <circle cx="32" cy="31" r="2" fill={color} />
-            <circle cx="16" cy="38" r="2" fill={color} />
-            <circle cx="32" cy="38" r="2" fill={color} />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-bookings.png" alt="Bookings" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
@@ -159,24 +130,11 @@ export function LocationIcon({ size = 24, color = '#31372B', style }: IconProps)
     )
 }
 
-// ── Clipboard: commodities list ──
+// ── Clipboard/Commodities: logo image ──
 export function ClipboardIcon({ size = 24, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Clipboard body */}
-            <rect x="10" y="8" width="28" height="36" rx="2" stroke={color} strokeWidth="2.5" fill="#fff" />
-            {/* Clip at top */}
-            <rect x="18" y="4" width="12" height="8" rx="2" stroke={color} strokeWidth="2.5" fill="#31372B" />
-            {/* List lines */}
-            <line x1="16" y1="18" x2="32" y2="18" stroke={color} strokeWidth="2" />
-            <line x1="16" y1="24" x2="32" y2="24" stroke={color} strokeWidth="2" />
-            <line x1="16" y1="30" x2="28" y2="30" stroke={color} strokeWidth="2" />
-            {/* Checkmarks */}
-            <path d="M13 18 L14.5 19.5 L17 16.5" stroke="#4A5240" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M13 24 L14.5 25.5 L17 22.5" stroke="#4A5240" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            {/* ₹ at bottom */}
-            <text x="24" y="40" textAnchor="middle" fontSize="8" fill={color} fontWeight="bold">₹</text>
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-commodities.png" alt="Commodities" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
