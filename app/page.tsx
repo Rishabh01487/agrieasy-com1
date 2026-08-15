@@ -44,7 +44,7 @@ export default function Home() {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 12px 40px rgba(49,55,43,0.18), inset 0 1px 0 rgba(255,255,255,0.9)',
           }}>
-            <img src="/agrieasy-logo-main-5.png" alt="AgriEasy" width={52} height={52} style={{ borderRadius: 13 }} />
+            <img src="/agrieasy-logo-main-5.png?v=2" alt="AgriEasy" width={52} height={52} style={{ borderRadius: 13 }} />
           </div>
         </div>
 
