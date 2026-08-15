@@ -133,18 +133,11 @@ export function WalletIcon({ size = 32, color = '#31372B', style }: IconProps) {
     )
 }
 
-// ── AgriSocial: chat/feed bubble ──
+// ── AgriSocial: new logo image ──
 export function SocialIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Speech bubble */}
-            <path d="M8 10 L40 10 Q42 10 42 12 L42 30 Q42 32 40 32 L20 32 L12 38 L12 32 L8 32 Q6 32 6 30 L6 12 Q6 10 8 10 Z" stroke={color} strokeWidth="2" fill="#fff" />
-            {/* Heart inside */}
-            <path d="M24 16 Q22 14 20 16 Q18 18 20 20 L24 24 L28 20 Q30 18 28 16 Q26 14 24 16 Z" fill="#31372B" stroke={color} strokeWidth="1.5" />
-            {/* Dots */}
-            <circle cx="14" cy="20" r="1.5" fill={color} />
-            <circle cx="34" cy="20" r="1.5" fill={color} />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/agrisocial-logo.png" alt="AgriSocial" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
