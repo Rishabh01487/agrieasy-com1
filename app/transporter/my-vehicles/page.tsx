@@ -76,7 +76,7 @@ export default function ManageVehicles() {
             <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img src="/icons/icon-192.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+                        <img src="/agrisocial-logo.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
                         <Link href="/transporter/dashboard" style={{ color: TRANSPORTER.primary, fontWeight: 800, textDecoration: 'none' }}>AgriEasy</Link>
                         <span style={{ color: TRANSPORTER.muted }}>›</span>
                         <span style={{ color: TRANSPORTER.text, fontWeight: 600, fontSize: '0.9rem' }}>My Fleet</span>

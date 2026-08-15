@@ -92,7 +92,7 @@ export default function Login() {
         <Link href="/" style={{ color: AUTH.muted, textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '24px', fontFamily: SHARED.font }}>← Back to home</Link>
 
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <img src="/icons/icon-192.png" alt="logo" style={{ width: '56px', height: '56px', borderRadius: '14px', marginBottom: '14px', boxShadow: '0 2px 12px rgba(109,40,217,0.2)' }} />
+          <img src="/agrisocial-logo.png" alt="logo" style={{ width: '56px', height: '56px', borderRadius: '14px', marginBottom: '14px', boxShadow: '0 2px 12px rgba(109,40,217,0.2)' }} />
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: AUTH.primaryLight, border: `1px solid ${AUTH.border}`, borderRadius: '100px', padding: '5px 16px', marginBottom: '12px', fontFamily: SHARED.font }}>
             <span style={{ fontSize: '1.1rem' }}>{rc.icon}</span>
             <span style={{ color: AUTH.primary, fontWeight: 700, fontSize: '0.85rem' }}>Sign in as {rc.label}</span>

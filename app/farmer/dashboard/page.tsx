@@ -153,7 +153,7 @@ export default function FarmerDashboard() {
       <nav style={{ ...navStyle(FARMER), background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', padding: isMobile ? '12px 16px' : '14px 24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 10, background: FARMER.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>🌾</div>
+            <img src="/agrisocial-logo.png" alt="AgriEasy" style={{ width: 32, height: 32, borderRadius: 8, objectFit: 'cover' }} />
             <div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: isMobile ? '0.95rem' : '1.05rem', color: FARMER.text, lineHeight: 1 }}>AgriEasy</p>
               {!isMobile && <p style={{ margin: 0, fontSize: '0.7rem', color: FARMER.muted }}>Farmer/Vyapari workspace</p>}

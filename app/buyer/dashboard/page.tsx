@@ -142,7 +142,7 @@ export default function BuyerDashboard() {
       <nav style={{ ...navStyle(BUYER), background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: BUYER.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.95rem' }}>🛒</div>
+            <img src="/agrisocial-logo.png" alt="AgriEasy" style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'cover' }} />
             <div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: BUYER.text, lineHeight: 1 }}>AgriEasy</p>
               <p style={{ margin: 0, fontSize: '0.7rem', color: BUYER.muted }}>Buyer workspace</p>
