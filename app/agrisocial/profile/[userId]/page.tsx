@@ -280,7 +280,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 <div style={{ display: 'flex', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 6 }}>
                     {([
                         ['posts', '📷', 'Posts'],
-                        ['clips', '🎬', 'Clips'],
+                        ['clips', '🎬', 'KrishiClips'],
                         ...(isOwn ? [['saved', 'bookmark', 'Saved'] as const] : []),
                     ] as const).map(([k, icon, label]) => (
                         <button key={k} onClick={() => setTab(k as 'posts' | 'clips' | 'saved')}
@@ -330,7 +330,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                     )}
                                     {/* Play icon overlay for video clips (YouTube-style red circle) */}
                                     {isVideo && (
-                                        <div style={{ position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: '#ff0000', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
+                                        <div style={{ position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
                                             <svg width="9" height="9" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}>
                                                 <path d="M8 5v14l11-7z" />
                                             </svg>

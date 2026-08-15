@@ -286,7 +286,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     )}
                 </div>
             ) : post.mediaUrl && post.mediaType === 'video' ? (
-                <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
+                <video src={post.mediaUrl} controls preload="metadata" style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
             ) : null}
 
             {/* Actions */}
@@ -668,7 +668,7 @@ export default function AgriSocialFeed() {
                     <Link href="/" title="AgriEasy Home" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         <Icon name="home" size={24} color={SOCIAL.text} />
                     </Link>
-                    <Link href="/agrisocial/clips" title="Reels" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                    <Link href="/agrisocial/clips" title="KrishiClips" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         <Icon name="reels" size={24} color={SOCIAL.text} />
                     </Link>
                     <Link href="/agrisocial/explore" title="Explore" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
@@ -811,7 +811,7 @@ export default function AgriSocialFeed() {
             <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.95)', borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', justifyContent: 'space-around', padding: '8px 0', zIndex: 50, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 {([
                     ['home', 'Feed', '/agrisocial'],
-                    ['reels', 'Reels', '/agrisocial/clips'],
+                    ['reels', 'KrishiClips', '/agrisocial/clips'],
                     ['plus', 'Create', '/agrisocial/create'],
                     ['search', 'Search', '/agrisocial/search'],
                     ['heart-nav', 'Activity', '/agrisocial/notifications'],
