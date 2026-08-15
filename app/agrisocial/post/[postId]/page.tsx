@@ -305,7 +305,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                     <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 14px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '2px', marginBottom: 8 }}>
                             <IconButton name="heart" size={24} title="Like" onClick={handleLike}
-                                active={liked} activeColor="#ef4444" color={SOCIAL.text}
+                                active={liked} activeColor="#D9534F" color={SOCIAL.text}
                                 style={{ transform: liked ? 'scale(1.05)' : 'scale(1)' }}
                             />
                             <IconButton name="comment" size={24} title="Comment" color={SOCIAL.text} />

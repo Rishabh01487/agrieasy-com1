@@ -292,7 +292,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             {/* Actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '8px 10px' }}>
                 <IconButton name="heart" size={24} title="Like" onClick={handleLike}
-                    active={liked} activeColor="#ef4444" color={SOCIAL.text}
+                    active={liked} activeColor="#D9534F" color={SOCIAL.text}
                     style={{ transform: liked ? 'scale(1.05)' : 'scale(1)' }}
                 />
                 <IconButton name="comment" size={24} title="Comment" onClick={() => setShowComments(s => !s)} color={SOCIAL.text} />

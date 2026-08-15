@@ -281,7 +281,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     )}
                 </Link>
                 <button onClick={handleLike} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
-                    <Icon name="heart" size={32} color={liked ? '#ef4444' : '#fff'} filled={liked} />
+                    <Icon name="heart" size={32} color={liked ? '#D9534F' : '#fff'} filled={liked} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>
                 </button>
                 {/* Comment — links to the post detail page where comments live */}

@@ -365,7 +365,7 @@ export default function StoryViewer({ params }: { params: Promise<{ userId: stri
                             transform: liked ? 'scale(1.05)' : 'scale(1)',
                             fontWeight: 700, fontSize: '0.82rem',
                         }}>
-                        <Icon name="heart" size={18} color={liked ? '#ef4444' : '#fff'} filled={liked} />
+                        <Icon name="heart" size={18} color={liked ? '#D9534F' : '#fff'} filled={liked} />
                         {liked ? 'Liked' : 'Like'}
                     </button>
                     {/* Reply via DM (Instagram stories use DM replies instead of comments) */}
