@@ -242,7 +242,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={clip.mediaUrl} alt="clip" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} />
             ) : (
-                <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, #431407, #9a3412)`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 0 }}>
+                <div style={{ width: '100%', height: '100%', background: `linear-gradient(135deg, #D9534F, #B8423F)`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 0 }}>
                     <span style={{ fontSize: '4rem' }}>🌾</span>
                 </div>
             )}

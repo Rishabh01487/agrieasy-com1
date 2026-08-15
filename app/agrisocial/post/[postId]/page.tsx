@@ -318,7 +318,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                                 style={{ marginLeft: 'auto' }}
                             />
                             {viewerId && viewerId === authorId && (
-                                <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#42476E" />
+                                <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#8A6060" />
                             )}
                         </div>
                         <p style={{ color: SOCIAL.text, fontSize: '0.84rem', fontWeight: 700, margin: '0 0 4px', cursor: 'pointer' }} onClick={() => setShowLikesModal(true)}>{likesCount.toLocaleString('en-IN')} {likesCount === 1 ? 'like' : 'likes'}</p>

@@ -305,7 +305,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     style={{ marginLeft: 'auto' }}
                 />
                 {isOwner && (
-                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#42476E" />
+                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#8A6060" />
                 )}
             </div>
 

@@ -36,7 +36,7 @@ body {
 
 /* Instagram-style story ring — magenta + gold (AgriEasy brand ring) */
 .story-ring {
-  background: linear-gradient(45deg, #31372B 0%, #31372B 25%, #4A5240 50%, #31372B 75%, #31372B 100%);
+  background: linear-gradient(45deg, #D9534F 0%, #B8423F 25%, #E87B7B 50%, #B8423F 75%, #D9534F 100%);
   padding: 2.5px;
   border-radius: 9999px;
 }

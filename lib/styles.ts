@@ -137,7 +137,7 @@ export const SOCIAL = {
   greenLight: 'rgba(217,83,79,0.1)',
   red: '#D9534F',
   redLight: '#fef2f2',
-  gradient: 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))',
+  gradient: 'linear-gradient(135deg, #D9534F 0%, #B8423F 100%)',
   gradientSoft: 'linear-gradient(135deg, rgba(217,83,79,0.12), rgba(217,83,79,0.06))',
   gradientRing:
     'linear-gradient(45deg, #D9534F 0%, #B8423F 25%, #E87B7B 50%, #B8423F 75%, #D9534F 100%)',

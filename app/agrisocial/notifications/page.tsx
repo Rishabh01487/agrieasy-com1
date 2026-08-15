@@ -33,7 +33,7 @@ function timeAgo(iso: string) {
 
 const typeMeta: Record<string, { icon: IconName; color: string; verb: (n: Notification) => string }> = {
     like:        { icon: 'heart', color: '#D9534F', verb: () => 'liked your post.' },
-    comment:     { icon: 'comment', color: '#42476E', verb: () => 'commented on your post.' },
+    comment:     { icon: 'comment', color: '#8A6060', verb: () => 'commented on your post.' },
     comment_like:{ icon: 'heart', color: '#D9534F', verb: () => 'liked your comment.' },
     follow:      { icon: 'explore', color: '#10b981', verb: () => 'started following you.' },
     mention:     { icon: 'send', color: '#D9534F', verb: () => 'mentioned you.' },
