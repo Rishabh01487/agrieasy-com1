@@ -27,109 +27,43 @@ const baseSvgProps = {
     strokeLinejoin: 'round' as const,
 }
 
-// ── Farmer/Vyapari: wheat sheaf ──
+// ── Farmer/Vyapari: logo image ──
 export function FarmerIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Central stalk */}
-            <line x1="24" y1="10" x2="24" y2="40" stroke={color} strokeWidth="2" />
-            {/* Wheat grains — left side */}
-            <path d="M24 14 Q18 14 16 18 Q18 19 20 18 Q22 17 24 14Z" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            <path d="M24 20 Q18 20 16 24 Q18 25 20 24 Q22 23 24 20Z" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            <path d="M24 26 Q18 26 16 30 Q18 31 20 30 Q22 29 24 26Z" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            {/* Wheat grains — right side */}
-            <path d="M24 14 Q30 14 32 18 Q30 19 28 18 Q26 17 24 14Z" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            <path d="M24 20 Q30 20 32 24 Q30 25 28 24 Q26 23 24 20Z" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            <path d="M24 26 Q30 26 32 30 Q30 31 28 30 Q26 29 24 26Z" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            {/* Top grain */}
-            <ellipse cx="24" cy="11" rx="3" ry="4" fill="#4A5240" stroke={color} strokeWidth="1.5" />
-            {/* Ground line */}
-            <line x1="14" y1="40" x2="34" y2="40" stroke={color} strokeWidth="2" />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-farmer.png" alt="Farmer" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
-// ── Buyer: warehouse with boxes ──
+// ── Buyer: logo image ──
 export function BuyerIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Roof */}
-            <path d="M6 18 L24 8 L42 18" stroke={color} strokeWidth="2" fill="#E8E4D6" />
-            {/* Building body */}
-            <rect x="8" y="18" width="32" height="24" stroke={color} strokeWidth="2" fill="#fff" />
-            {/* Garage door frame */}
-            <rect x="14" y="26" width="20" height="16" stroke={color} strokeWidth="2" fill="#FAF7EE" />
-            {/* Stacked boxes inside */}
-            <rect x="18" y="32" width="6" height="5" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            <rect x="26" y="32" width="6" height="5" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            <rect x="22" y="27" width="6" height="5" stroke={color} strokeWidth="1.5" fill="#31372B" />
-            {/* Tower */}
-            <rect x="20" y="4" width="8" height="6" stroke={color} strokeWidth="2" fill="#fff" />
-            <circle cx="24" cy="3" r="1.5" fill={color} />
-            {/* Ground */}
-            <line x1="4" y1="42" x2="44" y2="42" stroke={color} strokeWidth="2" />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-buyer.png" alt="Buyer" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
-// ── Transporter: delivery truck ──
+// ── Transporter: logo image ──
 export function TransporterIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Cargo box */}
-            <rect x="4" y="14" width="24" height="18" stroke={color} strokeWidth="2" fill="#fff" />
-            {/* Box detail on cargo */}
-            <rect x="10" y="19" width="6" height="5" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            <rect x="18" y="19" width="6" height="5" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            {/* Cab */}
-            <path d="M28 14 L38 14 L42 20 L42 32 L28 32 Z" stroke={color} strokeWidth="2" fill="#E8E4D6" />
-            {/* Window */}
-            <path d="M31 17 L37 17 L40 21 L31 21 Z" stroke={color} strokeWidth="1.5" fill="#FAF7EE" />
-            {/* Wheels */}
-            <circle cx="14" cy="34" r="4" stroke={color} strokeWidth="2" fill="#31372B" />
-            <circle cx="14" cy="34" r="1.5" fill="#fff" />
-            <circle cx="34" cy="34" r="4" stroke={color} strokeWidth="2" fill="#31372B" />
-            <circle cx="34" cy="34" r="1.5" fill="#fff" />
-            {/* Ground */}
-            <line x1="2" y1="40" x2="46" y2="40" stroke={color} strokeWidth="2" />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-transporter.png" alt="Transporter" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
-// ── Bill Calculator: calculator with receipt ──
+// ── Bill Calculator: logo image ──
 export function CalculatorIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Receipt body */}
-            <path d="M14 6 L34 6 L34 42 L30 39 L26 42 L22 39 L18 42 L14 39 Z" stroke={color} strokeWidth="2" fill="#fff" />
-            {/* Receipt lines */}
-            <line x1="19" y1="14" x2="29" y2="14" stroke={color} strokeWidth="1.5" />
-            <line x1="19" y1="19" x2="29" y2="19" stroke={color} strokeWidth="1.5" />
-            <line x1="19" y1="24" x2="25" y2="24" stroke={color} strokeWidth="1.5" />
-            {/* Total box */}
-            <rect x="18" y="29" width="12" height="6" stroke={color} strokeWidth="1.5" fill="#4A5240" />
-            <text x="24" y="34" textAnchor="middle" fontSize="5" fill={color} fontWeight="bold">₹</text>
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-billcalc.png" alt="Bill Calculator" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
-// ── AgriPay: wallet with card ──
+// ── AgriPay: logo image ──
 export function WalletIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Wallet body */}
-            <rect x="6" y="12" width="36" height="26" rx="3" stroke={color} strokeWidth="2" fill="#fff" />
-            {/* Card sticking out */}
-            <rect x="10" y="8" width="20" height="12" rx="2" stroke={color} strokeWidth="2" fill="#31372B" />
-            <line x1="13" y1="14" x2="22" y2="14" stroke="#fff" strokeWidth="1.5" />
-            {/* Wallet flap */}
-            <path d="M6 18 L42 18" stroke={color} strokeWidth="2" />
-            {/* Coin slot / button */}
-            <circle cx="34" cy="27" r="4" stroke={color} strokeWidth="2" fill="#4A5240" />
-            <circle cx="34" cy="27" r="1.5" fill={color} />
-            {/* ₹ symbol */}
-            <text x="16" y="32" fontSize="9" fill={color} fontWeight="bold">₹</text>
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-agripay.png" alt="AgriPay" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
@@ -141,24 +75,11 @@ export function SocialIcon({ size = 32, color = '#31372B', style }: IconProps) {
     )
 }
 
-// ── Ledger: book with pages ──
+// ── Ledger: logo image ──
 export function LedgerIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
-        <svg {...baseSvgProps} width={size} height={size} viewBox="0 0 48 48" style={style}>
-            {/* Book cover */}
-            <rect x="10" y="6" width="28" height="36" rx="2" stroke={color} strokeWidth="2" fill="#fff" />
-            {/* Spine */}
-            <line x1="14" y1="6" x2="14" y2="42" stroke={color} strokeWidth="2" />
-            {/* Page lines */}
-            <line x1="18" y1="14" x2="34" y2="14" stroke={color} strokeWidth="1.5" />
-            <line x1="18" y1="20" x2="34" y2="20" stroke={color} strokeWidth="1.5" />
-            <line x1="18" y1="26" x2="30" y2="26" stroke={color} strokeWidth="1.5" />
-            <line x1="18" y1="32" x2="34" y2="32" stroke={color} strokeWidth="1.5" />
-            {/* Bookmark */}
-            <path d="M30 6 L30 16 L33 13 L36 16 L36 6 Z" fill="#31372B" stroke={color} strokeWidth="1.5" />
-            {/* ₹ on cover spine */}
-            <circle cx="12" cy="24" r="1.5" fill="#4A5240" />
-        </svg>
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src="/logo-ledger.png" alt="Ledger" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
