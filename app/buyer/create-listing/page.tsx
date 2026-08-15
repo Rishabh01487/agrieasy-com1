@@ -286,7 +286,7 @@ export default function CreateListing() {
       <nav style={{ ...navStyle(BUYER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '820px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/agrisocial-logo.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
+            <img src="/icons/icon-192.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
             <Link href="/buyer/dashboard" style={{ color: BUYER.primary, fontWeight: 800, textDecoration: 'none' }}>AgriEasy</Link>
             <span style={{ color: BUYER.muted }}>›</span>
             <span style={{ color: BUYER.text, fontWeight: 600, fontSize: '0.9rem' }}>Add Commodities</span>

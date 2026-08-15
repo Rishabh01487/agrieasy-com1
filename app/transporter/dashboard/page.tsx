@@ -107,7 +107,7 @@ export default function TransporterDashboard() {
       <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <img src="/agrisocial-logo.png" alt="logo" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
+            <img src="/icons/icon-192.png" alt="logo" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
             <span style={{ fontWeight: 800, fontSize: '1.15rem', background: TRANSPORTER.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>AgriEasy</span>
             <span style={{ background: TRANSPORTER.primaryLight, color: TRANSPORTER.primary, border: `1px solid ${TRANSPORTER.border}`, borderRadius: '100px', padding: '3px 12px', fontSize: '0.75rem', fontWeight: 700, boxShadow: SHARED.shadow }}>🚛 Transporter</span>
           </div>

@@ -154,7 +154,7 @@ export default function Register() {
         <Link href="/" style={{ color: AUTH.muted, textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '20px', fontFamily: SHARED.font }}>← Back to home</Link>
 
         <div style={{ textAlign: 'center', marginBottom: '22px' }}>
-          <img src="/agrisocial-logo.png" alt="logo" style={{ width: '52px', height: '52px', borderRadius: '12px', marginBottom: '12px', boxShadow: '0 2px 12px rgba(109,40,217,0.2)' }} />
+          <img src="/icons/icon-192.png" alt="logo" style={{ width: '52px', height: '52px', borderRadius: '12px', marginBottom: '12px', boxShadow: '0 2px 12px rgba(109,40,217,0.2)' }} />
           <h2 style={{ color: AUTH.text, fontSize: '1.5rem', fontWeight: 800, margin: 0, marginBottom: '5px', fontFamily: SHARED.font }}>Create Account</h2>
           <p style={{ color: AUTH.muted, fontSize: '0.875rem', fontFamily: SHARED.font }}>Join farmers &amp; buyers on AgriEasy</p>
         </div>
