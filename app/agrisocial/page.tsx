@@ -818,8 +818,8 @@ export default function AgriSocialFeed() {
                     ['explore', 'Profile', userId ? `/agrisocial/profile/${userId}` : '/auth/login'],
                 ] as const).map(([iconName, label, href]) => (
                     <Link key={label} href={href}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: SOCIAL.muted, fontSize: '0.6rem', fontWeight: 700, gap: '2px', flex: 1 }}>
-                        <Icon name={iconName as any} size={24} color={SOCIAL.muted} />{label}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: SOCIAL.primary, fontSize: '0.6rem', fontWeight: 700, gap: '2px', flex: 1 }}>
+                        <Icon name={iconName as any} size={24} color={SOCIAL.primary} />{label}
                     </Link>
                 ))}
             </div>
