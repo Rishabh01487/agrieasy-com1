@@ -534,15 +534,18 @@ export default function AgriSocialFeed() {
             if (uid) params.set('userId', uid)
             if (cat && cat !== 'all') params.set('category', cat)
 
-            // Retry logic: try up to 3 times with increasing delay (Fix: feed loading reliability)
+            // Retry logic: try up to 4 times with increasing delay.
+            // First attempt gets a long timeout (30s) to allow the cold MongoDB
+            // connection pool to warm up. Subsequent retries use a shorter timeout.
             let lastErr: Error | null = null
             let res: Response | null = null
             let lastStatus = 0
-            for (let attempt = 1; attempt <= 3; attempt++) {
+            for (let attempt = 1; attempt <= 4; attempt++) {
                 try {
-                    // Add timeout: abort if server doesn't respond in 10s
+                    // 30s on first attempt (cold pool warm-up), 15s on retries
+                    const timeoutMs = attempt === 1 ? 30000 : 15000
                     const controller = new AbortController()
-                    const timeoutId = setTimeout(() => controller.abort(), 10000)
+                    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
                     res = await authFetch(`/api/social/posts?${params}`, { signal: controller.signal })
                     clearTimeout(timeoutId)
                     lastStatus = res.status
@@ -550,8 +553,8 @@ export default function AgriSocialFeed() {
                     break // success — break out of retry loop
                 } catch (e) {
                     lastErr = e as Error
-                    if (attempt < 3) {
-                        // Wait before retry: 1s, then 2s
+                    if (attempt < 4) {
+                        // Wait before retry: 1s, 2s, 3s
                         await new Promise(r => setTimeout(r, attempt * 1000))
                     }
                 }

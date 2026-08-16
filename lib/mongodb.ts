@@ -21,9 +21,9 @@ if (!cached) {
 
 const MAX_POOL_SIZE = parseInt(process.env.MONGODB_POOL_SIZE || '50')
 const MIN_POOL_SIZE = 10
-const SERVER_SELECTION_TIMEOUT = 10000
+const SERVER_SELECTION_TIMEOUT = 5000   // fail fast so retry loop kicks in sooner
 const SOCKET_TIMEOUT = 60000
-const MAX_RETRIES = 3
+const MAX_RETRIES = 5                    // bumped from 3 → 5 for cold-start resilience
 const CIRCUIT_BREAKER_THRESHOLD = 5
 const CIRCUIT_BREAKER_RESET_MS = 30000
 
