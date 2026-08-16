@@ -518,7 +518,7 @@ export default function AgriSocialFeed() {
     const pageRef = useRef(1)
     const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [category, setCategory] = useState('all')
-    const [feed, setFeed] = useState<'following' | 'ranked' | 'latest'>('following')
+    const [feed, setFeed] = useState<'following' | 'ranked' | 'latest'>('latest')
     const [unreadNotifs, setUnreadNotifs] = useState(0)
     const [unreadDMs, setUnreadDMs] = useState(0)
     const [userId] = useState(() => { try { return typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '' } catch { return '' } })
@@ -537,6 +537,7 @@ export default function AgriSocialFeed() {
             // Retry logic: try up to 3 times with increasing delay (Fix: feed loading reliability)
             let lastErr: Error | null = null
             let res: Response | null = null
+            let lastStatus = 0
             for (let attempt = 1; attempt <= 3; attempt++) {
                 try {
                     // Add timeout: abort if server doesn't respond in 10s
@@ -544,6 +545,7 @@ export default function AgriSocialFeed() {
                     const timeoutId = setTimeout(() => controller.abort(), 10000)
                     res = await authFetch(`/api/social/posts?${params}`, { signal: controller.signal })
                     clearTimeout(timeoutId)
+                    lastStatus = res.status
                     if (!res.ok) throw new Error(`Server error (${res.status})`)
                     break // success — break out of retry loop
                 } catch (e) {
@@ -555,7 +557,13 @@ export default function AgriSocialFeed() {
                 }
             }
 
-            if (!res || !res.ok) throw lastErr || new Error('Server error')
+            if (!res || !res.ok) {
+                // Distinguish server error (500 = DB down) from auth errors
+                const errDetail = lastStatus === 500
+                    ? 'Database is unreachable. If you are running locally, make sure MongoDB is started on localhost:27017.'
+                    : (lastErr?.message || `Server responded with ${lastStatus || 'no response'}`)
+                throw new Error(errDetail)
+            }
 
             const d = await res.json()
             const newPosts = d.posts || d.data?.posts || []
@@ -563,9 +571,11 @@ export default function AgriSocialFeed() {
             setPosts(prev => append ? [...prev, ...newPosts] : newPosts)
             setHasMore(newPosts.length > 0 && (append ? (posts.length + newPosts.length < total) : (newPosts.length < total)))
             pageRef.current = pageNum
-        } catch {
-            // Friendly error message — don't alarm users with "MongoDB Atlas paused" etc.
-            if (!append) { setError('Could not load posts. Please check your connection.'); setPosts([]) }
+        } catch (e) {
+            // Show the actual error message (from the retry loop above) so users
+            // know whether it's a DB issue, a network issue, or something else.
+            const msg = e instanceof Error ? e.message : 'Could not load posts. Please check your connection.'
+            if (!append) { setError(msg); setPosts([]) }
         } finally {
             setLoading(false)
             setLoadingMore(false)
@@ -617,10 +627,30 @@ export default function AgriSocialFeed() {
     useEffect(() => {
         pageRef.current = 1
         setHasMore(true)
-        fetchPosts(userId, category, feed, 1, false).catch(() => {})
+        // Auto-retry: if the first fetch fails, retry once after 2.5s.
+        // This handles the common case where MongoDB is still spinning up
+        // when the user first lands on the feed after login.
+        let cancelled = false
+        const loadWithRetry = async (attempt = 1) => {
+            try {
+                if (attempt === 1) {
+                    await fetchPosts(userId, category, feed, 1, false)
+                } else {
+                    // small delay before retry
+                    await new Promise(r => setTimeout(r, 2500))
+                    if (!cancelled) await fetchPosts(userId, category, feed, 1, false)
+                }
+            } catch {
+                if (attempt === 1 && !cancelled) {
+                    await loadWithRetry(2)
+                }
+            }
+        }
+        loadWithRetry(1).catch(() => {})
         fetchStories()
         fetchSuggested()
         fetchUnreadCounts()
+        return () => { cancelled = true }
     }, [fetchPosts, fetchStories, fetchSuggested, fetchUnreadCounts, userId, category, feed])
 
     const loadMore = useCallback(() => {
@@ -742,9 +772,10 @@ export default function AgriSocialFeed() {
                         </div>
                     ) : error ? (
                         <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🔄</div>
+                            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📡</div>
                             <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Couldn&apos;t load posts</h3>
-                            <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>A temporary network issue occurred. Please try again.</p>
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 8px' }}>{error}</p>
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '0 0 20px' }}>Tip: if running locally, start MongoDB with <code style={{ background: SOCIAL.bgSub, padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace' }}>mongod</code> or use MongoDB Atlas.</p>
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <button onClick={() => { pageRef.current = 1; setHasMore(true); fetchPosts(userId, category, feed, 1, false) }} style={{ padding: '10px 20px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Try Again</button>
                                 <Link href="/agrisocial/create" style={{ padding: '10px 20px', background: SOCIAL.primaryLight, color: SOCIAL.textSecondary, border: `1px solid ${SOCIAL.border}`, borderRadius: '10px', fontWeight: 700, textDecoration: 'none' }}>+ Create Post</Link>
