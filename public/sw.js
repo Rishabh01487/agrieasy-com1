@@ -8,7 +8,7 @@
  *     gets the updated code — fixes the "stuck on old version" issue)
  */
 
-const CACHE_VERSION = 'agrieasy-v11'
+const CACHE_VERSION = 'agrieasy-v12'
 const APP_SHELL = [
   '/',
   '/auth/login',

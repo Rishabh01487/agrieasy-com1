@@ -169,10 +169,20 @@ function CreateContent() {
         const video = videoRef.current
         const vw = video.videoWidth || 1280, vh = video.videoHeight || 720
 
-        // Capture the FULL video frame — no cropping, no aspect ratio math.
-        // The camera preview uses objectFit: 'contain' (shows full frame with
-        // black bars if needed), so capturing the full frame guarantees
-        // WYSIWYG: what you see in the camera = what you get in the photo.
+        // Detect the ACTUAL facing mode from the live media stream — don't rely
+        // on React state, which can be stale if the user switched cameras just
+        // before capturing. This is the source of the "selfie not mirrored" bug.
+        let actualFacing: 'user' | 'environment' = facingMode
+        if (streamRef.current) {
+            const track = streamRef.current.getVideoTracks()[0]
+            const settings = track?.getSettings?.() as any
+            if (settings?.facingMode === 'user' || settings?.facingMode === 'environment') {
+                actualFacing = settings.facingMode
+            }
+        }
+
+        // Capture the FULL video frame. The camera preview uses objectFit:
+        // 'contain' (shows full frame), so capturing the full frame = WYSIWYG.
         let outW = vw, outH = vh
         if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
 
@@ -182,13 +192,14 @@ function CreateContent() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // Mirror for front camera — matches the preview's scaleX(-1) transform
-        if (facingMode === 'user') {
+        // Mirror for front camera — matches the preview's scaleX(-1) transform.
+        // Uses the ACTUAL stream facing mode, not React state.
+        if (actualFacing === 'user') {
             ctx.translate(outW, 0)
             ctx.scale(-1, 1)
         }
 
-        // Draw the full frame. No filter baked in — filters apply via CSS in preview.
+        // Draw the full frame. No filter baked in.
         ctx.drawImage(video, 0, 0, outW, outH)
 
         canvas.toBlob(blob => {
@@ -524,8 +535,8 @@ function CreateContent() {
 
             {/* ── CAMERA MODE ── */}
             {mode === 'camera' && (
-                <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none', background: '#000' }} />
+                <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <video ref={videoRef} autoPlay playsInline muted style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 56px)', width: 'auto', height: 'auto', objectFit: 'contain', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none', background: '#000' }} />
 
                     {/* Recording timer */}
                     {isRecording && (
