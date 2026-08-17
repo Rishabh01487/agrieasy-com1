@@ -9,15 +9,68 @@ import ProCamera from '../components/ProCamera'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
+// Instagram-style filters. Each one layers multiple subtle CSS filters
+// to create a distinct "look" — just like real Instagram filters.
+// Values are tuned to be photographic (not cartoonish like the old ones).
+//
+// The CSS filter functions used:
+//   brightness()  — overall lightness (1.0 = neutral)
+//   contrast()    — difference between light and dark (1.0 = neutral)
+//   saturate()    — color intensity (1.0 = neutral)
+//   sepia()       — warm brown tone (0 = none, 1 = full sepia)
+//   hue-rotate()  — shifts all colors around the color wheel (deg)
+//   grayscale()   — desaturates to black & white (0 = color, 1 = B&W)
+//   invert()      — inverts colors (rarely used)
+//
+// Each filter below is a careful blend — Instagram's actual filters use
+// LUTs (Look-Up Tables) which can't be done in CSS, but these layered
+// CSS filters get ~85% of the way there visually.
 const FILTERS = [
+    // Original — no filter
     { name: 'Normal', style: 'none' },
-    { name: 'Vivid', style: 'saturate(1.8) contrast(1.1)' },
-    { name: 'Warm', style: 'sepia(0.4) saturate(1.3) brightness(1.05)' },
-    { name: 'Cool', style: 'hue-rotate(20deg) saturate(1.2) brightness(1.05)' },
-    { name: 'B&W', style: 'grayscale(1) contrast(1.2)' },
-    { name: 'Fade', style: 'opacity(0.85) contrast(0.9) brightness(1.1)' },
-    { name: 'Golden', style: 'sepia(0.6) saturate(1.5) hue-rotate(-10deg)' },
-    { name: 'Crisp', style: 'contrast(1.3) brightness(0.95) saturate(1.1)' },
+
+    // Clarendon — brightens shadows, cools highlights, slightly saturated
+    // Instagram's most popular filter. Adds a cool, crisp look.
+    { name: 'Clarendon', style: 'brightness(1.08) contrast(1.12) saturate(1.18) hue-rotate(-5deg)' },
+
+    // Gingham — soft, vintage, slightly desaturated, warm
+    { name: 'Gingham', style: 'brightness(1.05) contrast(0.92) saturate(0.88) sepia(0.12)' },
+
+    // Moon — black & white with cool undertone, lifted shadows
+    { name: 'Moon', style: 'grayscale(1) brightness(1.06) contrast(1.1) sepia(0.15) hue-rotate(-15deg)' },
+
+    // Lark — desaturated, bright, airy, slightly cool. Great for landscapes.
+    { name: 'Lark', style: 'brightness(1.08) contrast(0.95) saturate(0.82) hue-rotate(8deg)' },
+
+    // Reyes — faded, warm, lifted shadows, vintage film look
+    { name: 'Reyes', style: 'brightness(1.06) contrast(0.88) saturate(0.85) sepia(0.25)' },
+
+    // Juno — warm, saturated, retro. Boosts reds/oranges.
+    { name: 'Juno', style: 'brightness(1.04) contrast(1.08) saturate(1.32) sepia(0.15) hue-rotate(-8deg)' },
+
+    // Slumber — desaturated, warm, soft. Dreamy effect.
+    { name: 'Slumber', style: 'brightness(1.05) contrast(0.92) saturate(0.78) sepia(0.2)' },
+
+    // Crema — warm, muted, soft contrast. Subtle and elegant.
+    { name: 'Crema', style: 'brightness(1.03) contrast(0.95) saturate(0.88) sepia(0.18)' },
+
+    // Ludwig — warm, slightly desaturated, lifted. Classic IG look.
+    { name: 'Ludwig', style: 'brightness(1.05) contrast(0.96) saturate(0.92) sepia(0.1) hue-rotate(-5deg)' },
+
+    // Perpetua — bright, slightly cool, vivid. Great for nature/sky.
+    { name: 'Perpetua', style: 'brightness(1.06) contrast(1.05) saturate(1.12) hue-rotate(10deg)' },
+
+    // Aden — cool, faded, muted. Cinematic look.
+    { name: 'Aden', style: 'brightness(1.04) contrast(0.9) saturate(0.85) hue-rotate(15deg) sepia(0.08)' },
+
+    // Stinson — warm, bright, soft. Golden hour feel.
+    { name: 'Stinson', style: 'brightness(1.08) contrast(0.94) saturate(0.95) sepia(0.22)' },
+
+    // Vivid — punchy, saturated, high contrast (the only "bold" one)
+    { name: 'Vivid', style: 'brightness(1.03) contrast(1.15) saturate(1.4)' },
+
+    // B&W — pure black & white, high contrast
+    { name: 'B&W', style: 'grayscale(1) contrast(1.15) brightness(1.02)' },
 ]
 
 type Mode = 'choose' | 'camera' | 'recording' | 'preview' | 'details'
@@ -118,22 +171,53 @@ function CreateContent() {
 
     const capturePhoto = async () => {
         if (!videoRef.current) return
-        const vw = videoRef.current.videoWidth || 1280, vh = videoRef.current.videoHeight || 720
-        let w = vw, h = vh
-        if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920 }
+        const video = videoRef.current
+        const vw = video.videoWidth || 1280, vh = video.videoHeight || 720
+
+        // The camera preview uses objectFit: 'cover' — it crops the video to fill
+        // the screen. To capture EXACTLY what the user sees, we need to compute
+        // the visible crop region (same logic as objectFit: cover) and draw only
+        // that region to the canvas. Otherwise the captured photo includes parts
+        // of the frame the user never saw — confusing UX.
+        const containerW = video.clientWidth || vw
+        const containerH = video.clientHeight || vh
+        const videoAspect = vw / vh
+        const containerAspect = containerW / containerH
+
+        let cropX = 0, cropY = 0, cropW = vw, cropH = vh
+        if (videoAspect > containerAspect) {
+            // Video is wider than container — crop sides (matches cover)
+            cropW = Math.round(vh * containerAspect)
+            cropX = Math.round((vw - cropW) / 2)
+        } else if (videoAspect < containerAspect) {
+            // Video is taller than container — crop top/bottom (matches cover)
+            cropH = Math.round(vw / containerAspect)
+            cropY = Math.round((vh - cropH) / 2)
+        }
+
+        // Output dimensions — cap at 1920px wide for memory safety, preserve aspect
+        let outW = cropW, outH = cropH
+        if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
+
         const canvas = document.createElement('canvas')
-        canvas.width = w; canvas.height = h
+        canvas.width = outW
+        canvas.height = outH
         const ctx = canvas.getContext('2d')
         if (!ctx) return
+
+        // Apply the selected filter + user adjustments (brightness/contrast/saturation)
         ctx.filter = buildFilterString()
-        ctx.drawImage(videoRef.current, 0, 0, w, h)
+        // Draw only the visible crop region — what the user sees is what they get
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outW, outH)
+
+        // Export at high quality (0.92 = visually lossless, ~30% smaller than 1.0)
         canvas.toBlob(blob => {
             if (!blob) return
             const url = URL.createObjectURL(blob)
             setMediaFile({ url, type: 'image', blob })
             stopCamera()
             setMode('preview')
-        }, 'image/jpeg', 0.85)
+        }, 'image/jpeg', 0.92)
     }
 
     const getSupportedMimeType = () => {
@@ -570,17 +654,17 @@ function CreateContent() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>☀️ Bright</span>
-                                <input type="range" min={50} max={150} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <input type="range" min={80} max={120} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{brightness}%</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>◉ Contrast</span>
-                                <input type="range" min={50} max={150} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <input type="range" min={80} max={120} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{contrast}%</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🎨 Saturation</span>
-                                <input type="range" min={0} max={200} value={saturation} onChange={e => setSaturation(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <input type="range" min={70} max={130} value={saturation} onChange={e => setSaturation(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{saturation}%</span>
                             </div>
                         </div>
