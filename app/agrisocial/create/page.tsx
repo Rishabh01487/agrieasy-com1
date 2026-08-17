@@ -525,7 +525,7 @@ function CreateContent() {
             {/* ── CAMERA MODE ── */}
             {mode === 'camera' && (
                 <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', filter: buildFilterString(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none', background: '#000' }} />
+                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none', background: '#000' }} />
 
                     {/* Recording timer */}
                     {isRecording && (
