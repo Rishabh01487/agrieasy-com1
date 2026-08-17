@@ -87,10 +87,43 @@ export default function PWABootstrap() {
       return
     }
 
-    // Register service worker
+    // Register service worker + force-update logic.
+    // The service worker caches aggressively — without this, users would be stuck
+    // running old code for days after a deploy. This block:
+    //   1. Registers the SW
+    //   2. Listens for a NEW SW version to be installed by the browser
+    //   3. When a new SW is found, forces it to "skip waiting" (become active immediately)
+    //   4. Triggers a page reload so the new SW + new cached assets take effect
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
-        console.warn('SW registration failed:', err)
+      navigator.serviceWorker.register('/sw.js')
+        .then((registration) => {
+          // Listen for new SW versions
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing
+            if (!newWorker) return
+            newWorker.addEventListener('statechange', () => {
+              // When the new SW has finished installing, force it to activate
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // There's a new SW waiting — force it to take over immediately
+                newWorker.postMessage({ type: 'SKIP_WAITING' })
+              }
+            })
+          })
+          // Check for updates every 60 seconds (in case the user keeps the PWA open)
+          setInterval(() => {
+            registration.update().catch(() => {})
+          }, 60_000)
+        })
+        .catch((err) => {
+          console.warn('SW registration failed:', err)
+        })
+
+      // When the new SW takes control, reload the page so the new code runs
+      let refreshing = false
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return
+        refreshing = true
+        window.location.reload()
       })
     }
 
