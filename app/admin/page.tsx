@@ -7,12 +7,19 @@ import { ADMIN, SHARED } from '@/lib/styles'
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null)
   const [logs, setLogs] = useState<any[]>([])
+  const [pwaStats, setPwaStats] = useState<{ total: number; last7Days: number; byPlatform: Record<string, number>; trend: { date: string; count: number }[] } | null>(null)
 
   useEffect(() => {
     authFetch('/api/admin/stats')
       .then(r => r.json())
       .then(d => { setStats(d.stats); setLogs(d.recentLogs || []) })
       .catch(console.error)
+
+    // Fetch PWA install stats in parallel
+    authFetch('/api/analytics/pwa-install')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d) setPwaStats(d) })
+      .catch(() => {})
   }, [])
 
   const rows = stats ? [
@@ -24,7 +31,16 @@ export default function AdminDashboard() {
     { label: 'Clips', value: stats.totalClips, color: ADMIN.red },
     { label: 'Transactions', value: stats.totalTransactions, color: ADMIN.green },
     { label: 'Wallets', value: stats.totalWallets, color: ADMIN.blue },
+    { label: 'PWA Installs', value: pwaStats?.total ?? '—', color: ADMIN.primary },
+    { label: 'Installs (7d)', value: pwaStats?.last7Days ?? '—', color: ADMIN.green },
   ] : []
+
+  // Platform breakdown — show as a small table under the cards
+  const platformRows = pwaStats?.byPlatform
+    ? Object.entries(pwaStats.byPlatform)
+        .sort((a, b) => (b[1] as number) - (a[1] as number))
+        .map(([platform, count]) => ({ platform, count }))
+    : []
 
   return (
     <div style={{ fontFamily: SHARED.font }}>
@@ -46,6 +62,37 @@ export default function AdminDashboard() {
           </div>
         ))}
       </div>
+
+      {/* PWA install breakdown — only shown if we have install data */}
+      {pwaStats && pwaStats.total > 0 && (
+        <div style={{ marginBottom: 32 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, letterSpacing: '0.02em' }}>📱 PWA Installs by Platform</h2>
+          <div style={{ background: ADMIN.card, border: `1px solid ${ADMIN.border}`, borderRadius: 12, overflow: 'hidden' }}>
+            {platformRows.length === 0 && <div style={{ padding: 24, color: ADMIN.muted }}>No install data yet</div>}
+            {platformRows.map((row, i) => {
+              const pct = pwaStats.total > 0 ? Math.round((row.count / pwaStats.total) * 100) : 0
+              return (
+                <div key={row.platform} style={{
+                  padding: '12px 16px',
+                  borderBottom: i < platformRows.length - 1 ? `1px solid ${ADMIN.border}` : 'none',
+                  fontSize: 13,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: i % 2 === 0 ? ADMIN.card : ADMIN.bgSub,
+                }}>
+                  <span style={{ fontWeight: 600, color: ADMIN.primary }}>{row.platform}</span>
+                  <span>
+                    <span style={{ fontWeight: 700, color: ADMIN.text }}>{row.count}</span>
+                    <span style={{ color: ADMIN.muted, marginLeft: 8, fontSize: 12 }}>({pct}%)</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, letterSpacing: '0.02em' }}>Recent Activity</h2>
       <div style={{ background: ADMIN.card, border: `1px solid ${ADMIN.border}`, borderRadius: 12, overflow: 'hidden' }}>
         {logs.length === 0 && <div style={{ padding: 24, color: ADMIN.muted, fontFamily: SHARED.font }}>No recent activity</div>}
