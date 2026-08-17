@@ -117,75 +117,20 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
   const startStream = useCallback(async () => {
     setError('')
 
-    // ── Insecure context — getUserMedia will silently fail ──
-    // This happens when accessing via network IP (e.g. http://21.0.16.19:3000)
-    // instead of http://localhost:3000. Browsers only allow camera on HTTPS
-    // or localhost. Show a clear error with the exact URL to use.
+    // Insecure context (http://network-ip) — camera can't work here.
     if (typeof window !== 'undefined' && !window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
-      setError(
-        `Camera requires HTTPS or localhost. You're on http://${location.host} — ` +
-        `please open http://localhost:3000 instead (on this same device), ` +
-        `or deploy to a HTTPS URL like https://agrieasy.vercel.app.`
-      )
+      setError('Camera needs HTTPS. Please use https://agrieasy.site')
       return
     }
 
-    // ── getUserMedia not supported (very old browser) ──
+    // Old browser with no camera API
     if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setError('Your browser does not support camera access. Try Chrome, Edge, Firefox, or Safari (latest version).')
+      setError('Please update your browser to use the camera.')
       return
     }
 
-    // ── Pre-flight permission check ──
-    // Before calling getUserMedia, query the current permission state. This lets us
-    // distinguish between "never asked" (will prompt), "granted" (will succeed), and
-    // "denied" (will silently fail — browser won't re-prompt).
-    //
-    // Why this matters: if the user previously tapped "Block", calling getUserMedia
-    // does NOT show the prompt again — it just throws NotAllowedError. The user sees
-    // an error and thinks the app is broken. By pre-checking, we can show a clear
-    // message: "You previously denied camera. Open in Browser to reset, or tap Allow
-    // when the prompt appears next time."
-    //
-    // Supported in Chrome 44+, Firefox 39+, Edge 79+. Safari 17+ (older Safari returns
-    // undefined — we fall through to getUserMedia which handles it natively).
-    if (typeof navigator !== 'undefined' && navigator.permissions && typeof navigator.permissions.query === 'function') {
-      try {
-        const permStatus = await navigator.permissions.query({ name: 'camera' as PermissionName })
-        if (permStatus.state === 'denied') {
-          // User previously denied — browser will NOT show the prompt again.
-          // getUserMedia would silently fail. Show the right error instead.
-          //
-          // IMPORTANT: 'denied' can also mean "camera hardware is currently in use by
-          // another app" or "Android's per-app camera permission for Chrome is off".
-          // So the message should cover all cases, not just "you tapped Block".
-          setPermissionDenied(true)
-          if (isStandalone) {
-            setError(
-              "Can't open camera. Try these in order:\n\n" +
-              "1. Close any other app using the camera (Chrome tab, Instagram, etc.) then tap Try Again\n" +
-              "2. Long-press this app icon → Clear cache → reopen\n" +
-              "3. Tap \"Open in Browser\" below to enable camera from Chrome's address bar"
-            )
-          } else {
-            setError(
-              "Can't open camera. Try these in order:\n\n" +
-              "1. Close any other app using the camera (other Chrome tabs, Instagram, etc.) then tap Try Again\n" +
-              "2. Chrome: tap the 📷 icon in the address bar → 'Always allow' → Reload\n" +
-              "3. iPhone: Settings → Safari → Camera → Allow"
-            )
-          }
-          return  // don't bother calling getUserMedia — we know it'll fail
-        }
-        // If state is 'prompt' or 'granted', proceed to getUserMedia.
-        // 'prompt' = browser will show the permission dialog (first time, or after reset).
-        // 'granted' = user previously allowed — camera opens instantly, no prompt.
-      } catch {
-        // Some browsers (older Safari) don't support querying camera permission —
-        // fall through to getUserMedia and let it handle the prompt natively.
-      }
-    }
-
+    // Try to open the camera. Browser shows its native permission prompt
+    // automatically on first use — exactly like Instagram.
     stopStream()
     try {
       const constraints = buildCaptureConstraints({ facing, quality, fps, isVideo: mode === 'video' })
@@ -206,24 +151,7 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
     } catch (e: any) {
       console.error('Camera start failed:', e)
       if (e?.name === 'NotAllowedError') {
-        // Permission was denied — either by the prompt OR previously saved as "denied"
-        // in browser/PWA settings. The browser won't re-prompt until the user resets it.
         setPermissionDenied(true)
-        // Context-aware message:
-        //  - PWA (standalone): keep it minimal — user just wants the camera to work.
-        //    Don't dump a wall of instructions. Just show "Open in Browser" button
-        //    so they can reset the permission in Chrome's address bar.
-        //  - Browser: full instructions with browser-specific steps.
-        if (isStandalone) {
-          setError("Couldn't access camera. Tap \"Open in Browser\" to enable it, then come back.")
-        } else {
-          setError(
-            'Camera access was blocked earlier. To allow:\n\n' +
-            '• Chrome: tap the 📷 icon in the address bar → "Always allow" → Reload\n' +
-            '• iPhone Safari: Settings → Safari → Camera → Allow\n\n' +
-            'Then tap "Try Again" below.'
-          )
-        }
       } else if (e?.name === 'NotFoundError') {
         setError('No camera found on this device.')
       } else if (e?.name === 'OverconstrainedError') {
@@ -237,14 +165,15 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
             videoRef.current.srcObject = stream
             await videoRef.current.play().catch(() => {})
           }
+          setPermissionDenied(false)
         } catch {
-          setError('Camera failed to start. Try reloading the page.')
+          setPermissionDenied(true)
         }
       } else {
-        setError(e?.message || 'Camera failed to start.')
+        setError('Could not start camera. Please try again.')
       }
     }
-  }, [facing, quality, fps, mode, torchOn, stopStream, applyTorch, isStandalone])
+  }, [facing, quality, fps, mode, torchOn, stopStream, applyTorch])
 
   // Auto-start the camera stream on modal mount + whenever the user
   // changes facing/quality/fps. The user already tapped "Open Camera"
@@ -510,57 +439,35 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         )}
 
         {error && (
-          <div style={{ textAlign: 'center', color: '#ef4444', fontSize: '0.78rem', padding: '12px 16px', background: 'rgba(239,68,68,0.1)', borderRadius: 8, whiteSpace: 'pre-line' }}>
+          <div style={{ textAlign: 'center', color: '#ef4444', fontSize: '0.85rem', padding: '12px 16px', background: 'rgba(239,68,68,0.1)', borderRadius: 8 }}>
             {error}
-            {permissionDenied && (
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                {/* In standalone PWA mode: show both "Try Again" (in case user closed
-                    other camera-using apps) AND "Open in Browser" (for permission reset). */}
-                {isStandalone && (
-                  <>
-                    <button
-                      onClick={() => { setError(''); setPermissionDenied(false); startStream() }}
-                      style={{
-                        background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
-                        borderRadius: 8, padding: '8px 20px', fontSize: '0.82rem', fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      🔄 Try Again
-                    </button>
-                    <button
-                      onClick={() => {
-                        // Open the current URL in the system browser (Chrome).
-                        // This exits the PWA standalone context and lets the user
-                        // use the regular browser permission reset flow (address
-                        // bar camera icon → Always allow).
-                        const url = typeof window !== 'undefined' ? window.location.href : '/'
-                        window.open(url, '_blank', 'noopener')
-                      }}
-                      style={{
-                        background: '#fff', color: '#0f172a', border: 'none', borderRadius: 8,
-                        padding: '8px 18px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                      }}
-                    >
-                      🌐 Open in Browser
-                    </button>
-                  </>
-                )}
-                {/* In browser mode: just show "Try Again" — user can reset via address bar icon. */}
-                {!isStandalone && (
-                  <button
-                    onClick={() => { setError(''); setPermissionDenied(false); startStream() }}
-                    style={{
-                      background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
-                      borderRadius: 8, padding: '8px 20px', fontSize: '0.82rem', fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    🔄 Try Again
-                  </button>
-                )}
-              </div>
-            )}
+            <button
+              onClick={() => { setError(''); startStream() }}
+              style={{
+                display: 'block', margin: '10px auto 0', background: SOCIAL.primary || '#7091E6',
+                color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px',
+                fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer',
+              }}
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {permissionDenied && !error && (
+          <div style={{ textAlign: 'center', color: '#fff', fontSize: '0.85rem', padding: '20px 16px', background: 'rgba(255,255,255,0.08)', borderRadius: 8 }}>
+            <div style={{ fontSize: '2rem', marginBottom: 8 }}>📷</div>
+            <p style={{ margin: '0 0 16px', color: 'rgba(255,255,255,0.85)' }}>Camera unavailable</p>
+            <button
+              onClick={() => { setPermissionDenied(false); startStream() }}
+              style={{
+                background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
+                borderRadius: 8, padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700,
+                cursor: 'pointer',
+              }}
+            >
+              Try Again
+            </button>
           </div>
         )}
       </div>
