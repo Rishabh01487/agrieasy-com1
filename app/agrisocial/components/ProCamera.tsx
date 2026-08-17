@@ -64,11 +64,40 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
   const [recordingTime, setRecordingTime] = useState(0)
   const [exposure, setExposure] = useState(0)
 
+  // Permission + secure context state — needed because:
+  //  - getUserMedia only works on HTTPS or http://localhost (NOT network IPs)
+  //  - iOS Safari + some Android browsers require an explicit user gesture
+  //    before getUserMedia will trigger the permission prompt
+  //  - If permission was previously denied, the browser never re-prompts —
+  //    we have to detect that and tell the user to reset it in site settings
+  const [secureContext, setSecureContext] = useState(true)
+  const [permissionState, setPermissionState] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
+  const [cameraStarted, setCameraStarted] = useState(false)  // user explicitly clicked "Allow Camera"
+
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const timerRef = useRef<NodeJS.Timeout | null>(null)
+
+  // On mount: check if we're in a secure context + query current permission state
+  useEffect(() => {
+    // Secure context check — getUserMedia requires HTTPS or localhost
+    const isSecure = typeof window !== 'undefined' && (window.isSecureContext || location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+    setSecureContext(isSecure)
+
+    // Query current camera permission state (Chrome 44+, Firefox 39+)
+    if (typeof navigator !== 'undefined' && navigator.permissions && typeof navigator.permissions.query === 'function') {
+      navigator.permissions.query({ name: 'camera' as PermissionName })
+        .then((status) => {
+          setPermissionState(status.state as any)
+          status.onchange = () => setPermissionState(status.state as any)
+        })
+        .catch(() => {
+          // Some browsers (Safari < 17) don't support querying camera permission — leave as 'unknown'
+        })
+    }
+  }, [])
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop())
@@ -85,6 +114,26 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
 
   const startStream = useCallback(async () => {
     setError('')
+
+    // ── Insecure context — getUserMedia will silently fail ──
+    // This happens when accessing via network IP (e.g. http://21.0.16.19:3000)
+    // instead of http://localhost:3000. Browsers only allow camera on HTTPS
+    // or localhost. Show a clear error with the exact URL to use.
+    if (typeof window !== 'undefined' && !window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+      setError(
+        `Camera requires HTTPS or localhost. You're on http://${location.host} — ` +
+        `please open http://localhost:3000 instead (on this same device), ` +
+        `or deploy to a HTTPS URL like https://agrieasy.vercel.app.`
+      )
+      return
+    }
+
+    // ── getUserMedia not supported (very old browser) ──
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Your browser does not support camera access. Try Chrome, Edge, Firefox, or Safari (latest version).')
+      return
+    }
+
     stopStream()
     try {
       const constraints = buildCaptureConstraints({ facing, quality, fps, isVideo: mode === 'video' })
@@ -101,10 +150,21 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         if (fps === 60 && !capabilities.supports60fps) setFps(30)
       }
       if (torchOn) applyTorch(true)
+      setPermissionState('granted')
     } catch (e: any) {
       console.error('Camera start failed:', e)
       if (e?.name === 'NotAllowedError') {
-        setError('Camera permission denied. Allow camera access in your browser settings.')
+        // Permission was denied — either by the prompt OR previously saved as "denied"
+        // in browser settings. The browser won't re-prompt until the user resets it.
+        setPermissionState('denied')
+        setError(
+          'Camera permission was denied. To fix:\n' +
+          '• Chrome: click the camera icon in the address bar → "Always allow" → Reload\n' +
+          '• Safari: Settings → Websites → Camera → Allow\n' +
+          '• Firefox: Preferences → Privacy & Security → Permissions → Camera → Settings\n' +
+          '• iPhone: Settings → Safari → Camera → Allow\n' +
+          '• Android Chrome: tap the lock icon → Permissions → Camera → Allow'
+        )
       } else if (e?.name === 'NotFoundError') {
         setError('No camera found on this device.')
       } else if (e?.name === 'OverconstrainedError') {
@@ -127,11 +187,28 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
     }
   }, [facing, quality, fps, mode, torchOn, stopStream, applyTorch])
 
+  // Auto-start the stream ONLY IF the user has already explicitly clicked
+  // "Allow Camera" (i.e. cameraStarted === true). On first mount, we DON'T
+  // auto-call getUserMedia because:
+  //  1. iOS Safari + some Android browsers require an explicit user gesture
+  //     before getUserMedia will trigger the permission prompt
+  //  2. If permission was previously denied, calling getUserMedia silently
+  //     fails without showing any prompt — confusing UX
+  //  3. We want to show a clear "Allow Camera" button first so the user
+  //     knows what's about to happen
   useEffect(() => {
+    if (!cameraStarted) return
     startStream()
     return () => { stopStream(); if (timerRef.current) clearInterval(timerRef.current) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [facing, quality, fps])
+  }, [facing, quality, fps, cameraStarted])
+
+  // Manual "Allow Camera" button handler — this is the explicit user gesture
+  // that browsers require before they'll show the permission prompt.
+  const handleAllowCamera = useCallback(() => {
+    setCameraStarted(true)
+    // startStream will be called by the useEffect above on the next render
+  }, [])
 
   const handleVideoClick = useCallback(async (e: React.MouseEvent<HTMLVideoElement>) => {
     const track = streamRef.current?.getVideoTracks()[0] as any
@@ -239,6 +316,61 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
         position: 'relative', overflow: 'hidden',
       }}>
+        {/* ── PERMISSION GATE ── shown until user clicks "Allow Camera" */}
+        {!cameraStarted ? (
+          <div style={{
+            textAlign: 'center', padding: 32, color: '#fff', maxWidth: 440,
+            fontFamily: SHARED.font,
+          }}>
+            <div style={{ fontSize: '3.5rem', marginBottom: 16 }}>📷</div>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 12px' }}>
+              {secureContext ? 'Allow camera access' : 'HTTPS required'}
+            </h2>
+            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.6, margin: '0 0 24px' }}>
+              {secureContext ? (
+                <>
+                  AgriEasy needs camera access to capture photos and videos for your posts.
+                  Your browser will show a permission prompt — tap <strong>Allow</strong>.
+                  <br /><br />
+                  <span style={{ opacity: 0.6, fontSize: '0.78rem' }}>
+                    🔒 Photos stay on your device until you publish them. We never access your camera without your action.
+                  </span>
+                </>
+              ) : (
+                <>
+                  Camera access requires a secure connection (HTTPS or localhost).
+                  <br /><br />
+                  <strong>Fix:</strong> open <code style={{ background: 'rgba(255,255,255,0.15)', padding: '2px 6px', borderRadius: 4 }}>http://localhost:3000</code> in your browser
+                  (on this same device), or deploy to a HTTPS URL.
+                  <br /><br />
+                  <span style={{ opacity: 0.6, fontSize: '0.78rem' }}>
+                    You're currently on: <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: 4 }}>{typeof window !== 'undefined' ? window.location.host : 'unknown'}</code>
+                  </span>
+                </>
+              )}
+            </p>
+            {secureContext && (
+              <button
+                onClick={handleAllowCamera}
+                style={{
+                  background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
+                  borderRadius: 12, padding: '14px 32px', fontSize: '1rem', fontWeight: 700,
+                  cursor: 'pointer', boxShadow: '0 8px 24px rgba(112,145,230,0.4)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {permissionState === 'denied' ? '🔄 Request Camera Again' : '📷 Allow Camera'}
+              </button>
+            )}
+            {permissionState === 'denied' && (
+              <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginTop: 20, lineHeight: 1.6 }}>
+                <strong>Previously denied:</strong> Your browser won't re-prompt automatically.<br />
+                Reset it: click the camera 📷 icon in your browser's address bar → "Always allow" → Reload this page.
+              </p>
+            )}
+          </div>
+        ) : (
+        <>
         <div style={{
           position: 'relative',
           width: aspectValue >= 1 ? '100%' : `${(1/aspectValue) * 100}%`,
@@ -299,6 +431,8 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
             />
           </div>
         </div>
+        </>
+        )}
       </div>
 
       <div style={{
