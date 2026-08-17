@@ -159,14 +159,13 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         // Permission was denied — either by the prompt OR previously saved as "denied"
         // in browser/PWA settings. The browser won't re-prompt until the user resets it.
         setPermissionDenied(true)
-        // Context-aware message: installed PWA has no address bar, so instructions differ.
+        // Context-aware message:
+        //  - PWA (standalone): keep it minimal — user just wants the camera to work.
+        //    Don't dump a wall of instructions. Just show "Open in Browser" button
+        //    so they can reset the permission in Chrome's address bar.
+        //  - Browser: full instructions with browser-specific steps.
         if (isStandalone) {
-          setError(
-            'Camera access was blocked earlier. To allow:\n\n' +
-            '• Android: long-press the AgriEasy app icon → App info → Permissions → Camera → Allow\n' +
-            '• iPhone: open Settings → scroll down to "AgriEasy" → Camera → Allow\n\n' +
-            'Then come back and tap "Try Again".'
-          )
+          setError("Couldn't access camera. Tap \"Open in Browser\" to enable it, then come back.")
         } else {
           setError(
             'Camera access was blocked earlier. To allow:\n\n' +
@@ -464,16 +463,44 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
           <div style={{ textAlign: 'center', color: '#ef4444', fontSize: '0.78rem', padding: '12px 16px', background: 'rgba(239,68,68,0.1)', borderRadius: 8, whiteSpace: 'pre-line' }}>
             {error}
             {permissionDenied && (
-              <button
-                onClick={() => { setError(''); setPermissionDenied(false); startStream() }}
-                style={{
-                  display: 'block', margin: '10px auto 0', background: SOCIAL.primary || '#7091E6',
-                  color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px',
-                  fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                }}
-              >
-                🔄 Try Again
-              </button>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
+                {/* In standalone PWA mode: the only useful action is "Open in Browser"
+                    because the permission can't be reset from inside the PWA.
+                    Hide the useless "Try Again" button — it'll just fail again. */}
+                {isStandalone && (
+                  <button
+                    onClick={() => {
+                      // Open the current URL in the system browser (Chrome).
+                      // This exits the PWA standalone context and lets the user
+                      // use the regular browser permission reset flow (address
+                      // bar camera icon → Always allow).
+                      const url = typeof window !== 'undefined' ? window.location.href : '/'
+                      window.open(url, '_blank', 'noopener')
+                    }}
+                    style={{
+                      background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
+                      borderRadius: 8, padding: '10px 22px', fontSize: '0.85rem', fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🌐 Open in Browser
+                  </button>
+                )}
+                {/* In browser mode: show "Try Again" so the user can retry after
+                    resetting the permission via the address bar camera icon. */}
+                {!isStandalone && (
+                  <button
+                    onClick={() => { setError(''); setPermissionDenied(false); startStream() }}
+                    style={{
+                      background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
+                      borderRadius: 8, padding: '8px 20px', fontSize: '0.82rem', fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    🔄 Try Again
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
