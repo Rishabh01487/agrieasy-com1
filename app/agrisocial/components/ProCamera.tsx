@@ -155,15 +155,24 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         if (permStatus.state === 'denied') {
           // User previously denied — browser will NOT show the prompt again.
           // getUserMedia would silently fail. Show the right error instead.
+          //
+          // IMPORTANT: 'denied' can also mean "camera hardware is currently in use by
+          // another app" or "Android's per-app camera permission for Chrome is off".
+          // So the message should cover all cases, not just "you tapped Block".
           setPermissionDenied(true)
           if (isStandalone) {
-            setError("Camera was blocked earlier. Tap \"Open in Browser\" to enable it, then come back.")
+            setError(
+              "Can't open camera. Try these in order:\n\n" +
+              "1. Close any other app using the camera (Chrome tab, Instagram, etc.) then tap Try Again\n" +
+              "2. Long-press this app icon → Clear cache → reopen\n" +
+              "3. Tap \"Open in Browser\" below to enable camera from Chrome's address bar"
+            )
           } else {
             setError(
-              'Camera access was blocked earlier. To allow:\n\n' +
-              '• Chrome: tap the 📷 icon in the address bar → "Always allow" → Reload\n' +
-              '• iPhone Safari: Settings → Safari → Camera → Allow\n\n' +
-              'Then tap "Try Again" below.'
+              "Can't open camera. Try these in order:\n\n" +
+              "1. Close any other app using the camera (other Chrome tabs, Instagram, etc.) then tap Try Again\n" +
+              "2. Chrome: tap the 📷 icon in the address bar → 'Always allow' → Reload\n" +
+              "3. iPhone: Settings → Safari → Camera → Allow"
             )
           }
           return  // don't bother calling getUserMedia — we know it'll fail
@@ -505,30 +514,39 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
             {error}
             {permissionDenied && (
               <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12, flexWrap: 'wrap' }}>
-                {/* In standalone PWA mode: the only useful action is "Open in Browser"
-                    because the permission can't be reset from inside the PWA.
-                    Hide the useless "Try Again" button — it'll just fail again. */}
+                {/* In standalone PWA mode: show both "Try Again" (in case user closed
+                    other camera-using apps) AND "Open in Browser" (for permission reset). */}
                 {isStandalone && (
-                  <button
-                    onClick={() => {
-                      // Open the current URL in the system browser (Chrome).
-                      // This exits the PWA standalone context and lets the user
-                      // use the regular browser permission reset flow (address
-                      // bar camera icon → Always allow).
-                      const url = typeof window !== 'undefined' ? window.location.href : '/'
-                      window.open(url, '_blank', 'noopener')
-                    }}
-                    style={{
-                      background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
-                      borderRadius: 8, padding: '10px 22px', fontSize: '0.85rem', fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    🌐 Open in Browser
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { setError(''); setPermissionDenied(false); startStream() }}
+                      style={{
+                        background: SOCIAL.primary || '#7091E6', color: '#fff', border: 'none',
+                        borderRadius: 8, padding: '8px 20px', fontSize: '0.82rem', fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      🔄 Try Again
+                    </button>
+                    <button
+                      onClick={() => {
+                        // Open the current URL in the system browser (Chrome).
+                        // This exits the PWA standalone context and lets the user
+                        // use the regular browser permission reset flow (address
+                        // bar camera icon → Always allow).
+                        const url = typeof window !== 'undefined' ? window.location.href : '/'
+                        window.open(url, '_blank', 'noopener')
+                      }}
+                      style={{
+                        background: '#fff', color: '#0f172a', border: 'none', borderRadius: 8,
+                        padding: '8px 18px', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                      }}
+                    >
+                      🌐 Open in Browser
+                    </button>
+                  </>
                 )}
-                {/* In browser mode: show "Try Again" so the user can retry after
-                    resetting the permission via the address bar camera icon. */}
+                {/* In browser mode: just show "Try Again" — user can reset via address bar icon. */}
                 {!isStandalone && (
                   <button
                     onClick={() => { setError(''); setPermissionDenied(false); startStream() }}
