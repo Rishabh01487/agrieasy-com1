@@ -169,33 +169,11 @@ function CreateContent() {
         const video = videoRef.current
         const vw = video.videoWidth || 1280, vh = video.videoHeight || 720
 
-        // ── Match the camera preview EXACTLY ──
-        // The camera preview uses objectFit: 'cover' (crops to fill screen) and
-        // mirrors the front camera (scaleX(-1)). The captured photo MUST match
-        // what the user saw — otherwise the photo looks "different" from the
-        // camera view, which is the user's complaint.
-        //
-        // Step 1: Compute the crop region (same math as objectFit: 'cover')
-        //   - Compare video aspect ratio to preview container aspect ratio
-        //   - Crop the dimension that overflows
-        const containerW = video.clientWidth || vw
-        const containerH = video.clientHeight || vh
-        const videoAspect = vw / vh
-        const containerAspect = containerW / containerH
-
-        let cropX = 0, cropY = 0, cropW = vw, cropH = vh
-        if (videoAspect > containerAspect) {
-            // Video is wider than container — crop left/right edges
-            cropW = Math.round(vh * containerAspect)
-            cropX = Math.round((vw - cropW) / 2)
-        } else if (videoAspect < containerAspect) {
-            // Video is taller than container — crop top/bottom edges
-            cropH = Math.round(vw / containerAspect)
-            cropY = Math.round((vh - cropH) / 2)
-        }
-
-        // Output dimensions — cap at 1920px wide for memory safety
-        let outW = cropW, outH = cropH
+        // Capture the FULL video frame — no cropping, no aspect ratio math.
+        // The camera preview uses objectFit: 'contain' (shows full frame with
+        // black bars if needed), so capturing the full frame guarantees
+        // WYSIWYG: what you see in the camera = what you get in the photo.
+        let outW = vw, outH = vh
         if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
 
         const canvas = document.createElement('canvas')
@@ -204,20 +182,15 @@ function CreateContent() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // Step 2: If front camera, mirror the canvas horizontally to match
-        // the preview's scaleX(-1) transform. Without this, selfies look
-        // "flipped" compared to what the user saw in the camera.
+        // Mirror for front camera — matches the preview's scaleX(-1) transform
         if (facingMode === 'user') {
             ctx.translate(outW, 0)
             ctx.scale(-1, 1)
         }
 
-        // Step 3: Draw only the visible crop region. No filter baked in —
-        // filters are applied via CSS in the preview screen so the user
-        // can change them without re-capturing.
-        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outW, outH)
+        // Draw the full frame. No filter baked in — filters apply via CSS in preview.
+        ctx.drawImage(video, 0, 0, outW, outH)
 
-        // Export at high quality (0.92 = visually lossless)
         canvas.toBlob(blob => {
             if (!blob) return
             const url = URL.createObjectURL(blob)
@@ -552,7 +525,7 @@ function CreateContent() {
             {/* ── CAMERA MODE ── */}
             {mode === 'camera' && (
                 <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }} />
+                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'contain', filter: buildFilterString(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none', background: '#000' }} />
 
                     {/* Recording timer */}
                     {isRecording && (
