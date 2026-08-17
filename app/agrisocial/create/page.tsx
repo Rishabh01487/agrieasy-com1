@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import ProCamera from '../components/ProCamera'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
@@ -50,6 +51,7 @@ function CreateContent() {
     const [contrast, setContrast] = useState(100)
     const [saturation, setSaturation] = useState(100)
     const [rotation, setRotation] = useState(0)
+    const [proCameraOpen, setProCameraOpen] = useState(false)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -82,18 +84,18 @@ function CreateContent() {
 
     const startCamera = async () => {
         setCamError('')
-        setMode('camera')
-        await new Promise(r => setTimeout(r, 100))
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: postType === 'krishiclip' })
-            streamRef.current = stream
-            if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
-        } catch (e) {
-            console.error(e)
-            stopCamera()
-            setMode('choose')
-            setCamError('Camera access denied. Please allow camera permission in your browser settings, or use "Upload from Gallery" instead.')
-        }
+        setProCameraOpen(true)
+    }
+
+    // Called by ProCamera when a photo or video is captured.
+    // Replaces the old in-page getUserMedia + MediaRecorder flow with
+    // the Instagram-grade ProCamera pipeline (HDR, tap-to-focus, 4K,
+    // sharpening, denoise, white balance, color grading, proper EXIF).
+    const handleProCameraCapture = (blob: Blob, type: 'image' | 'video') => {
+        const url = URL.createObjectURL(blob)
+        setMediaFile({ url, type, blob })
+        setProCameraOpen(false)
+        setMode('preview')
     }
 
     // Flip between front (user) and back (environment) camera
@@ -656,6 +658,15 @@ function CreateContent() {
         textarea:focus, input[type=text]:focus { border-color: ${SOCIAL.primary} !important; }
         ::-webkit-scrollbar { display: none; }
       `}</style>
+
+        {/* ── PRO CAMERA MODAL ── Instagram-grade capture experience */}
+        {proCameraOpen && (
+            <ProCamera
+                mode={postType === 'krishiclip' ? 'video' : 'photo'}
+                onCapture={handleProCameraCapture}
+                onClose={() => setProCameraOpen(false)}
+            />
+        )}
         </div>
     )
 }
