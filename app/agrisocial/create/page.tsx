@@ -169,12 +169,33 @@ function CreateContent() {
         const video = videoRef.current
         const vw = video.videoWidth || 1280, vh = video.videoHeight || 720
 
-        // Capture the FULL camera frame — no cropping. The user wants to see
-        // everything the camera saw, not just the part that fit on screen.
-        // The camera preview may show a cropped view (objectFit: 'cover'), but
-        // the captured photo preserves the entire sensor frame.
-        let outW = vw, outH = vh
-        // Cap at 1920px wide for memory safety + upload size, preserve aspect
+        // ── Match the camera preview EXACTLY ──
+        // The camera preview uses objectFit: 'cover' (crops to fill screen) and
+        // mirrors the front camera (scaleX(-1)). The captured photo MUST match
+        // what the user saw — otherwise the photo looks "different" from the
+        // camera view, which is the user's complaint.
+        //
+        // Step 1: Compute the crop region (same math as objectFit: 'cover')
+        //   - Compare video aspect ratio to preview container aspect ratio
+        //   - Crop the dimension that overflows
+        const containerW = video.clientWidth || vw
+        const containerH = video.clientHeight || vh
+        const videoAspect = vw / vh
+        const containerAspect = containerW / containerH
+
+        let cropX = 0, cropY = 0, cropW = vw, cropH = vh
+        if (videoAspect > containerAspect) {
+            // Video is wider than container — crop left/right edges
+            cropW = Math.round(vh * containerAspect)
+            cropX = Math.round((vw - cropW) / 2)
+        } else if (videoAspect < containerAspect) {
+            // Video is taller than container — crop top/bottom edges
+            cropH = Math.round(vw / containerAspect)
+            cropY = Math.round((vh - cropH) / 2)
+        }
+
+        // Output dimensions — cap at 1920px wide for memory safety
+        let outW = cropW, outH = cropH
         if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
 
         const canvas = document.createElement('canvas')
@@ -183,12 +204,18 @@ function CreateContent() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // DO NOT bake filters into the captured image. Filters are applied
-        // live via CSS (style.filter) in the preview screen — this lets the
-        // user change filters without re-capturing, and avoids the "double
-        // filter" bug where the filter was baked in AND applied via CSS.
-        // The captured blob is the RAW camera frame.
-        ctx.drawImage(video, 0, 0, outW, outH)
+        // Step 2: If front camera, mirror the canvas horizontally to match
+        // the preview's scaleX(-1) transform. Without this, selfies look
+        // "flipped" compared to what the user saw in the camera.
+        if (facingMode === 'user') {
+            ctx.translate(outW, 0)
+            ctx.scale(-1, 1)
+        }
+
+        // Step 3: Draw only the visible crop region. No filter baked in —
+        // filters are applied via CSS in the preview screen so the user
+        // can change them without re-capturing.
+        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outW, outH)
 
         // Export at high quality (0.92 = visually lossless)
         canvas.toBlob(blob => {
