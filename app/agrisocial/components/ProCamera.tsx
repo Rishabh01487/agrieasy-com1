@@ -136,6 +136,47 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
       return
     }
 
+    // ── Pre-flight permission check ──
+    // Before calling getUserMedia, query the current permission state. This lets us
+    // distinguish between "never asked" (will prompt), "granted" (will succeed), and
+    // "denied" (will silently fail — browser won't re-prompt).
+    //
+    // Why this matters: if the user previously tapped "Block", calling getUserMedia
+    // does NOT show the prompt again — it just throws NotAllowedError. The user sees
+    // an error and thinks the app is broken. By pre-checking, we can show a clear
+    // message: "You previously denied camera. Open in Browser to reset, or tap Allow
+    // when the prompt appears next time."
+    //
+    // Supported in Chrome 44+, Firefox 39+, Edge 79+. Safari 17+ (older Safari returns
+    // undefined — we fall through to getUserMedia which handles it natively).
+    if (typeof navigator !== 'undefined' && navigator.permissions && typeof navigator.permissions.query === 'function') {
+      try {
+        const permStatus = await navigator.permissions.query({ name: 'camera' as PermissionName })
+        if (permStatus.state === 'denied') {
+          // User previously denied — browser will NOT show the prompt again.
+          // getUserMedia would silently fail. Show the right error instead.
+          setPermissionDenied(true)
+          if (isStandalone) {
+            setError("Camera was blocked earlier. Tap \"Open in Browser\" to enable it, then come back.")
+          } else {
+            setError(
+              'Camera access was blocked earlier. To allow:\n\n' +
+              '• Chrome: tap the 📷 icon in the address bar → "Always allow" → Reload\n' +
+              '• iPhone Safari: Settings → Safari → Camera → Allow\n\n' +
+              'Then tap "Try Again" below.'
+            )
+          }
+          return  // don't bother calling getUserMedia — we know it'll fail
+        }
+        // If state is 'prompt' or 'granted', proceed to getUserMedia.
+        // 'prompt' = browser will show the permission dialog (first time, or after reset).
+        // 'granted' = user previously allowed — camera opens instantly, no prompt.
+      } catch {
+        // Some browsers (older Safari) don't support querying camera permission —
+        // fall through to getUserMedia and let it handle the prompt natively.
+      }
+    }
+
     stopStream()
     try {
       const constraints = buildCaptureConstraints({ facing, quality, fps, isVideo: mode === 'video' })
@@ -194,7 +235,7 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         setError(e?.message || 'Camera failed to start.')
       }
     }
-  }, [facing, quality, fps, mode, torchOn, stopStream, applyTorch])
+  }, [facing, quality, fps, mode, torchOn, stopStream, applyTorch, isStandalone])
 
   // Auto-start the camera stream on modal mount + whenever the user
   // changes facing/quality/fps. The user already tapped "Open Camera"
