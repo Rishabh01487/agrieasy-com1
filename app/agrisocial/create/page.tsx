@@ -171,7 +171,7 @@ function CreateContent() {
 
         // Detect the ACTUAL facing mode from the live media stream — don't rely
         // on React state, which can be stale if the user switched cameras just
-        // before capturing. This is the source of the "selfie not mirrored" bug.
+        // before capturing.
         let actualFacing: 'user' | 'environment' = facingMode
         if (streamRef.current) {
             const track = streamRef.current.getVideoTracks()[0]
@@ -181,8 +181,7 @@ function CreateContent() {
             }
         }
 
-        // Capture the FULL video frame. The camera preview uses objectFit:
-        // 'contain' (shows full frame), so capturing the full frame = WYSIWYG.
+        // Capture the FULL video frame.
         let outW = vw, outH = vh
         if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
 
@@ -192,8 +191,21 @@ function CreateContent() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // Mirror for front camera — matches the preview's scaleX(-1) transform.
-        // Uses the ACTUAL stream facing mode, not React state.
+        // ── MIRROR LOGIC ──
+        // The camera preview <video> has transform: scaleX(-1) applied via CSS
+        // when facingMode === 'user'. This makes the preview feel like a mirror
+        // (natural for selfies).
+        //
+        // IMPORTANT: CSS transforms do NOT affect ctx.drawImage(). The canvas
+        // always draws the RAW video frame, regardless of CSS transforms on the
+        // <video> element. So we MUST manually mirror the canvas drawing to
+        // match what the user saw in the mirrored preview.
+        //
+        // Without this mirror, a selfie captured while the user tilts their
+        // head LEFT would show the head tilted RIGHT in the photo (because the
+        // raw sensor captures the non-mirrored view, as others see you).
+        //
+        // We mirror when actualFacing === 'user' (front camera / selfie).
         if (actualFacing === 'user') {
             ctx.translate(outW, 0)
             ctx.scale(-1, 1)
@@ -201,6 +213,9 @@ function CreateContent() {
 
         // Draw the full frame. No filter baked in.
         ctx.drawImage(video, 0, 0, outW, outH)
+
+        // Reset the transform (cleanup for any future draws)
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
 
         canvas.toBlob(blob => {
             if (!blob) return
