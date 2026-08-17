@@ -72,6 +72,19 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
   // a hard browser block we can't bypass.
   const [secureContext, setSecureContext] = useState(true)
   const [permissionDenied, setPermissionDenied] = useState(false)
+  const [isStandalone, setIsStandalone] = useState(false)
+
+  // Detect if running as installed PWA (standalone display mode).
+  // In standalone mode, there's no address bar — so error messages
+  // should tell the user to use the OS app settings, not the browser
+  // address bar icon.
+  useEffect(() => {
+    const standalone = typeof window !== 'undefined' && (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as any).standalone === true
+    )
+    setIsStandalone(standalone)
+  }, [])
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -144,14 +157,24 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
       console.error('Camera start failed:', e)
       if (e?.name === 'NotAllowedError') {
         // Permission was denied — either by the prompt OR previously saved as "denied"
-        // in browser settings. The browser won't re-prompt until the user resets it.
+        // in browser/PWA settings. The browser won't re-prompt until the user resets it.
         setPermissionDenied(true)
-        setError(
-          'Camera access was denied. To enable:\n' +
-          '• Chrome: tap the 📷 icon in the address bar → "Always allow" → Reload\n' +
-          '• iPhone: Settings → Safari → Camera → Allow\n' +
-          '• Android: tap the 🔒 lock icon → Permissions → Camera → Allow'
-        )
+        // Context-aware message: installed PWA has no address bar, so instructions differ.
+        if (isStandalone) {
+          setError(
+            'Camera access was blocked earlier. To allow:\n\n' +
+            '• Android: long-press the AgriEasy app icon → App info → Permissions → Camera → Allow\n' +
+            '• iPhone: open Settings → scroll down to "AgriEasy" → Camera → Allow\n\n' +
+            'Then come back and tap "Try Again".'
+          )
+        } else {
+          setError(
+            'Camera access was blocked earlier. To allow:\n\n' +
+            '• Chrome: tap the 📷 icon in the address bar → "Always allow" → Reload\n' +
+            '• iPhone Safari: Settings → Safari → Camera → Allow\n\n' +
+            'Then tap "Try Again" below.'
+          )
+        }
       } else if (e?.name === 'NotFoundError') {
         setError('No camera found on this device.')
       } else if (e?.name === 'OverconstrainedError') {
