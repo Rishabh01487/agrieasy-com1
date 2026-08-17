@@ -9,68 +9,63 @@ import ProCamera from '../components/ProCamera'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
-// Instagram-style filters. Each one layers multiple subtle CSS filters
-// to create a distinct "look" — just like real Instagram filters.
-// Values are tuned to be photographic (not cartoonish like the old ones).
+// Instagram-style filters. Each one layers multiple CSS filters to create
+// a distinct photographic look. Values are tuned to be visibly different
+// from Normal but not cartoonish.
 //
-// The CSS filter functions used:
-//   brightness()  — overall lightness (1.0 = neutral)
-//   contrast()    — difference between light and dark (1.0 = neutral)
-//   saturate()    — color intensity (1.0 = neutral)
-//   sepia()       — warm brown tone (0 = none, 1 = full sepia)
-//   hue-rotate()  — shifts all colors around the color wheel (deg)
-//   grayscale()   — desaturates to black & white (0 = color, 1 = B&W)
-//   invert()      — inverts colors (rarely used)
-//
-// Each filter below is a careful blend — Instagram's actual filters use
-// LUTs (Look-Up Tables) which can't be done in CSS, but these layered
-// CSS filters get ~85% of the way there visually.
+// CSS filter functions:
+//   brightness()  — 1.0 = neutral, >1 brighter, <1 darker
+//   contrast()    — 1.0 = neutral, >1 punchier, <1 flatter
+//   saturate()    — 1.0 = neutral, >1 more colorful, <1 less colorful
+//   sepia()       — 0 = none, 1 = full brown tint (warm vintage)
+//   hue-rotate()  — shifts colors (deg) — negative = warmer, positive = cooler
+//   grayscale()   — 0 = color, 1 = B&W
 const FILTERS = [
     // Original — no filter
     { name: 'Normal', style: 'none' },
 
-    // Clarendon — brightens shadows, cools highlights, slightly saturated
-    // Instagram's most popular filter. Adds a cool, crisp look.
-    { name: 'Clarendon', style: 'brightness(1.08) contrast(1.12) saturate(1.18) hue-rotate(-5deg)' },
+    // Clarendon — Instagram's most popular. Cool, crisp, slightly saturated.
+    // Brightens shadows, cools highlights.
+    { name: 'Clarendon', style: 'brightness(1.1) contrast(1.15) saturate(1.25) hue-rotate(-8deg)' },
 
-    // Gingham — soft, vintage, slightly desaturated, warm
-    { name: 'Gingham', style: 'brightness(1.05) contrast(0.92) saturate(0.88) sepia(0.12)' },
+    // Gingham — soft vintage, warm, slightly faded. Like old film.
+    { name: 'Gingham', style: 'brightness(1.05) contrast(0.88) saturate(0.85) sepia(0.18)' },
 
-    // Moon — black & white with cool undertone, lifted shadows
-    { name: 'Moon', style: 'grayscale(1) brightness(1.06) contrast(1.1) sepia(0.15) hue-rotate(-15deg)' },
+    // Moon — black & white with cool undertone, lifted shadows, slight contrast.
+    { name: 'Moon', style: 'grayscale(1) brightness(1.08) contrast(1.15) sepia(0.2) hue-rotate(-20deg)' },
 
-    // Lark — desaturated, bright, airy, slightly cool. Great for landscapes.
-    { name: 'Lark', style: 'brightness(1.08) contrast(0.95) saturate(0.82) hue-rotate(8deg)' },
+    // Lark — desaturated, bright, airy, slightly cool. Great for landscapes/sky.
+    { name: 'Lark', style: 'brightness(1.12) contrast(0.92) saturate(0.75) hue-rotate(12deg)' },
 
-    // Reyes — faded, warm, lifted shadows, vintage film look
-    { name: 'Reyes', style: 'brightness(1.06) contrast(0.88) saturate(0.85) sepia(0.25)' },
+    // Reyes — faded, warm, lifted shadows, vintage film look.
+    { name: 'Reyes', style: 'brightness(1.08) contrast(0.85) saturate(0.8) sepia(0.3)' },
 
-    // Juno — warm, saturated, retro. Boosts reds/oranges.
-    { name: 'Juno', style: 'brightness(1.04) contrast(1.08) saturate(1.32) sepia(0.15) hue-rotate(-8deg)' },
+    // Juno — warm, saturated, retro. Boosts reds/oranges. Great for people/food.
+    { name: 'Juno', style: 'brightness(1.05) contrast(1.12) saturate(1.4) sepia(0.18) hue-rotate(-10deg)' },
 
     // Slumber — desaturated, warm, soft. Dreamy effect.
-    { name: 'Slumber', style: 'brightness(1.05) contrast(0.92) saturate(0.78) sepia(0.2)' },
+    { name: 'Slumber', style: 'brightness(1.06) contrast(0.9) saturate(0.72) sepia(0.25)' },
 
     // Crema — warm, muted, soft contrast. Subtle and elegant.
-    { name: 'Crema', style: 'brightness(1.03) contrast(0.95) saturate(0.88) sepia(0.18)' },
+    { name: 'Crema', style: 'brightness(1.04) contrast(0.92) saturate(0.85) sepia(0.22)' },
 
     // Ludwig — warm, slightly desaturated, lifted. Classic IG look.
-    { name: 'Ludwig', style: 'brightness(1.05) contrast(0.96) saturate(0.92) sepia(0.1) hue-rotate(-5deg)' },
+    { name: 'Ludwig', style: 'brightness(1.07) contrast(0.94) saturate(0.88) sepia(0.15) hue-rotate(-8deg)' },
 
     // Perpetua — bright, slightly cool, vivid. Great for nature/sky.
-    { name: 'Perpetua', style: 'brightness(1.06) contrast(1.05) saturate(1.12) hue-rotate(10deg)' },
+    { name: 'Perpetua', style: 'brightness(1.08) contrast(1.08) saturate(1.2) hue-rotate(15deg)' },
 
     // Aden — cool, faded, muted. Cinematic look.
-    { name: 'Aden', style: 'brightness(1.04) contrast(0.9) saturate(0.85) hue-rotate(15deg) sepia(0.08)' },
+    { name: 'Aden', style: 'brightness(1.05) contrast(0.88) saturate(0.8) hue-rotate(20deg) sepia(0.1)' },
 
     // Stinson — warm, bright, soft. Golden hour feel.
-    { name: 'Stinson', style: 'brightness(1.08) contrast(0.94) saturate(0.95) sepia(0.22)' },
+    { name: 'Stinson', style: 'brightness(1.1) contrast(0.92) saturate(0.92) sepia(0.28)' },
 
-    // Vivid — punchy, saturated, high contrast (the only "bold" one)
-    { name: 'Vivid', style: 'brightness(1.03) contrast(1.15) saturate(1.4)' },
+    // Vivid — punchy, saturated, high contrast. The bold one.
+    { name: 'Vivid', style: 'brightness(1.04) contrast(1.2) saturate(1.5)' },
 
-    // B&W — pure black & white, high contrast
-    { name: 'B&W', style: 'grayscale(1) contrast(1.15) brightness(1.02)' },
+    // B&W — pure black & white, high contrast, dramatic.
+    { name: 'B&W', style: 'grayscale(1) contrast(1.2) brightness(1.03)' },
 ]
 
 type Mode = 'choose' | 'camera' | 'recording' | 'preview' | 'details'
@@ -174,29 +169,12 @@ function CreateContent() {
         const video = videoRef.current
         const vw = video.videoWidth || 1280, vh = video.videoHeight || 720
 
-        // The camera preview uses objectFit: 'cover' — it crops the video to fill
-        // the screen. To capture EXACTLY what the user sees, we need to compute
-        // the visible crop region (same logic as objectFit: cover) and draw only
-        // that region to the canvas. Otherwise the captured photo includes parts
-        // of the frame the user never saw — confusing UX.
-        const containerW = video.clientWidth || vw
-        const containerH = video.clientHeight || vh
-        const videoAspect = vw / vh
-        const containerAspect = containerW / containerH
-
-        let cropX = 0, cropY = 0, cropW = vw, cropH = vh
-        if (videoAspect > containerAspect) {
-            // Video is wider than container — crop sides (matches cover)
-            cropW = Math.round(vh * containerAspect)
-            cropX = Math.round((vw - cropW) / 2)
-        } else if (videoAspect < containerAspect) {
-            // Video is taller than container — crop top/bottom (matches cover)
-            cropH = Math.round(vw / containerAspect)
-            cropY = Math.round((vh - cropH) / 2)
-        }
-
-        // Output dimensions — cap at 1920px wide for memory safety, preserve aspect
-        let outW = cropW, outH = cropH
+        // Capture the FULL camera frame — no cropping. The user wants to see
+        // everything the camera saw, not just the part that fit on screen.
+        // The camera preview may show a cropped view (objectFit: 'cover'), but
+        // the captured photo preserves the entire sensor frame.
+        let outW = vw, outH = vh
+        // Cap at 1920px wide for memory safety + upload size, preserve aspect
         if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
 
         const canvas = document.createElement('canvas')
@@ -205,12 +183,14 @@ function CreateContent() {
         const ctx = canvas.getContext('2d')
         if (!ctx) return
 
-        // Apply the selected filter + user adjustments (brightness/contrast/saturation)
-        ctx.filter = buildFilterString()
-        // Draw only the visible crop region — what the user sees is what they get
-        ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outW, outH)
+        // DO NOT bake filters into the captured image. Filters are applied
+        // live via CSS (style.filter) in the preview screen — this lets the
+        // user change filters without re-capturing, and avoids the "double
+        // filter" bug where the filter was baked in AND applied via CSS.
+        // The captured blob is the RAW camera frame.
+        ctx.drawImage(video, 0, 0, outW, outH)
 
-        // Export at high quality (0.92 = visually lossless, ~30% smaller than 1.0)
+        // Export at high quality (0.92 = visually lossless)
         canvas.toBlob(blob => {
             if (!blob) return
             const url = URL.createObjectURL(blob)
@@ -596,13 +576,14 @@ function CreateContent() {
             {/* ── PREVIEW + FILTERS ── */}
             {mode === 'preview' && mediaFile && (
                 <div style={{ background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    {/* Media preview */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', overflow: 'hidden', position: 'relative' }}>
+                    {/* Media preview — full photo on neutral black background.
+                        objectFit: 'contain' preserves the entire image without cropping. */}
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', maxHeight: '70vh', overflow: 'hidden', position: 'relative', background: '#000' }}>
                         {mediaFile.type === 'image' ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={mediaFile.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
+                            <img src={mediaFile.url} alt="preview" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', ...getFilterStyle() }} />
                         ) : (
-                            <video src={mediaFile.url} controls style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
+                            <video src={mediaFile.url} controls style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', ...getFilterStyle() }} />
                         )}
                         {/* Carousel dots + navigation */}
                         {carouselFiles.length > 1 && (
