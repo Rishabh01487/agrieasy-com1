@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Spinner } from '@/app/components/Spinner'
 import { Icon, IconButton } from '@/lib/icons'
+import CommentSheet from './components/CommentSheet'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -68,10 +69,8 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [saved, setSaved] = useState(viewerId ? post.savedBy?.includes(viewerId) : false)
     const [following, setFollowing] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
-    const [showComments, setShowComments] = useState(false)
-    const [commentText, setCommentText] = useState('')
+    const [commentSheetOpen, setCommentSheetOpen] = useState(false)
     const [comments, setComments] = useState<Comment[]>(post.comments || [])
-    const [posting, setPosting] = useState(false)
     const [imgErr, setImgErr] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [burst, setBurst] = useState(false)
@@ -126,18 +125,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         lastTapRef.current = now
     }
 
-    const handleComment = async () => {
-        if (!commentText.trim() || !viewerId) return
-        setPosting(true)
-        try {
-            const res = await authFetch('/api/social/comment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id, text: commentText }) })
-            if (res.ok) {
-                const d = await res.json()
-                setComments(c => [...c, d.comment])
-                setCommentText('')
-            }
-        } catch {}
-        finally { setPosting(false) }
+    const handleCommentCountUpdate = (newCount: number) => {
+        // CommentSheet calls this when a comment is added — updates the count badge
+        // We don't need to do anything special here since comments state is managed
+        // inside CommentSheet, but we keep this for future count sync if needed.
     }
 
     const handleSave = async () => {
@@ -295,7 +286,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     active={liked} activeColor="#D9534F" color={SOCIAL.text}
                     style={{ transform: liked ? 'scale(1.05)' : 'scale(1)' }}
                 />
-                <IconButton name="comment" size={24} title="Comment" onClick={() => setShowComments(s => !s)} color={SOCIAL.text} />
+                <IconButton name="comment" size={24} title="Comment" onClick={() => setCommentSheetOpen(true)} color={SOCIAL.text} />
                 <Link href={`/agrisocial/dm?sharePost=${post._id}`} title="Share via DM" style={{ textDecoration: 'none', display: 'inline-flex' }}>
                     <IconButton name="send" size={22} color={SOCIAL.text} />
                 </Link>
@@ -341,10 +332,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* View comments link */}
-            {comments.length > 0 && !showComments && (
+            {/* View comments link — opens the Instagram-style bottom sheet */}
+            {comments.length > 0 && (
                 <div style={{ padding: '0 14px 10px' }}>
-                    <button onClick={() => setShowComments(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: SOCIAL.muted, fontSize: '0.82rem', fontWeight: 600, padding: 0 }}>
+                    <button onClick={() => setCommentSheetOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: SOCIAL.muted, fontSize: '0.82rem', fontWeight: 600, padding: 0 }}>
                         View all {comments.length} comments
                     </button>
                 </div>
@@ -367,35 +358,16 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* Comments */}
-            {showComments && (
-                <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 14px' }}>
-                    {comments.length === 0 && <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 8px', textAlign: 'center' }}>No comments yet — be first! 🌾</p>}
-                    {comments.slice(-3).map((c: Comment, i: number) => {
-                        const cn = typeof c.userId === 'object' ? ((c.userId as User).farmerName || (c.userId as User).firmName || 'User') : 'User'
-                        const cPic = typeof c.userId === 'object' ? (c.userId as User).profilePic : undefined
-                        return (
-                            <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
-                                <Avatar name={cn} size={28} src={cPic} />
-                                <p style={{ color: SOCIAL.text, fontSize: '0.84rem', margin: 0, paddingTop: '4px', flex: 1 }}>
-                                    <Link href={`/agrisocial/profile/${typeof c.userId === 'object' ? (c.userId as User)._id : ''}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{cn}</Link>{' '}{c.text}
-                                </p>
-                                <span style={{ color: SOCIAL.muted, fontSize: '0.68rem', paddingTop: '6px' }}>{timeAgo(c.createdAt)}</span>
-                            </div>
-                        )
-                    })}
-                    {viewerId ? (
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                            <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleComment()} placeholder="Add a comment…"
-                                style={{ flex: 1, padding: '8px 14px', background: SOCIAL.bg, border: `1px solid ${SOCIAL.border}`, borderRadius: '100px', fontSize: '0.84rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }} />
-                            <button onClick={handleComment} disabled={posting || !commentText.trim()}
-                                style={{ background: SOCIAL.primary, border: 'none', borderRadius: '100px', padding: '8px 16px', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', opacity: posting || !commentText.trim() ? 0.5 : 1 }}>Post</button>
-                        </div>
-                    ) : (
-                        <Link href="/auth/login" style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>Log in to comment</Link>
-                    )}
-                </div>
-            )}
+            {/* Instagram-style comment bottom sheet */}
+            <CommentSheet
+                postId={post._id}
+                postOwnerId={typeof post.userId === 'object' ? (post.userId as User)._id : post.userId}
+                viewerId={viewerId}
+                isOpen={commentSheetOpen}
+                onClose={() => setCommentSheetOpen(false)}
+                initialComments={comments}
+                onCommentAdded={handleCommentCountUpdate}
+            />
         </div>
     )
 }
