@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import { BUYER, FARMER, SHARED, navStyle } from '@/lib/styles'
 import BillCalculator from './BillCalculator'
+import ManualBillEntry from './ManualBillEntry'
 
 interface LedgerEntry {
     _id: string
@@ -59,6 +60,7 @@ export default function LedgerPage() {
     const [filter, setFilter] = useState<'all' | 'bill' | 'invoice' | 'earning' | 'expense'>('all')
     const [showAddModal, setShowAddModal] = useState(false)
     const [userRole, setUserRole] = useState('')
+    const [manualResult, setManualResult] = useState<any>(null)  // result from ManualBillEntry
 
     const [entryType, setEntryType] = useState<'bill' | 'invoice' | 'earning' | 'expense'>('bill')
     const [counterpartyName, setCounterpartyName] = useState('')
@@ -219,6 +221,60 @@ export default function LedgerPage() {
                             </span>
                         </div>
                         <BillCalculator embedded onSaved={fetchLedger} />
+                    </div>
+                )}
+
+                {/* ── MANUAL BILL ENTRY ──
+                     For buyers who want to enter commodity + per-bag weights manually
+                     (no photo). Supports unlimited commodities × unlimited bags.
+                     Per-bag weights are auto-grouped into batches of 10 for display. */}
+                {userRole === 'buyer' && !manualResult && (
+                    <div style={{
+                        background: palette.bgSub, borderRadius: 16, padding: 16,
+                        marginBottom: 24, border: `1px solid ${palette.border}`,
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 4px' }}>
+                            <span style={{ fontSize: '1.3rem' }}>✍️</span>
+                            <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
+                                Manual Bill Entry
+                            </h2>
+                            <span style={{ color: palette.muted, fontSize: '0.76rem', marginLeft: 'auto' }}>
+                                Enter commodity + per-bag weights → auto-batched in 10s
+                            </span>
+                        </div>
+                        <ManualBillEntry
+                            onGenerate={(result) => setManualResult(result)}
+                        />
+                    </div>
+                )}
+
+                {/* Manual bill result display — reuses BillCalculator's result UI */}
+                {userRole === 'buyer' && manualResult && (
+                    <div style={{
+                        background: palette.bgSub, borderRadius: 16, padding: 16,
+                        marginBottom: 24, border: `1px solid ${palette.border}`,
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, padding: '0 4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontSize: '1.3rem' }}>📋</span>
+                                <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
+                                    Generated Bill
+                                </h2>
+                            </div>
+                            <button
+                                onClick={() => setManualResult(null)}
+                                style={{
+                                    background: palette.white, border: `1px solid ${palette.border}`,
+                                    borderRadius: 8, padding: '6px 14px', color: palette.text,
+                                    fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
+                                }}
+                            >✕ Clear</button>
+                        </div>
+                        <BillCalculator
+                            embedded
+                            initialResult={manualResult}
+                            onSaved={() => { fetchLedger(); setManualResult(null) }}
+                        />
                     </div>
                 )}
 
