@@ -349,7 +349,8 @@ function CreateContent() {
                 }
                 const sig = await sigRes.json()
                 if (!sig.available) {
-                    setError('Media upload requires Cloudinary configuration. Please contact admin.')
+                    const hint = sig.debug?.hint || 'unknown reason'
+                    setError(`Upload not available: ${hint}. Check Vercel env vars: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET`)
                     setSubmitting(false)
                     return
                 }
