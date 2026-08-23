@@ -341,6 +341,12 @@ function CreateContent() {
         if (filesToUpload.length > 0 && filesToUpload.some(f => f.blob)) {
             try {
                 const sigRes = await authFetch('/api/social/upload-signature')
+                if (!sigRes.ok) {
+                    const errBody = await sigRes.json().catch(() => ({}))
+                    setError(errBody?.error || `Authentication failed (HTTP ${sigRes.status}). Please log in again.`)
+                    setSubmitting(false)
+                    return
+                }
                 const sig = await sigRes.json()
                 if (!sig.available) {
                     setError('Media upload requires Cloudinary configuration. Please contact admin.')
