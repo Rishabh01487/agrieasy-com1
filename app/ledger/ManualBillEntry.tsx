@@ -26,7 +26,7 @@
 import { useState } from 'react'
 import { BUYER, SHARED } from '@/lib/styles'
 
-interface Batch { bagCount: number; weight: number }
+interface Batch { bagCount: number; weight: number; individualWeights?: number[] }
 interface CommodityGroup {
     name: string
     nameEn: string
@@ -154,6 +154,7 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                 batches.push({
                     bagCount: slice.length,
                     weight: Math.round(batchWeight * 1000) / 1000,  // 3 decimal places
+                    individualWeights: slice,  // preserve each bag's weight for display
                 })
             }
 
