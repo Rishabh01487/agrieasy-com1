@@ -1057,16 +1057,39 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
         const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
 
         const rowsHtml = computedRows.map((c, i) => {
-            const batchesHtml = c.batches.map((b, j) => `
-                <tr class="batch-row">
-                    <td colspan="2" style="padding: 3px 8px 3px 28px; color: #6B6B6B; font-size: 11px; background: #FAFAF5;">
-                        Batch ${j + 1}: ${b.bagCount} bags &times; ${formatNum(b.weight)} kg
-                    </td>
-                    <td colspan="2" style="padding: 3px 12px 3px 8px; color: #6B6B6B; font-size: 11px; text-align: right; background: #FAFAF5;">
-                        ${formatNum(b.weight)} kg
-                    </td>
-                </tr>
-            `).join('')
+            const batchesHtml = c.batches.map((b, j) => {
+                // Build individual bag weights list (if available from manual entry)
+                let globalBagNum = 1
+                for (let m = 0; m < j; m++) {
+                    globalBagNum += (c.batches[m]?.individualWeights?.length || c.batches[m]?.bagCount || 0)
+                }
+                const individualHtml = b.individualWeights && b.individualWeights.length > 0
+                    ? `<tr class="batch-detail-row">
+                            <td colspan="4" style="padding: 4px 12px 4px 28px; background: #FAFAF5;">
+                                <div style="font-size: 10px; color: #6B6B6B; line-height: 1.6;">
+                                    ${b.individualWeights.map((w, k) => {
+                        const bagNum = globalBagNum + k
+                        return `<span style="display: inline-block; min-width: 70px; margin-right: 4px;">Bag ${bagNum}: <strong style="color: #2A2A2A;">${w.toFixed(3)} kg</strong></span>`
+                    }).join('')}
+                                </div>
+                                <div style="font-size: 10px; color: #AC3B61; font-weight: 700; margin-top: 3px; padding-top: 3px; border-top: 1px dashed #EFE6DC;">
+                                    Batch ${j + 1} subtotal: ${formatNum(b.weight)} kg × ${b.bagCount} bags
+                                </div>
+                            </td>
+                        </tr>`
+                    : ''
+                return `
+                    <tr class="batch-row">
+                        <td colspan="2" style="padding: 3px 8px 3px 28px; color: #6B6B6B; font-size: 11px; background: #FAFAF5;">
+                            Batch ${j + 1}: ${b.bagCount} bags &times; ${formatNum(b.weight)} kg
+                        </td>
+                        <td colspan="2" style="padding: 3px 12px 3px 8px; color: #6B6B6B; font-size: 11px; text-align: right; background: #FAFAF5;">
+                            ${formatNum(b.weight)} kg
+                        </td>
+                    </tr>
+                    ${individualHtml}
+                `
+            }).join('')
             return `
                 <tr class="commodity-row">
                     <td style="padding: 10px 8px; border-bottom: 1px solid #EFE6DC; font-weight: 700; text-align: center; color: #AC3B61;">${i + 1}</td>
@@ -1086,16 +1109,29 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
             `
         }).join('')
 
-        // Build a plain-text summary for sharing
+        // Build a plain-text summary for sharing — includes individual bag weights
         const shareText = `*AgriEasy Bill Receipt*
 Receipt: ${receiptNo}
 Date: ${dateStr} ${timeStr}
 Farmer: ${counterpartyName || '—'}
 ──────────────────
-${computedRows.map((c, i) => `${i + 1}. ${c.name}${c.nameEn && c.nameEn !== c.name ? ` (${c.nameEn})` : ''}
-   ${c.totalBags} bags · ${formatNum(c.totalWeight)} kg
+${computedRows.map((c, i) => {
+            const batchLines = c.batches.map((b, j) => {
+                let globalBagNum = 1
+                for (let m = 0; m < j; m++) {
+                    globalBagNum += (c.batches[m]?.individualWeights?.length || c.batches[m]?.bagCount || 0)
+                }
+                const bagLines = b.individualWeights && b.individualWeights.length > 0
+                    ? b.individualWeights.map((w, k) => `   Bag ${globalBagNum + k}: ${w.toFixed(3)} kg`).join('\n')
+                    : ''
+                return `   Batch ${j + 1}: ${b.bagCount} bags = ${formatNum(b.weight)} kg${bagLines ? '\n' + bagLines : ''}`
+            }).join('\n')
+            return `${i + 1}. ${c.name}${c.nameEn && c.nameEn !== c.name ? ` (${c.nameEn})` : ''}
+${batchLines}
+   Total: ${c.totalBags} bags · ${formatNum(c.totalWeight)} kg
    Rate: ₹${c.rate || '0'}/${c.unit}
-   Amount: ${formatINR(c.amount)}`).join('\n')}
+   Amount: ${formatINR(c.amount)}`
+        }).join('\n')}
 ──────────────────
 Total Bags: ${result.grandTotalBags}
 Total Weight: ${formatNum(result.grandTotalWeight)} kg
@@ -1346,10 +1382,23 @@ Receipt: ${receiptNo}
 Date: ${dateStr}
 Farmer: ${counterpartyName || '—'}
 ──────────────────
-${computedRows.map((c, i) => `${i + 1}. ${c.name}${c.nameEn && c.nameEn !== c.name ? ` (${c.nameEn})` : ''}
-   ${c.totalBags} bags · ${formatNum(c.totalWeight)} kg
+${computedRows.map((c, i) => {
+            const batchLines = c.batches.map((b, j) => {
+                let globalBagNum = 1
+                for (let m = 0; m < j; m++) {
+                    globalBagNum += (c.batches[m]?.individualWeights?.length || c.batches[m]?.bagCount || 0)
+                }
+                const bagLines = b.individualWeights && b.individualWeights.length > 0
+                    ? b.individualWeights.map((w, k) => `   Bag ${globalBagNum + k}: ${w.toFixed(3)} kg`).join('\n')
+                    : ''
+                return `   Batch ${j + 1}: ${b.bagCount} bags = ${formatNum(b.weight)} kg${bagLines ? '\n' + bagLines : ''}`
+            }).join('\n')
+            return `${i + 1}. ${c.name}${c.nameEn && c.nameEn !== c.name ? ` (${c.nameEn})` : ''}
+${batchLines}
+   Total: ${c.totalBags} bags · ${formatNum(c.totalWeight)} kg
    Rate: ₹${c.rate || '0'}/${c.unit}
-   Amount: ${formatINR(c.amount)}`).join('\n')}
+   Amount: ${formatINR(c.amount)}`
+        }).join('\n')}
 ──────────────────
 Total Bags: ${result.grandTotalBags}
 Total Weight: ${formatNum(result.grandTotalWeight)} kg
