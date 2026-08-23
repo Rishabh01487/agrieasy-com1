@@ -47,6 +47,7 @@ interface ManualCommodity {
     rate: string
     unit: 'kg' | 'quintal'
     bagCount: number
+    batchSize: number  // user-selectable: 5, 10, 15, 20, or custom
     weights: string[]  // per-bag weights as strings (input values)
 }
 
@@ -55,7 +56,8 @@ interface ManualBillEntryProps {
     onCancel?: () => void
 }
 
-const BATCH_SIZE = 10
+const DEFAULT_BATCH_SIZE = 10
+const BATCH_SIZE_OPTIONS = [5, 10, 15, 20]
 
 function makeId() {
     return Math.random().toString(36).slice(2, 10)
@@ -68,6 +70,7 @@ function emptyCommodity(): ManualCommodity {
         rate: '',
         unit: 'kg',
         bagCount: 1,
+        batchSize: DEFAULT_BATCH_SIZE,
         weights: [''],
     }
 }
@@ -140,10 +143,13 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                 .map(w => parseFloat(w))
                 .filter(w => !isNaN(w) && w > 0)
 
-            // Group into batches of BATCH_SIZE (10)
+            // Group into batches of the user-selected size (5, 10, 15, 20, or custom).
+            // The last batch is the remainder — e.g. 30 bags with batch size 10 →
+            // 3 batches of 10. 30 bags with batch size 20 → 1 batch of 20 + 1 batch of 10.
+            const batchSize = Math.max(1, c.batchSize || DEFAULT_BATCH_SIZE)
             const batches: Batch[] = []
-            for (let i = 0; i < weights.length; i += BATCH_SIZE) {
-                const slice = weights.slice(i, i + BATCH_SIZE)
+            for (let i = 0; i < weights.length; i += batchSize) {
+                const slice = weights.slice(i, i + batchSize)
                 const batchWeight = slice.reduce((sum, w) => sum + w, 0)
                 batches.push({
                     bagCount: slice.length,
@@ -334,6 +340,40 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                             </div>
                         </div>
 
+                        {/* Batch size selector — user chooses how to group bags on the bill */}
+                        <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                            <div style={{ flex: '1 1 200px' }}>
+                                <label style={{ display: 'block', color: palette.muted, fontSize: '0.7rem', fontWeight: 700, marginBottom: 4 }}>
+                                    Batch Size (bags per row on bill)
+                                </label>
+                                <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min="1"
+                                    max="100"
+                                    value={c.batchSize}
+                                    onChange={e => updateCommodity(c.id, 'batchSize', Math.max(1, parseInt(e.target.value || '10', 10)))}
+                                    style={inputStyle(palette)}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                {BATCH_SIZE_OPTIONS.map(n => (
+                                    <button
+                                        key={n}
+                                        onClick={() => updateCommodity(c.id, 'batchSize', n)}
+                                        style={{
+                                            background: c.batchSize === n ? palette.primary : (palette.bgSub || '#f1f5f9'),
+                                            border: `1px solid ${c.batchSize === n ? palette.primary : palette.border}`,
+                                            borderRadius: 8, padding: '8px 12px',
+                                            color: c.batchSize === n ? '#fff' : palette.text,
+                                            fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                                            transition: 'all 0.15s ease',
+                                        }}
+                                    >{n}</button>
+                                ))}
+                            </div>
+                        </div>
+
                         {/* Quick-fill all weights */}
                         <div style={{ display: 'flex', gap: 8, marginBottom: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                             <span style={{ color: palette.muted, fontSize: '0.74rem', fontWeight: 600 }}>Quick-fill all bags:</span>
@@ -391,9 +431,13 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                         <div style={{
                             marginTop: 10, padding: '8px 12px', background: palette.bgSub || '#f1f5f9',
                             borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            flexWrap: 'wrap', gap: 6,
                         }}>
                             <span style={{ color: palette.muted, fontSize: '0.78rem', fontWeight: 600 }}>
                                 {filledCount} of {c.bagCount} bags filled
+                            </span>
+                            <span style={{ color: palette.muted, fontSize: '0.72rem' }}>
+                                → {Math.ceil(filledCount / Math.max(1, c.batchSize))} batch{Math.ceil(filledCount / Math.max(1, c.batchSize)) !== 1 ? 'es' : ''} of {c.batchSize}
                             </span>
                             <span style={{ color: palette.text, fontSize: '0.86rem', fontWeight: 800 }}>
                                 {totalWeight.toFixed(3)} kg
