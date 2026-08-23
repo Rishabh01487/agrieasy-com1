@@ -40,6 +40,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [paused, setPaused] = useState(false)
     const [ended, setEnded] = useState(false)  // true when clip finishes — shows AgriSocial branding
     const [heartBurst, setHeartBurst] = useState(false)
+    const ytId = clip.mediaUrl ? (clip.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
     const [showComments, setShowComments] = useState(false)
     const [comments, setComments] = useState<Comment[]>([])
     const [commentText, setCommentText] = useState('')
@@ -105,6 +106,36 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             }
         }
     }, [isActive, paused])
+
+    // Listen for YouTube iframe 'ended' events via postMessage.
+    // YouTube's IFrame API posts state changes: 0 = ended, 1 = playing, 2 = paused.
+    // We listen for state 0 to trigger the AgriSocial end screen.
+    useEffect(() => {
+        if (!ytId || !isActive) return
+
+        // Tell the YouTube iframe to start sending state change events
+        const iframe = document.querySelector('iframe[title="KrishiClip"]') as HTMLIFrameElement
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage(JSON.stringify({
+                event: 'listening',
+            }), '*')
+        }
+
+        const handler = (e: MessageEvent) => {
+            try {
+                if (e.origin !== 'https://www.youtube.com') return
+                const data = JSON.parse(e.data)
+                if (data.event === 'onStateChange' && data.info === 0) {
+                    setEnded(true)  // YouTube video ended → show AgriSocial branding
+                }
+                if (data.event === 'onStateChange' && data.info === 1) {
+                    setEnded(false)  // playing → hide end screen
+                }
+            } catch { /* ignore non-JSON messages */ }
+        }
+        window.addEventListener('message', handler)
+        return () => window.removeEventListener('message', handler)
+    }, [ytId, isActive])
 
     // Record a view when this clip becomes active (Fix: Issue 3 — per-clip view tracking)
     // Uses a ref to ensure we only record ONE view per active session (not on every re-render)
@@ -229,13 +260,13 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
         else setShowDeleteConfirm(false)
     }
 
-    const ytId = clip.mediaUrl ? (clip.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
+    // ytId is declared at the top of the component (needed by useEffect hooks above)
 
     return (
         <div ref={cardRef} style={{ position: 'relative', height: '100vh', width: '100%', background: SOCIAL.clips.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start', flexShrink: 0 }}>
             {/* Media */}
             {ytId ? (
-                <iframe key={`${ytId}-${isActive ? 'active' : 'inactive'}`} src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&loop=1&playlist=${ytId}`}
+                <iframe key={`${ytId}-${isActive ? 'active' : 'inactive'}`} src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : 'https://agrieasy.site'}`}
                     style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} allowFullScreen title="KrishiClip" allow="autoplay" />
             ) : clip.mediaUrl && clip.mediaType === 'video' ? (
                 <video ref={videoRef} src={clip.mediaUrl} muted={muted} playsInline controls={false}

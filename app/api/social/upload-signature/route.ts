@@ -16,18 +16,7 @@ export async function GET(request: NextRequest) {
     const apiSecret = process.env.CLOUDINARY_API_SECRET
 
     if (!cloudName || !apiKey || !apiSecret) {
-      return NextResponse.json({
-        available: false,
-        error: 'Cloudinary not configured',
-        debug: {
-          hasCloudName: !!cloudName,
-          hasApiKey: !!apiKey,
-          hasApiSecret: !!apiSecret,
-          hint: !cloudName ? 'CLOUDINARY_CLOUD_NAME missing'
-               : !apiKey ? 'CLOUDINARY_API_KEY missing'
-               : 'CLOUDINARY_API_SECRET missing',
-        },
-      })
+      return NextResponse.json({ available: false, error: 'Cloudinary not configured' })
     }
 
     cloudinary.config({
