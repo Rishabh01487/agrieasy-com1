@@ -38,6 +38,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [shareCopied, setShareCopied] = useState(false)
     const [muted, setMuted] = useState(false)
     const [paused, setPaused] = useState(false)
+    const [ended, setEnded] = useState(false)  // true when clip finishes — shows AgriSocial branding
     const [heartBurst, setHeartBurst] = useState(false)
     const [showComments, setShowComments] = useState(false)
     const [comments, setComments] = useState<Comment[]>([])
@@ -94,11 +95,13 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     useEffect(() => {
         if (videoRef.current) {
             if (isActive && !paused) {
+                setEnded(false)  // reset end screen when clip starts playing
                 videoRef.current.play().catch(() => null)
             } else {
                 // Aggressive pause: stop playback + reset to beginning + clear audio
                 videoRef.current.pause()
                 videoRef.current.currentTime = 0
+                setEnded(false)
             }
         }
     }, [isActive, paused])
@@ -235,8 +238,9 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 <iframe key={`${ytId}-${isActive ? 'active' : 'inactive'}`} src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&loop=1&playlist=${ytId}`}
                     style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} allowFullScreen title="KrishiClip" allow="autoplay" />
             ) : clip.mediaUrl && clip.mediaType === 'video' ? (
-                <video ref={videoRef} src={clip.mediaUrl} loop muted={muted} playsInline controls={false}
+                <video ref={videoRef} src={clip.mediaUrl} muted={muted} playsInline controls={false}
                     onClick={handleVideoTap}
+                    onEnded={() => setEnded(true)}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, cursor: 'pointer' }} />
             ) : clip.mediaUrl && clip.mediaType === 'image' ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -256,8 +260,82 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
             )}
 
             {/* Pause indicator */}
-            {paused && (
+            {paused && !ended && (
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff', fontSize: '3rem', opacity: 0.8, pointerEvents: 'none', zIndex: 10 }}>⏸</div>
+            )}
+
+            {/* End screen — AgriSocial branding when clip finishes.
+                Like Instagram's end-of-reel branding. Shows logo + name + replay. */}
+            {ended && (
+                <div style={{
+                    position: 'absolute', inset: 0, zIndex: 20,
+                    background: 'linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(20,20,20,0.9) 100%)',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    gap: 16, animation: 'fadeIn 0.3s ease',
+                }}>
+                    {/* AgriSocial logo */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/agrisocial-logo.png" alt="AgriSocial"
+                        style={{
+                            width: 72, height: 72, borderRadius: 18,
+                            boxShadow: '0 8px 32px rgba(217,83,79,0.4)',
+                            animation: 'logoPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                        }}
+                    />
+                    {/* Brand name */}
+                    <div style={{ textAlign: 'center' }}>
+                        <h2 style={{
+                            color: '#fff', fontSize: '1.6rem', fontWeight: 800, margin: 0,
+                            letterSpacing: '-0.02em',
+                        }}>
+                            Agri<span style={{ color: SOCIAL.clips.accent || '#D9534F' }}>Social</span>
+                        </h2>
+                        <p style={{
+                            color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', fontWeight: 600,
+                            margin: '4px 0 0', textTransform: 'uppercase', letterSpacing: '0.15em',
+                        }}>
+                            India's Agricultural Community
+                        </p>
+                    </div>
+                    {/* Replay button */}
+                    <button
+                        onClick={() => {
+                            setEnded(false)
+                            if (videoRef.current) {
+                                videoRef.current.currentTime = 0
+                                videoRef.current.play().catch(() => null)
+                            }
+                        }}
+                        style={{
+                            marginTop: 8, background: 'rgba(255,255,255,0.15)', color: '#fff',
+                            border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: 100,
+                            padding: '10px 28px', fontSize: '0.88rem', fontWeight: 700,
+                            cursor: 'pointer', backdropFilter: 'blur(10px)',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                            transition: 'all 0.2s ease',
+                        }}
+                    >🔁 Replay</button>
+                    {/* Swipe up hint */}
+                    <p style={{
+                        color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', fontWeight: 600,
+                        margin: '8px 0 0', animation: 'bounce 1.5s ease infinite',
+                    }}>Swipe up for next clip ↑</p>
+
+                    <style>{`
+                        @keyframes fadeIn {
+                            from { opacity: 0; }
+                            to { opacity: 1; }
+                        }
+                        @keyframes logoPop {
+                            0% { transform: scale(0.5); opacity: 0; }
+                            100% { transform: scale(1); opacity: 1; }
+                        }
+                        @keyframes bounce {
+                            0%, 100% { transform: translateY(0); }
+                            50% { transform: translateY(-6px); }
+                        }
+                    `}</style>
+                </div>
             )}
 
             {/* Sound toggle (top-right) */}
