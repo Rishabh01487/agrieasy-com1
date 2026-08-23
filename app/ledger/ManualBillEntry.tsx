@@ -23,7 +23,7 @@
  * Supports unlimited commodities × unlimited bags per commodity.
  */
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { BUYER, SHARED } from '@/lib/styles'
 
 interface Batch { bagCount: number; weight: number }
@@ -80,9 +80,29 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
     const [counterpartyName, setCounterpartyName] = useState('')
     const palette = BUYER
 
+    // Refs to each bag weight input — keyed by `${commodityId}-${bagIndex}`
+    // so we can auto-focus the next bag when the user presses Enter.
+    const bagInputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+
     // ── Commodity operations ──
     const addCommodity = () => {
         setCommodities(c => [...c, emptyCommodity()])
+    }
+
+    // ── Auto-focus the next bag input when user presses Enter ──
+    // This lets the user type weight → Enter → type weight → Enter → ...
+    // without lifting their finger to tap the next row.
+    // Also scrolls the next input into view so it's always visible.
+    const focusNextBag = (commodityId: string, currentIndex: number, totalBags: number) => {
+        if (currentIndex + 1 < totalBags) {
+            const nextRef = bagInputRefs.current[`${commodityId}-${currentIndex + 1}`]
+            if (nextRef) {
+                nextRef.focus()
+                nextRef.select()
+                // Scroll the next input into view smoothly (in case it's below the fold)
+                nextRef.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }
     }
 
     const removeCommodity = (id: string) => {
@@ -418,12 +438,19 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                                         Bag {i + 1}
                                     </span>
                                     <input
+                                        ref={(el) => { bagInputRefs.current[`${c.id}-${i}`] = el }}
                                         type="number"
                                         inputMode="decimal"
                                         step="0.001"
                                         min="0"
                                         value={w}
                                         onChange={e => updateBagWeight(c.id, i, e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault()
+                                                focusNextBag(c.id, i, c.bagCount)
+                                            }
+                                        }}
                                         placeholder="0"
                                         style={{
                                             flex: 1, padding: '8px 12px', textAlign: 'right',
