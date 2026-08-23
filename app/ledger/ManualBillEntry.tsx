@@ -397,17 +397,26 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                             <span style={{ color: palette.muted, fontSize: '0.7rem' }}>press Enter</span>
                         </div>
 
-                        {/* Per-bag weights grid */}
+                        {/* Per-bag weights — vertical list, one row per bag.
+                            Each row: "Bag N | [weight input] kg"
+                            Scrolls downward so 100 bags don't overwhelm the screen. */}
                         <div style={{
-                            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))',
-                            gap: 6, maxHeight: 280, overflowY: 'auto', padding: 4,
+                            display: 'flex', flexDirection: 'column', gap: 6,
+                            maxHeight: 400, overflowY: 'auto', padding: 8,
                             background: palette.bgSub || '#f8fafc', borderRadius: 8,
                         }}>
                             {c.weights.map((w, i) => (
-                                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                    <label style={{ color: palette.muted, fontSize: '0.65rem', fontWeight: 700, marginBottom: 2 }}>
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    padding: '6px 10px', background: palette.white,
+                                    borderRadius: 6, border: `1px solid ${palette.border}`,
+                                }}>
+                                    <span style={{
+                                        color: palette.muted, fontSize: '0.78rem', fontWeight: 700,
+                                        minWidth: 56, fontFamily: 'monospace',
+                                    }}>
                                         Bag {i + 1}
-                                    </label>
+                                    </span>
                                     <input
                                         type="number"
                                         inputMode="decimal"
@@ -417,12 +426,16 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                                         onChange={e => updateBagWeight(c.id, i, e.target.value)}
                                         placeholder="0"
                                         style={{
-                                            width: '100%', padding: '6px 4px', textAlign: 'center',
+                                            flex: 1, padding: '8px 12px', textAlign: 'right',
                                             background: palette.white, border: `1px solid ${palette.border}`,
-                                            borderRadius: 6, fontSize: '0.78rem', color: palette.text,
+                                            borderRadius: 6, fontSize: '0.88rem', color: palette.text,
                                             outline: 'none', fontFamily: 'monospace',
                                         }}
                                     />
+                                    <span style={{
+                                        color: palette.muted, fontSize: '0.78rem', fontWeight: 600,
+                                        minWidth: 24,
+                                    }}>kg</span>
                                 </div>
                             ))}
                         </div>
