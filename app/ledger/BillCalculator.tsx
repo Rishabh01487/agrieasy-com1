@@ -744,6 +744,27 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
     const fileInputRef = useRef<HTMLInputElement>(null)
     const cameraInputRef = useRef<HTMLInputElement>(null)
 
+    // Sync initialResult prop changes into state — useState only uses the
+    // initial value on first render, so when the parent passes a new
+    // initialResult (e.g. from ManualBillEntry), we need this effect to
+    // update the displayed result. Also pick up rates + counterparty that
+    // ManualBillEntry stashed on window.
+    useEffect(() => {
+        if (initialResult) {
+            setResult(initialResult)
+            const manualRates = (window as any).__manualBillRates
+            const manualCounterparty = (window as any).__manualBillCounterparty
+            if (manualRates) {
+                setRates(manualRates)
+                delete (window as any).__manualBillRates
+            }
+            if (manualCounterparty) {
+                setCounterpartyName(manualCounterparty)
+                delete (window as any).__manualBillCounterparty
+            }
+        }
+    }, [initialResult])
+
     useEffect(() => {
         // Fetch this buyer's listings so we can prefill rates per commodity
         void (async () => {

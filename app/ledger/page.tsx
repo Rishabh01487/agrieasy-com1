@@ -205,29 +205,47 @@ export default function LedgerPage() {
                 {/* ── INLINE BILL CALCULATOR ──
                      For buyers, the bill calculator is embedded directly on this page
                      so they can snap or upload a photo and get the total in one click —
-                     no navigation to a separate page needed. */}
+                     no navigation to a separate page needed.
+                     When manualResult is set (from ManualBillEntry below), this same
+                     BillCalculator displays the manual result via initialResult prop. */}
                 {userRole === 'buyer' && (
                     <div style={{
                         background: palette.bgSub, borderRadius: 16, padding: 16,
                         marginBottom: 24, border: `1px solid ${palette.border}`,
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 4px' }}>
-                            <span style={{ fontSize: '1.3rem' }}>🧮</span>
+                            <span style={{ fontSize: '1.3rem' }}>{manualResult ? '📋' : '🧮'}</span>
                             <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
-                                Bill Calculator
+                                {manualResult ? 'Generated Bill' : 'Bill Calculator'}
                             </h2>
                             <span style={{ color: palette.muted, fontSize: '0.76rem', marginLeft: 'auto' }}>
-                                Take/upload a bill photo → get instant total
+                                {manualResult ? 'From manual entry' : 'Take/upload a bill photo → get instant total'}
                             </span>
+                            {manualResult && (
+                                <button
+                                    onClick={() => setManualResult(null)}
+                                    style={{
+                                        background: palette.white, border: `1px solid ${palette.border}`,
+                                        borderRadius: 8, padding: '4px 12px', color: palette.text,
+                                        fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginLeft: 8,
+                                    }}
+                                >✕ Clear</button>
+                            )}
                         </div>
-                        <BillCalculator embedded onSaved={fetchLedger} />
+                        <BillCalculator
+                            embedded
+                            key={manualResult ? 'manual' : 'photo'}
+                            initialResult={manualResult}
+                            onSaved={() => { fetchLedger(); setManualResult(null) }}
+                        />
                     </div>
                 )}
 
                 {/* ── MANUAL BILL ENTRY ──
                      For buyers who want to enter commodity + per-bag weights manually
                      (no photo). Supports unlimited commodities × unlimited bags.
-                     Per-bag weights are auto-grouped into batches of 10 for display. */}
+                     Per-bag weights are auto-grouped into batches of 10 for display.
+                     Hidden when a manual result is being shown above. */}
                 {userRole === 'buyer' && !manualResult && (
                     <div style={{
                         background: palette.bgSub, borderRadius: 16, padding: 16,
@@ -244,36 +262,6 @@ export default function LedgerPage() {
                         </div>
                         <ManualBillEntry
                             onGenerate={(result) => setManualResult(result)}
-                        />
-                    </div>
-                )}
-
-                {/* Manual bill result display — reuses BillCalculator's result UI */}
-                {userRole === 'buyer' && manualResult && (
-                    <div style={{
-                        background: palette.bgSub, borderRadius: 16, padding: 16,
-                        marginBottom: 24, border: `1px solid ${palette.border}`,
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, padding: '0 4px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <span style={{ fontSize: '1.3rem' }}>📋</span>
-                                <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
-                                    Generated Bill
-                                </h2>
-                            </div>
-                            <button
-                                onClick={() => setManualResult(null)}
-                                style={{
-                                    background: palette.white, border: `1px solid ${palette.border}`,
-                                    borderRadius: 8, padding: '6px 14px', color: palette.text,
-                                    fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer',
-                                }}
-                            >✕ Clear</button>
-                        </div>
-                        <BillCalculator
-                            embedded
-                            initialResult={manualResult}
-                            onSaved={() => { fetchLedger(); setManualResult(null) }}
                         />
                     </div>
                 )}
