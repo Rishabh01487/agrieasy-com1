@@ -173,9 +173,13 @@ export const DEFAULT_PROCESSING: ImageProcessingOptions = {
   whiteBalance: true,
   autoExposure: true,
   colorGrade: 'warm',
-  saturation: 112,   // slight saturation boost
-  contrast: 108,     // slight contrast boost
-  brightness: 102,   // slight brightness boost
+  // Bumped to match Instagram's "default" look — Clarendon-ish baseline.
+  // Old values (112/108/102) were barely visible; these produce a noticeable
+  // pop without being cartoonish. Users can still override via per-filter
+  // presets in the create flow.
+  saturation: 125,   // visible saturation pop
+  contrast: 115,     // punchier highlights/shadows
+  brightness: 105,   // brighter midtones (Instagram lifts shadows)
 }
 
 /**
@@ -230,15 +234,18 @@ export function buildProcessingFilterString(opts: ImageProcessingOptions): strin
  *
  * Applied with a strength factor (0.6 = subtle, 1.0 = strong).
  */
-export function applySharpening(ctx: CanvasRenderingContext2D, w: number, h: number, strength = 0.6): void {
+export function applySharpening(ctx: CanvasRenderingContext2D, w: number, h: number, strength = 0.8): void {
+  // strength 0.8 — visibly crisper without halo artifacts. (Was 0.6, too mild.)
+  // Hard cap at 1.0 to avoid ringing on high-contrast edges.
+  const k = Math.min(1.0, Math.max(0, strength))
   const src = ctx.getImageData(0, 0, w, h)
   const dst = ctx.createImageData(w, h)
   const s = src.data
   const d = dst.data
 
   // Sharpen kernel weights (center-weighted)
-  const center = 1 + 8 * strength
-  const side = -strength
+  const center = 1 + 8 * k
+  const side = -k
 
   for (let y = 1; y < h - 1; y++) {
     for (let x = 1; x < w - 1; x++) {
@@ -338,25 +345,44 @@ export function detectOrientationCorrection(
  * aspect ratio cropping, and the full post-processing pipeline applied.
  *
  * Returns a high-quality JPEG blob (quality 0.92 — near-lossless).
+ *
+ * @param facing   Camera facing used for capture. When 'user' (front/selfie),
+ *                 the captured frame is mirrored horizontally to match what
+ *                 the user saw in the preview (which is CSS-mirrored via
+ *                 scaleX(-1)). Without this, selfies would come out
+ *                 un-mirrored — the "real" orientation — and look "wrong"
+ *                 to the user.
+ * @param liveExposure  Optional live EV slider value (e.g. -2..+2 from the
+ *                 ProCamera EV control). Folded into the brightness filter
+ *                 so the captured photo matches the on-screen preview.
+ *                 Range: typically -2 (darken) to +2 (brighten), where each
+ *                 step is ~10% brightness. 0 = no adjustment.
  */
 export async function captureProcessedStill(
   video: HTMLVideoElement,
   aspect: AspectRatio,
   opts: ImageProcessingOptions,
+  facing: CameraFacing = 'environment',
+  liveExposure = 0,
 ): Promise<Blob> {
   const vw = video.videoWidth || 1920
   const vh = video.videoHeight || 1080
 
-  // Compute crop rectangle to match desired aspect ratio
+  // Compute crop rectangle to match desired aspect ratio.
+  // The <video> element in ProCamera is given an explicit aspect-ratio
+  // container + object-fit:cover, so what the user SEES is the central
+  // crop of the raw sensor feed at the target aspect. We must reproduce
+  // the SAME crop here, otherwise the captured photo will be a different
+  // slice than what the user saw — the "photo is cut" bug.
   const targetAspect = ASPECT_RATIO_VALUE[aspect]
   const videoAspect = vw / vh
   let cropW = vw, cropH = vh, cropX = 0, cropY = 0
   if (videoAspect > targetAspect) {
-    // Video is wider than target — crop sides
+    // Sensor is wider than target — crop sides
     cropW = Math.round(vh * targetAspect)
     cropX = Math.round((vw - cropW) / 2)
   } else if (videoAspect < targetAspect) {
-    // Video is taller than target — crop top/bottom
+    // Sensor is taller than target — crop top/bottom
     cropH = Math.round(vw / targetAspect)
     cropY = Math.round((vh - cropH) / 2)
   }
@@ -376,26 +402,110 @@ export async function captureProcessedStill(
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) throw new Error('Canvas 2D context unavailable')
 
-  // Apply CSS-level filters (brightness, contrast, saturation, color grade)
-  ctx.filter = buildProcessingFilterString(opts)
+  // Mirror for front camera BEFORE drawing — must happen in canvas
+  // transform space so drawImage picks it up. Matches the CSS scaleX(-1)
+  // that's applied to the live <video> preview.
+  if (facing === 'user') {
+    ctx.translate(outW, 0)
+    ctx.scale(-1, 1)
+  }
 
-  // Draw the cropped region from the video to the canvas
+  // Apply CSS-level filters (brightness, contrast, saturation, color grade)
+  // Fold the live EV slider into brightness so capture matches preview.
+  // liveExposure range is ~-2..+2; each step = +10% brightness.
+  // Clamp to ±25% to avoid blowing highlights / crushing shadows.
+  const exposureBrightness = Math.max(75, Math.min(125, 100 + liveExposure * 10))
+  const filterOpts: ImageProcessingOptions = {
+    ...opts,
+    brightness: Math.round((opts.brightness * exposureBrightness) / 100),
+  }
+  ctx.filter = buildProcessingFilterString(filterOpts)
+
+  // Draw the cropped region from the video to the canvas.
+  // The source rectangle (cropX, cropY, cropW, cropH) is in the *raw video*
+  // coordinate space. The destination rectangle (0,0,outW,outH) is the
+  // output canvas. If we mirrored, the dest X axis is flipped — so the
+  // image is drawn mirrored correctly.
   ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, outW, outH)
 
   // Reset filter for manual pixel ops (we don't want filters applied twice)
   ctx.filter = 'none'
 
+  // Reset the mirror transform so pixel ops work in normal coordinate space.
+  // (Otherwise getImageData/putImageData would be applied to mirrored pixels
+  //  but the canvas backing store IS already mirrored — get/putImageData
+  //  always work in untransformed pixel space, so this is safe to do.)
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+
   // Manual pixel operations (only if requested and image isn't too huge)
   const pixelCount = outW * outH
   if (pixelCount < 8_000_000) {  // skip for >8MP images to avoid perf hit
     if (opts.denoise)  applyDenoise(ctx, outW, outH)
-    if (opts.sharpen)  applySharpening(ctx, outW, outH, 0.6)
+    if (opts.sharpen)  applySharpening(ctx, outW, outH, 0.8)
   }
 
   // Export at quality 0.92 — visually lossless, ~30% smaller than 1.0
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => blob ? resolve(blob) : reject(new Error('toBlob failed')),
+      'image/jpeg',
+      0.92,
+    )
+  })
+}
+
+/**
+ * Apply an Instagram-style CSS filter string to an existing image Blob.
+ *
+ * WHY THIS EXISTS:
+ *  The create-flow page in app/agrisocial/create/page.tsx lets users pick
+ *  from 16 Instagram filter presets (Clarendon, Gingham, Moon, etc.) and
+ *  adjust brightness/contrast/saturation via sliders. Originally, those
+ *  filters were applied ONLY as a CSS filter on the <img> preview — the
+ *  uploaded blob was the RAW captured image with no filter baked in.
+ *  Result: the post looked amazing in the editor, but published "flat".
+ *  This function bakes the chosen filter into the actual uploaded file.
+ *
+ * @param blob       Source image blob (JPEG/PNG/WebP)
+ * @param filterCss  CSS filter string, e.g. "brightness(1.1) contrast(1.15)"
+ *                   Pass 'none' or '' for no filter.
+ * @returns New JPEG blob (quality 0.92) with the filter baked in.
+ */
+export async function applyInstagramFilterToBlob(
+  blob: Blob,
+  filterCss: string,
+): Promise<Blob> {
+  if (!filterCss || filterCss === 'none') return blob
+
+  // Load the source blob into an Image element
+  const url = URL.createObjectURL(blob)
+  const img = new Image()
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve()
+    img.onerror = () => reject(new Error('Failed to load image for filter bake'))
+    img.src = url
+  }).finally(() => {
+    // Defer revoke one tick so the Image element has settled
+    setTimeout(() => URL.revokeObjectURL(url), 0)
+  })
+
+  const w = img.naturalWidth || img.width
+  const h = img.naturalHeight || img.height
+  if (!w || !h) return blob
+
+  const canvas = document.createElement('canvas')
+  canvas.width = w
+  canvas.height = h
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return blob
+
+  ctx.filter = filterCss
+  ctx.drawImage(img, 0, 0, w, h)
+  ctx.filter = 'none'
+
+  return new Promise<Blob>((resolve) => {
+    canvas.toBlob(
+      (out) => resolve(out || blob),
       'image/jpeg',
       0.92,
     )

@@ -220,7 +220,10 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
     if (!videoRef.current || capturing) return
     setCapturing(true)
     try {
-      const blob = await captureProcessedStill(videoRef.current, aspect, processing)
+      // Pass `facing` so the captured selfie is mirrored to match the
+      // CSS-mirrored preview. Pass `exposure` so the live EV slider is
+      // baked into the captured photo (was preview-only before).
+      const blob = await captureProcessedStill(videoRef.current, aspect, processing, facing, exposure)
       onCapture(blob, 'image')
     } catch (e) {
       console.error('Capture failed:', e)
@@ -317,9 +320,24 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
         ) : (
         <>
         <div style={{
+          // Container sized to the selected aspect ratio.
+          // aspectValue = w/h. For landscape (aspectValue>=1) the width
+          // fills the parent and height shrinks; for portrait (aspectValue<1)
+          // the height fills the parent and width shrinks.
+          //
+          // *** FIX (was inverted) ***
+          // Previously:
+          //   width:  aspectValue >= 1 ? '100%'            : `${(1/aspectValue) * 100}%`,
+          //   height: aspectValue >= 1 ? `${aspectValue * 100}%` : '100%',
+          // For 9:16 (aspectValue=0.5625), this gave width=177.78% (wider
+          // than parent) + height=100% = a LANDSCAPE container — exactly
+          // backwards. The user would see a wide landscape preview, then
+          // captureProcessedStill correctly cropped to a 9:16 portrait
+          // slice — a slice the user never actually saw. That was the
+          // "photo is cut" bug.
           position: 'relative',
-          width: aspectValue >= 1 ? '100%' : `${(1/aspectValue) * 100}%`,
-          height: aspectValue >= 1 ? `${aspectValue * 100}%` : '100%',
+          width:  aspectValue >= 1 ? '100%'                  : `${aspectValue * 100}%`,
+          height: aspectValue >= 1 ? `${100 / aspectValue}%` : '100%',
           maxWidth: '100%', maxHeight: '100%',
         }}>
           <video
