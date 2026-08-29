@@ -624,14 +624,15 @@ export function applyMasterAdjust(
 export async function applyAdvancedFilterToBlob(
   blob: Blob,
   filter: FilterDefinition,
+  mirrorSelfie = false,
 ): Promise<Blob> {
-  // No-op fast path
+  // No-op fast path — also exit early if no mirror requested.
   const hasOps = filter.whiteBalance || filter.exposure !== undefined || filter.toneCurve
     || filter.splitTone || (filter.hslBands && filter.hslBands.length > 0)
     || filter.vignette || filter.grain || filter.lightLeak || filter.bloom
     || filter.orton || filter.saturation !== undefined || filter.contrast !== undefined
     || filter.brightness !== undefined
-  if (!hasOps && (!filter.previewCss || filter.previewCss === 'none')) return blob
+  if (!hasOps && (!filter.previewCss || filter.previewCss === 'none') && !mirrorSelfie) return blob
 
   const url = URL.createObjectURL(blob)
   const img = new Image()
@@ -645,6 +646,13 @@ export async function applyAdvancedFilterToBlob(
   const h = img.naturalHeight || img.height
   if (!w || !h) return blob
 
+  // When mirroring a selfie, we need to draw the image flipped onto a
+  // temporary canvas, then run all the pixel ops on the FLIPPED image,
+  // then export. This is because the user expects the final saved post
+  // to be horizontally mirrored (matching what they saw during capture).
+  //
+  // For the no-mirror path, we keep the existing pipeline (draw normally,
+  // run pixel ops, export).
   const canvas = document.createElement('canvas')
   canvas.width = w
   canvas.height = h
@@ -652,11 +660,22 @@ export async function applyAdvancedFilterToBlob(
   if (!ctx) return blob
 
   // Step 0: Apply the CSS-level preview filter first (fast brightness/contrast/saturate/etc.)
+  // If mirroring a selfie, apply the mirror transform BEFORE drawImage so the
+  // image is drawn flipped onto the canvas. All subsequent pixel ops (which
+  // work on the canvas backing store) then operate on the already-mirrored
+  // pixels — no special handling needed.
+  if (mirrorSelfie) {
+    ctx.translate(w, 0)
+    ctx.scale(-1, 1)
+  }
   if (filter.previewCss && filter.previewCss !== 'none') {
     ctx.filter = filter.previewCss
   }
   ctx.drawImage(img, 0, 0, w, h)
   ctx.filter = 'none'
+  // Reset transform — pixel ops below work in untransformed space, which
+  // is exactly the mirrored pixels we just drew.
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
 
   // Steps 1-6: pixel-level operations
   const hasPixelOps = filter.whiteBalance || filter.exposure !== undefined

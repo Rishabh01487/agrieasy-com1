@@ -402,13 +402,16 @@ export async function captureProcessedStill(
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) throw new Error('Canvas 2D context unavailable')
 
-  // Mirror for front camera BEFORE drawing — must happen in canvas
-  // transform space so drawImage picks it up. Matches the CSS scaleX(-1)
-  // that's applied to the live <video> preview.
-  if (facing === 'user') {
-    ctx.translate(outW, 0)
-    ctx.scale(-1, 1)
-  }
+  // NOTE: We no longer mirror the captured frame in canvas here.
+  // Reason: behavior differed across devices — some Android sensors
+  // pre-mirror the front-camera stream, so a second mirror here would
+  // un-mirror the captured photo. Instead, the parent component now
+  // applies a CSS scaleX(-1) on the displayed <img> for front-camera
+  // captures, AND bakes a canvas mirror into the uploaded blob via
+  // applyInstagramFilterToBlob / applyAdvancedFilterToBlob at upload
+  // time. This is consistent across devices.
+  //
+  // (Previous code: if (facing === 'user') { ctx.translate(outW, 0); ctx.scale(-1, 1) })
 
   // Apply CSS-level filters (brightness, contrast, saturation, color grade)
   // Fold the live EV slider into brightness so capture matches preview.
@@ -431,11 +434,10 @@ export async function captureProcessedStill(
   // Reset filter for manual pixel ops (we don't want filters applied twice)
   ctx.filter = 'none'
 
-  // Reset the mirror transform so pixel ops work in normal coordinate space.
-  // (Otherwise getImageData/putImageData would be applied to mirrored pixels
-  //  but the canvas backing store IS already mirrored — get/putImageData
-  //  always work in untransformed pixel space, so this is safe to do.)
-  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  // No transform to reset — we no longer apply a mirror transform here.
+  // (The CSS scaleX(-1) on the displayed <img> handles preview mirror;
+  //  applyInstagramFilterToBlob / applyAdvancedFilterToBlob handle the
+  //  uploaded-blob mirror with the `mirrorSelfie` flag.)
 
   // Manual pixel operations (only if requested and image isn't too huge)
   const pixelCount = outW * outH
@@ -474,8 +476,10 @@ export async function captureProcessedStill(
 export async function applyInstagramFilterToBlob(
   blob: Blob,
   filterCss: string,
+  mirrorSelfie = false,
 ): Promise<Blob> {
-  if (!filterCss || filterCss === 'none') return blob
+  // If no filter AND no mirror requested, return the blob unchanged.
+  if ((!filterCss || filterCss === 'none') && !mirrorSelfie) return blob
 
   // Load the source blob into an Image element
   const url = URL.createObjectURL(blob)
@@ -499,7 +503,18 @@ export async function applyInstagramFilterToBlob(
   const ctx = canvas.getContext('2d')
   if (!ctx) return blob
 
-  ctx.filter = filterCss
+  // Mirror for front-camera selfie BEFORE drawing. Matches the CSS
+  // scaleX(-1) on the displayed <img> + the CSS scaleX(-1) on the
+  // live <video> preview — so the uploaded blob is mirrored to match
+  // what the user saw during capture (Instagram-style WYSIWYG selfie).
+  if (mirrorSelfie) {
+    ctx.translate(w, 0)
+    ctx.scale(-1, 1)
+  }
+
+  if (filterCss && filterCss !== 'none') {
+    ctx.filter = filterCss
+  }
   ctx.drawImage(img, 0, 0, w, h)
   ctx.filter = 'none'
 

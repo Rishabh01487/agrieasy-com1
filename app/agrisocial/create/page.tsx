@@ -41,6 +41,13 @@ function CreateContent() {
     const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
     const [mode, setMode] = useState<Mode>('choose')
     const [mediaFile, setMediaFile] = useState<MediaFile | null>(null)
+    // Tracks which camera facing was used for the most recent capture.
+    // Used to (a) mirror the displayed <img> via CSS so it matches the
+    // CSS-mirrored live preview, and (b) bake a canvas mirror into the
+    // uploaded blob so the saved post is also mirrored (Instagram-style
+    // WYSIWYG selfie). captureProcessedStill no longer mirrors in the
+    // capture canvas; this is the source of truth for mirror behavior.
+    const [lastCaptureFacing, setLastCaptureFacing] = useState<'user' | 'environment'>('environment')
     const [carouselFiles, setCarouselFiles] = useState<MediaFile[]>([])
     const [carouselIdx, setCarouselIdx] = useState(0)
     const [selectedFilter, setSelectedFilter] = useState(0)
@@ -102,9 +109,10 @@ function CreateContent() {
     // Replaces the old in-page getUserMedia + MediaRecorder flow with
     // the Instagram-grade ProCamera pipeline (HDR, tap-to-focus, 4K,
     // sharpening, denoise, white balance, color grading, proper EXIF).
-    const handleProCameraCapture = (blob: Blob, type: 'image' | 'video') => {
+    const handleProCameraCapture = (blob: Blob, type: 'image' | 'video', facing: 'user' | 'environment' = 'environment') => {
         const url = URL.createObjectURL(blob)
         setMediaFile({ url, type, blob })
+        setLastCaptureFacing(facing)
         setProCameraOpen(false)
         setMode('preview')
     }
@@ -370,14 +378,22 @@ function CreateContent() {
                     // This is what makes our filters competitive with /
                     // better than Instagram's. Falls back to the simpler
                     // CSS-based baker if the worker fails.
+                    //
+                    // SECURITY/WYSIWYG: pass `mirrorSelfie: lastCaptureFacing === 'user'`
+                    // so front-camera selfies get a canvas mirror baked into
+                    // the uploaded blob — matches what the user saw during
+                    // capture (CSS-mirrored live preview). Without this, the
+                    // saved post would show the "real" un-mirrored orientation,
+                    // which doesn't match the in-app preview.
                     let uploadBlob: Blob = file.blob
+                    const mirrorSelfie = lastCaptureFacing === 'user' && file.type === 'image'
                     if (file.type === 'image') {
                         try {
-                            uploadBlob = await applyAdvancedFilter(file.blob, FILTERS[selectedFilter])
+                            uploadBlob = await applyAdvancedFilter(file.blob, FILTERS[selectedFilter], mirrorSelfie)
                         } catch (e) {
                             console.warn('Advanced filter failed, falling back to CSS baker:', e)
                             try {
-                                uploadBlob = await applyInstagramFilterToBlob(file.blob, buildFilterString())
+                                uploadBlob = await applyInstagramFilterToBlob(file.blob, buildFilterString(), mirrorSelfie)
                             } catch (e2) {
                                 console.warn('CSS baker also failed, uploading original:', e2)
                                 uploadBlob = file.blob
@@ -647,7 +663,7 @@ function CreateContent() {
                             // raw capture URL with CSS filter when the worker
                             // is still rendering or has failed.
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={advancedFilterPreview || mediaFile.url} alt="preview" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `rotate(${rotation}deg)`, ...(advancedFilterPreview ? {} : getFilterStyle()) }} />
+                            <img src={advancedFilterPreview || mediaFile.url} alt="preview" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `rotate(${rotation}deg)${lastCaptureFacing === 'user' && !advancedFilterPreview ? ' scaleX(-1)' : ''}`, ...(advancedFilterPreview ? {} : getFilterStyle()) }} />
                         ) : (
                             <video src={mediaFile.url} controls style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', ...getFilterStyle() }} />
                         )}

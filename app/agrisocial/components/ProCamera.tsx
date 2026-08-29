@@ -45,7 +45,9 @@ import {
 
 interface ProCameraProps {
   mode: 'photo' | 'video'
-  onCapture: (blob: Blob, type: 'image' | 'video') => void
+  /** Receives the captured blob, type, AND the facing used (so the parent
+   *  can mirror the display + uploaded blob for front-camera selfies). */
+  onCapture: (blob: Blob, type: 'image' | 'video', facing: CameraFacing) => void
   onClose: () => void
 }
 
@@ -220,11 +222,13 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
     if (!videoRef.current || capturing) return
     setCapturing(true)
     try {
-      // Pass `facing` so the captured selfie is mirrored to match the
-      // CSS-mirrored preview. Pass `exposure` so the live EV slider is
-      // baked into the captured photo (was preview-only before).
+      // Pass `facing` so the parent can mirror the displayed image and
+      // the uploaded blob to match the CSS-mirrored live preview.
+      // (captureProcessedStill no longer mirrors in canvas — we do it via
+      // CSS on display + canvas at upload-time for consistent behavior
+      // across devices that pre-mirror the front-camera stream.)
       const blob = await captureProcessedStill(videoRef.current, aspect, processing, facing, exposure)
-      onCapture(blob, 'image')
+      onCapture(blob, 'image', facing)
     } catch (e) {
       console.error('Capture failed:', e)
       setError('Failed to capture photo. Try again.')
@@ -245,7 +249,7 @@ export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) 
     mr.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data) }
     mr.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: mimeType || 'video/webm' })
-      onCapture(blob, 'video')
+      onCapture(blob, 'video', facing)
       setIsRecording(false)
       if (timerRef.current) clearInterval(timerRef.current)
     }

@@ -26,8 +26,10 @@ interface PreviewOptions {
 }
 
 interface UseAdvancedFilterResult {
-  /** Apply the full filter pipeline at full resolution. Use at upload time. */
-  applyFilter: (blob: Blob, filter: FilterDefinition) => Promise<Blob>
+  /** Apply the full filter pipeline at full resolution. Use at upload time.
+   *  Pass `mirrorSelfie: true` for front-camera captures so the saved post
+   *  is mirrored to match what the user saw during capture. */
+  applyFilter: (blob: Blob, filter: FilterDefinition, mirrorSelfie?: boolean) => Promise<Blob>
   /**
    * Apply the filter at a smaller resolution for fast preview rendering.
    * Returns a blob URL. Caller must revoke the URL when done.
@@ -78,10 +80,11 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
       blob: Blob,
       filter: FilterDefinition,
       maxDim: number,
+      mirrorSelfie = false,
     ): Promise<Blob> => {
       if (!workerRef.current) {
         // Fall back to main thread
-        return applyAdvancedFilterToBlob(blob, filter)
+        return applyAdvancedFilterToBlob(blob, filter, mirrorSelfie)
       }
 
       const url = URL.createObjectURL(blob)
@@ -110,11 +113,22 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
         if (!ctx) throw new Error('Canvas context unavailable')
 
         // Step 0: Apply previewCss (CSS-level filter) first
+        // If mirroring a selfie, apply the mirror transform BEFORE drawImage
+        // so the canvas backing store contains the mirrored pixels. All
+        // subsequent pixel ops (worker + canvas-composite) operate on the
+        // already-mirrored pixels — no special handling needed.
+        if (mirrorSelfie) {
+          ctx.translate(w, 0)
+          ctx.scale(-1, 1)
+        }
         if (filter.previewCss && filter.previewCss !== 'none') {
           ctx.filter = filter.previewCss
         }
         ctx.drawImage(img, 0, 0, w, h)
         ctx.filter = 'none'
+        // Reset transform — pixel ops work in untransformed space, which
+        // is exactly the mirrored pixels we just drew.
+        ctx.setTransform(1, 0, 0, 1, 0, 0)
 
         // Step 1: Get ImageData to send to worker
         const imgData = ctx.getImageData(0, 0, w, h)
@@ -170,18 +184,18 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
   )
 
   const applyFilter = useCallback(
-    async (blob: Blob, filter: FilterDefinition): Promise<Blob> => {
+    async (blob: Blob, filter: FilterDefinition, mirrorSelfie = false): Promise<Blob> => {
       setIsProcessing(true)
       setError(null)
       try {
         // Use a high max dimension for the final upload (preserve quality)
-        return await processViaWorker(blob, filter, 2400)
+        return await processViaWorker(blob, filter, 2400, mirrorSelfie)
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Filter application failed'
         setError(msg)
         // Fallback: try the synchronous main-thread version
         try {
-          return await applyAdvancedFilterToBlob(blob, filter)
+          return await applyAdvancedFilterToBlob(blob, filter, mirrorSelfie)
         } catch (e2) {
           setError(e2 instanceof Error ? e2.message : String(e2))
           return blob // last-resort: return original
