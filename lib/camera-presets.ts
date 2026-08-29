@@ -401,6 +401,8 @@ export async function captureProcessedStill(
   canvas.height = outH
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) throw new Error('Canvas 2D context unavailable')
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   // NOTE: We no longer mirror the captured frame in canvas here.
   // Reason: behavior differed across devices — some Android sensors
@@ -446,12 +448,12 @@ export async function captureProcessedStill(
     if (opts.sharpen)  applySharpening(ctx, outW, outH, 0.8)
   }
 
-  // Export at quality 0.92 — visually lossless, ~30% smaller than 1.0
+  // Export at quality 0.95 — visually lossless at typical viewing sizes
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       (blob) => blob ? resolve(blob) : reject(new Error('toBlob failed')),
       'image/jpeg',
-      0.92,
+      0.95,
     )
   })
 }
@@ -502,6 +504,8 @@ export async function applyInstagramFilterToBlob(
   canvas.height = h
   const ctx = canvas.getContext('2d')
   if (!ctx) return blob
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   // Mirror for front-camera selfie BEFORE drawing. Matches the CSS
   // scaleX(-1) on the displayed <img> + the CSS scaleX(-1) on the
@@ -522,7 +526,7 @@ export async function applyInstagramFilterToBlob(
     canvas.toBlob(
       (out) => resolve(out || blob),
       'image/jpeg',
-      0.92,
+      0.95,
     )
   })
 }

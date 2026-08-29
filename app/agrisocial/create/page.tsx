@@ -65,9 +65,19 @@ function CreateContent() {
     const [camError, setCamError] = useState('')
     const [isRecording, setIsRecording] = useState(false)
     const [recordingTime, setRecordingTime] = useState(0)
-    const [brightness, setBrightness] = useState(100)
-    const [contrast, setContrast] = useState(100)
-    const [saturation, setSaturation] = useState(100)
+    const [brightness, setBrightness] = useState(100)  // 80..120 (% of filter's baked brightness)
+    const [contrast, setContrast] = useState(100)      // 80..120
+    const [saturation, setSaturation] = useState(100)  // 70..130
+    // New pro sliders — overlay adjustments baked into the upload,
+    // not just CSS preview. Wire: buildMergedFilter() consumes all
+    // 9 slider values and overlays them on the base FilterDefinition.
+    const [warmth, setWarmth] = useState(0)            // -50..+50 (° Kelvin shift)
+    const [highlights, setHighlights] = useState(0)    // -50..+50
+    const [shadows, setShadows] = useState(0)           // -50..+50
+    const [fade, setFade] = useState(0)                  // 0..50
+    const [sharpen, setSharpen] = useState(0)            // 0..50
+    const [vignette, setVignette] = useState(0)          // 0..50 (adds/extends vignette)
+    const [showProAdjust, setShowProAdjust] = useState(false)  // toggle for the 6 new sliders
     const [rotation, setRotation] = useState(0)
     const [proCameraOpen, setProCameraOpen] = useState(false)
 
@@ -248,12 +258,17 @@ function CreateContent() {
         await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
         URL.revokeObjectURL(url)
         let w = img.width, h = img.height
-        if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920 }
+        // Cap at 2400px on the long edge — keeps enough resolution for
+        // 4K displays at typical viewing sizes without bloating uploads.
+        // (Was 1920 + JPEG q=0.8 — visibly worse than camera-captured photos.)
+        if (w > 2400) { h = Math.round(h * 2400 / w); w = 2400 }
         const canvas = document.createElement('canvas')
         canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d')!
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
         ctx.drawImage(img, 0, 0, w, h)
-        return new Promise(resolve => canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.8) as unknown as void)
+        return new Promise(resolve => canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.92) as unknown as void)
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -300,6 +315,61 @@ function CreateContent() {
         return base ? `${base} ${adj}` : adj
     }
 
+    /**
+     * Build a merged FilterDefinition that overlays the user's slider
+     * adjustments on top of the selected base filter. Both previewFilter
+     * (live preview) and applyAdvancedFilter (upload bake) consume this
+     * merged filter — so what the user sees is exactly what gets uploaded.
+     *
+     * Slider-to-filter mapping:
+     *   brightness (80-120%)  → multiplies filter.brightness (default 1.0)
+     *   contrast   (80-120%)  → multiplies filter.contrast   (default 1.0)
+     *   saturation (70-130%)  → multiplies filter.saturation (default 1.0)
+     *   warmth     (-50..+50) → adds to filter.whiteBalance.temperature (range ±50)
+     *   highlights (-50..+50) → sets filter.toneRegions.highlights (range -1..+1)
+     *   shadows    (-50..+50) → sets filter.toneRegions.shadows  (range -1..+1)
+     *   fade       (0..50)    → sets filter.toneRegions.fade (range 0..1)
+     *   sharpen    (0..50)    → sets filter.sharpen { amount, radius, threshold }
+     *   vignette   (0..50)    → overrides/extends filter.vignette.amount
+     *
+     * Returns a fresh object each call — never mutates the base filter.
+     */
+    const buildMergedFilter = () => {
+        const base = FILTERS[selectedFilter]
+        return {
+            ...base,
+            // Master adjustments: multiply base values by slider ratio
+            brightness: (base.brightness ?? 1) * (brightness / 100),
+            contrast:   (base.contrast   ?? 1) * (contrast   / 100),
+            saturation: (base.saturation ?? 1) * (saturation / 100),
+            // White balance: overlay warmth slider (±50 = ±50° K shift)
+            whiteBalance: base.whiteBalance
+                ? { ...base.whiteBalance, temperature: (base.whiteBalance.temperature ?? 0) + warmth }
+                : (warmth !== 0 ? { temperature: warmth, tint: 0 } : undefined),
+            // Tone regions: highlights/shadows/fade (only set if non-zero)
+            toneRegions: (highlights !== 0 || shadows !== 0 || fade !== 0)
+                ? {
+                    highlights: highlights / 50,
+                    shadows: shadows / 50,
+                    fade: fade / 50,
+                }
+                : base.toneRegions,
+            // Sharpen (only set if slider > 0)
+            sharpen: sharpen > 0
+                ? { amount: sharpen / 25, radius: 1.5, threshold: 4 }  // amount 0..2
+                : base.sharpen,
+            // Vignette: if slider > 0, override/extend base vignette
+            vignette: vignette > 0
+                ? {
+                    amount: vignette / 100,   // 0..0.5 strength
+                    size: base.vignette?.size ?? 0.4,
+                    feather: base.vignette?.feather ?? 0.5,
+                    tint: base.vignette?.tint ?? 0,
+                }
+                : base.vignette,
+        }
+    }
+
     // Live preview of the FULL advanced filter pipeline (not just CSS).
     // Runs when the user changes the selected filter while in preview mode.
     // Uses a small preview dimension (480px) so the Web Worker finishes
@@ -315,14 +385,14 @@ function CreateContent() {
         // preview WYSIWYG with the uploaded post. Without this, the
         // selfie would flip back to the un-mirrored "real" orientation
         // as soon as the worker finishes (~150ms after capture).
-        previewFilter(mediaFile.blob, FILTERS[selectedFilter], { maxWidth: 480, mirrorSelfie: lastCaptureFacing === 'user' })
+        previewFilter(mediaFile.blob, buildMergedFilter(), { maxWidth: 480, mirrorSelfie: lastCaptureFacing === 'user' })
             .then(url => { if (!cancelled) setAdvancedFilterPreview(url) })
             .catch(() => { if (!cancelled) setAdvancedFilterPreview(null) })
         return () => {
             cancelled = true
             setAdvancedFilterPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null })
         }
-    }, [mode, mediaFile, selectedFilter, previewFilter])
+    }, [mode, mediaFile, selectedFilter, previewFilter, brightness, contrast, saturation, warmth, highlights, shadows, fade, sharpen, vignette])
 
     const getFilterStyle = () => ({ filter: buildFilterString(), transform: `rotate(${rotation}deg)` })
 
@@ -394,7 +464,7 @@ function CreateContent() {
                     const mirrorSelfie = lastCaptureFacing === 'user' && file.type === 'image'
                     if (file.type === 'image') {
                         try {
-                            uploadBlob = await applyAdvancedFilter(file.blob, FILTERS[selectedFilter], mirrorSelfie)
+                            uploadBlob = await applyAdvancedFilter(file.blob, buildMergedFilter(), mirrorSelfie)
                         } catch (e) {
                             console.warn('Advanced filter failed, falling back to CSS baker:', e)
                             try {
@@ -739,14 +809,17 @@ function CreateContent() {
                     <div style={{ background: '#42476E', padding: '8px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Adjust</p>
-                            {/* Rotate buttons */}
-                            <div style={{ display: 'flex', gap: 8 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                {/* Pro toggle — reveals 6 more sliders (warmth/highlights/shadows/fade/sharpen/vignette) */}
+                                <button onClick={() => setShowProAdjust(s => !s)} title="Pro adjustments"
+                                    style={{ background: showProAdjust ? SOCIAL.primary : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: showProAdjust ? '#fff' : 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>✨ Pro</button>
                                 <button onClick={() => setRotation(r => r - 90)} title="Rotate left" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↺</button>
                                 <button onClick={() => setRotation(r => r + 90)} title="Rotate right" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↻</button>
-                                {rotation !== 0 && <button onClick={() => setRotation(0)} title="Reset" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem' }}>Reset</button>}
+                                {rotation !== 0 && <button onClick={() => setRotation(0)} title="Reset rotation" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem' }}>↺↻</button>}
                             </div>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {/* Basic 3 sliders — always visible */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>☀️ Bright</span>
                                 <input type="range" min={80} max={120} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
@@ -758,10 +831,48 @@ function CreateContent() {
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{contrast}%</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🎨 Saturation</span>
+                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🎨 Saturat</span>
                                 <input type="range" min={70} max={130} value={saturation} onChange={e => setSaturation(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{saturation}%</span>
                             </div>
+                            {/* 6 pro sliders — shown when user taps "Pro" */}
+                            {showProAdjust && (
+                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 4, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🔥 Warmth</span>
+                                        <input type="range" min={-50} max={50} value={warmth} onChange={e => setWarmth(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{warmth > 0 ? `+${warmth}` : warmth}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>⬆ Highlts</span>
+                                        <input type="range" min={-50} max={50} value={highlights} onChange={e => setHighlights(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{highlights > 0 ? `+${highlights}` : highlights}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>⬇ Shadows</span>
+                                        <input type="range" min={-50} max={50} value={shadows} onChange={e => setShadows(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{shadows > 0 ? `+${shadows}` : shadows}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🌫️ Fade</span>
+                                        <input type="range" min={0} max={50} value={fade} onChange={e => setFade(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{fade}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🔪 Sharpen</span>
+                                        <input type="range" min={0} max={50} value={sharpen} onChange={e => setSharpen(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{sharpen}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>⚫ Vignette</span>
+                                        <input type="range" min={0} max={50} value={vignette} onChange={e => setVignette(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{vignette}</span>
+                                    </div>
+                                    {/* Reset all pro adjustments */}
+                                    <button onClick={() => { setWarmth(0); setHighlights(0); setShadows(0); setFade(0); setSharpen(0); setVignette(0) }}
+                                        style={{ alignSelf: 'flex-end', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 6, padding: '3px 8px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.68rem', marginTop: 2 }}>Reset Pro</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

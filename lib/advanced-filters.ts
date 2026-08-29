@@ -134,6 +134,32 @@ export interface BeautyOpts {
   evenOut?: number
 }
 
+/** Unsharp mask — traditional photographic sharpening.
+ *  Blurs a copy, computes the difference (high-frequency residual),
+ *  and adds the residual back to the original at `amount` strength.
+ *  `threshold` skips pixels where the residual is small (avoids amplifying noise). */
+export interface SharpenOpts {
+  /** 0..2, sharpen strength (0.5 = subtle, 1.0 = standard, 2.0 = aggressive) */
+  amount: number
+  /** Blur radius in pixels (1-3 typical). Smaller = sharper edges only, larger = broader halos. */
+  radius: number
+  /** 0..50, threshold below which sharpening is skipped (prevents noise amplification) */
+  threshold?: number
+}
+
+/** Tone region adjustments — applied per-pixel based on luminance.
+ *  `highlights` lifts/darkens bright pixels; `shadows` lifts/darkens dark pixels.
+ *  Both range -1..+1 (negative = darken, positive = lighten).
+ *  Transitions are smooth (cubic) around mid-tones (luminance 96-160). */
+export interface ToneRegionOpts {
+  /** -1..+1, brightness gain in highlight region (luminance > 160) */
+  highlights?: number
+  /** -1..+1, brightness gain in shadow region (luminance < 96) */
+  shadows?: number
+  /** 0..1, lifts blacks toward mid-gray (faded film look). Adds a hazy, soft contrast feel. */
+  fade?: number
+}
+
 export interface SplitTone {
   /** Color applied to shadows */
   shadowColor: RGBTuple
@@ -177,6 +203,10 @@ export interface FilterDefinition {
   orton?: OrtonEffect
   /** Beauty / skin smoothing (selective blur on skin-tone pixels) */
   beauty?: BeautyOpts
+  /** Sharpen (unsharp mask) — adds back edge detail after smoothing/blur */
+  sharpen?: SharpenOpts
+  /** Per-tone-region adjustments: highlights, shadows, fade. Combined in one pass. */
+  toneRegions?: ToneRegionOpts
   /** Final master adjustments */
   saturation?: number // 0..2
   contrast?: number // 0..2
@@ -537,6 +567,158 @@ export function applySkinSmooth(
   }
 }
 
+/**
+ * Unsharp mask sharpening — the standard photo-editor sharpen algorithm.
+ *
+ * Algorithm:
+ *   1. Compute a blurred copy (box blur, radius = opts.radius)
+ *   2. For each pixel: residual = original - blurred (the high-freq detail)
+ *   3. Skip if |residual| < threshold (avoids amplifying noise)
+ *   4. Output = original + amount * residual (sharpened)
+ *
+ * The skin smoothing pipeline runs BEFORE this sharpen op, so blemishes
+ * get smoothed and then the remaining edges (eyes, hair, lips) get
+ * sharpened — gives the polished beauty-cam look without amplifying
+ * the blemishes we just smoothed.
+ *
+ * Performance: separable box blur is O(n) per pixel; total cost ~3x
+ * the cost of applySkinSmooth (which already does the same blur).
+ */
+export function applyUnsharpMask(
+  data: Uint8ClampedArray,
+  w: number,
+  h: number,
+  sharpen: SharpenOpts,
+): void {
+  const { amount, radius, threshold = 4 } = sharpen
+  if (amount <= 0 || radius < 1) return
+
+  // === Box blur (same separable horizontal + vertical pass as applySkinSmooth) ===
+  const src = new Uint8ClampedArray(data)
+  const tmp = new Uint8ClampedArray(data.length)
+  const blur = new Uint8ClampedArray(data.length)
+  const r = Math.max(1, Math.floor(radius))
+
+  // Horizontal pass
+  for (let y = 0; y < h; y++) {
+    const rowStart = y * w * 4
+    for (let x = 0; x < w; x++) {
+      let sR = 0, sG = 0, sB = 0, c = 0
+      for (let dx = -r; dx <= r; dx++) {
+        const nx = x + dx
+        if (nx < 0 || nx >= w) continue
+        const idx = rowStart + nx * 4
+        sR += src[idx]; sG += src[idx + 1]; sB += src[idx + 2]; c++
+      }
+      const out = rowStart + x * 4
+      tmp[out] = sR / c; tmp[out + 1] = sG / c; tmp[out + 2] = sB / c
+      tmp[out + 3] = src[out + 3]
+    }
+  }
+  // Vertical pass
+  for (let x = 0; x < w; x++) {
+    for (let y = 0; y < h; y++) {
+      let sR = 0, sG = 0, sB = 0, c = 0
+      for (let dy = -r; dy <= r; dy++) {
+        const ny = y + dy
+        if (ny < 0 || ny >= h) continue
+        const idx = (ny * w + x) * 4
+        sR += tmp[idx]; sG += tmp[idx + 1]; sB += tmp[idx + 2]; c++
+      }
+      const out = (y * w + x) * 4
+      blur[out] = sR / c; blur[out + 1] = sG / c; blur[out + 2] = sB / c
+      blur[out + 3] = src[out + 3]
+    }
+  }
+
+  // === Apply unsharp mask per pixel ===
+  for (let i = 0; i < data.length; i += 4) {
+    const r0 = src[i], g0 = src[i + 1], b0 = src[i + 2]
+    const br = blur[i], bg = blur[i + 1], bb = blur[i + 2]
+    // Per-channel residual = original - blurred
+    let dr = r0 - br
+    let dg = g0 - bg
+    let db = b0 - bb
+    // Skip if all residuals are below threshold (avoids noise amplification)
+    if (Math.abs(dr) < threshold && Math.abs(dg) < threshold && Math.abs(db) < threshold) continue
+    // Apply threshold only to small residuals (zero them), keep large ones intact
+    if (Math.abs(dr) < threshold) dr = 0
+    if (Math.abs(dg) < threshold) dg = 0
+    if (Math.abs(db) < threshold) db = 0
+    // Sharpened = original + amount * residual
+    data[i]     = r0 + amount * dr
+    data[i + 1] = g0 + amount * dg
+    data[i + 2] = b0 + amount * db
+    // Alpha unchanged
+  }
+}
+
+/**
+ * Per-tone-region adjustments — highlights, shadows, fade.
+ *
+ * - Highlights: lift (positive) or darken (negative) pixels in the highlight
+ *   region (luminance > 160). Smooth cubic falloff from 160 (no effect) to
+ *   255 (full effect). Recovers blown-out skies or pulls down bright spots.
+ * - Shadows: lift (positive) or darken (negative) pixels in the shadow region
+ *   (luminance < 96). Smooth cubic falloff from 96 (no effect) to 0 (full).
+ *   Lifts crushed blacks or deepens shadows for drama.
+ * - Fade: lifts blacks toward mid-gray by (fade * 64) at luminance 0, fading
+ *   smoothly to 0 by luminance 128. The classic "faded film" look.
+ *
+ * Runs as a single pass over the data — cheaper than running 3 separate ops.
+ */
+export function applyToneRegions(
+  data: Uint8ClampedArray,
+  opts: ToneRegionOpts,
+): void {
+  const { highlights = 0, shadows = 0, fade = 0 } = opts
+  if (highlights === 0 && shadows === 0 && fade === 0) return
+
+  // Pre-compute the highlight lift/darken as an additive offset (in 0..255 range)
+  // highlights in [-1, 1] → gain of 60 (positive lift 60, negative darken 60)
+  const highlightGain = highlights * 60
+  const shadowGain = shadows * 60
+  // fade in [0, 1] → max lift at luminance 0 = fade * 64
+  const fadeMax = fade * 64
+
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i + 1], b = data[i + 2]
+    const lum = 0.299 * r + 0.587 * g + 0.114 * b
+
+    // Compute per-pixel additive offsets from each effect
+    let offset = 0
+
+    // Highlights: full effect at lum=255, no effect at lum=160, cubic falloff
+    if (highlightGain !== 0 && lum > 160) {
+      const t = Math.min(1, (lum - 160) / 95)  // 0..1
+      const tc = t * t * (3 - 2 * t)           // smoothstep
+      offset += highlightGain * tc
+    }
+
+    // Shadows: full effect at lum=0, no effect at lum=96, cubic falloff
+    if (shadowGain !== 0 && lum < 96) {
+      const t = Math.min(1, (96 - lum) / 96)  // 0..1
+      const tc = t * t * (3 - 2 * t)
+      offset += shadowGain * tc
+    }
+
+    // Fade: lift blacks toward mid-gray. Affects lum < 128, smooth falloff.
+    if (fadeMax > 0 && lum < 128) {
+      const t = Math.min(1, (128 - lum) / 128)  // 0..1, 0 at lum=128, 1 at lum=0
+      const tc = t * t * (3 - 2 * t)
+      offset += fadeMax * tc
+    }
+
+    if (offset !== 0) {
+      // Apply the same additive offset to all 3 channels
+      // (preserves color, only changes brightness)
+      data[i]     = r + offset
+      data[i + 1] = g + offset
+      data[i + 2] = b + offset
+    }
+  }
+}
+
 /** Apply a radial vignette — darkens edges, optionally tints them. */
 export function applyVignette(
   ctx: CanvasRenderingContext2D,
@@ -838,6 +1020,8 @@ export async function applyAdvancedFilterToBlob(
   canvas.height = h
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) return blob
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
 
   // Step 0: Apply the CSS-level preview filter first (fast brightness/contrast/saturate/etc.)
   // If mirroring a selfie, apply the mirror transform BEFORE drawImage so the
@@ -872,6 +1056,8 @@ export async function applyAdvancedFilterToBlob(
     if (filter.splitTone) applySplitTone(data, filter.splitTone)
     if (filter.hslBands && filter.hslBands.length > 0) applyHSLBands(data, filter.hslBands)
     if (filter.beauty) applySkinSmooth(data, w, h, filter.beauty)
+    if (filter.toneRegions) applyToneRegions(data, filter.toneRegions)
+    if (filter.sharpen) applyUnsharpMask(data, w, h, filter.sharpen)
     if (filter.grain) applyFilmGrain(data, w, h, filter.grain)
     applyMasterAdjust(
       data,
@@ -889,12 +1075,12 @@ export async function applyAdvancedFilterToBlob(
   if (filter.bloom) applyBloomViaCanvas(ctx, canvas, w, h, filter.bloom)
   if (filter.orton) applyOrton(ctx, canvas, w, h, filter.orton)
 
-  // Export at quality 0.92 (visually lossless)
+  // Export at quality 0.95 (visually lossless at typical viewing sizes)
   return new Promise<Blob>((resolve) => {
     canvas.toBlob(
       (out) => resolve(out || blob),
       'image/jpeg',
-      0.92,
+      0.95,
     )
   })
 }
@@ -1660,6 +1846,331 @@ export const ADVANCED_FILTERS: FilterDefinition[] = [
     saturation: 0.92,
     contrast: 0.94,
     brightness: 1.08,
+  },
+
+  // ── INSTAGRAM-LOOKALIKES ──────────────────────────────────────
+  // Recreated from Instagram's actual CSS+pixel pipeline. Same
+  // visual identity (cool/warm/faded/vibrant contrast) but applied
+  // through our higher-quality pixel pipeline (curves, split-tone,
+  // HSL, vignette) instead of IG's CSS-only filter chain.
+  {
+    id: 'ig-clarendon',
+    name: 'Clarendon',
+    category: 'vivid',
+    description: 'Cool light, high contrast, lifted blacks — IG classic',
+    previewCss: 'contrast(1.25) brightness(1.05) saturate(1.15) hue-rotate(-5deg)',
+    whiteBalance: { temperature: -8, tint: -3 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 18 }, { x: 64, y: 80 }, { x: 128, y: 132 }, { x: 192, y: 200 }, { x: 255, y: 250 },
+      ],
+      r: [{ x: 0, y: 12 }, { x: 128, y: 135 }, { x: 255, y: 250 }],
+      b: [{ x: 0, y: 20 }, { x: 128, y: 138 }, { x: 255, y: 252 }],
+    },
+    hslBands: [
+      { hue: 30, range: 25, saturation: 1.15, lightness: 3, hueShift: 0 },
+      { hue: 210, range: 30, saturation: 1.2, lightness: 0, hueShift: 0 },
+    ],
+    vignette: { amount: 0.15, size: 0.6, feather: 0.4 },
+    saturation: 1.15,
+    contrast: 1.2,
+    brightness: 1.05,
+  },
+  {
+    id: 'ig-gingham',
+    name: 'Gingham',
+    category: 'vintage',
+    description: 'Warm vintage, soft contrast, faded yellows',
+    previewCss: 'brightness(1.05) contrast(0.95) saturate(0.85) sepia(0.18)',
+    whiteBalance: { temperature: 16, tint: 4 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 28 }, { x: 64, y: 84 }, { x: 128, y: 134 }, { x: 192, y: 198 }, { x: 255, y: 248 },
+      ],
+      r: [{ x: 0, y: 32 }, { x: 128, y: 145 }, { x: 255, y: 250 }],
+      b: [{ x: 0, y: 16 }, { x: 128, y: 122 }, { x: 255, y: 238 }],
+    },
+    hslBands: [
+      { hue: 45, range: 30, saturation: 0.85, lightness: 5, hueShift: 0 },
+    ],
+    grain: { amount: 0.12, size: 2, mono: true, shadowOnly: 0.3 },
+    vignette: { amount: 0.2, size: 0.55, feather: 0.5, tint: 0.1 },
+    saturation: 0.88,
+    contrast: 0.95,
+    brightness: 1.05,
+  },
+  {
+    id: 'ig-moon',
+    name: 'Moon',
+    category: 'mono',
+    description: 'Soft B&W with lifted blacks and warm midtones',
+    previewCss: 'grayscale(1) contrast(1.1) brightness(1.05) sepia(0.15)',
+    toneCurve: {
+      master: [
+        { x: 0, y: 22 }, { x: 64, y: 78 }, { x: 128, y: 130 }, { x: 192, y: 198 }, { x: 255, y: 248 },
+      ],
+    },
+    splitTone: {
+      shadowColor: { r: 40, g: 30, b: 20 },
+      shadowAmount: 0.2,
+      shadowThreshold: 70,
+      highlightColor: { r: 255, g: 245, b: 220 },
+      highlightAmount: 0.15,
+      highlightThreshold: 180,
+    },
+    grain: { amount: 0.15, size: 2, mono: true, shadowOnly: 0.4 },
+    saturation: 0,
+    contrast: 1.1,
+    brightness: 1.05,
+  },
+  {
+    id: 'ig-lark',
+    name: 'Lark',
+    category: 'natural',
+    description: 'Cool, muted, desaturated highlights — soft and airy',
+    previewCss: 'brightness(1.08) contrast(0.95) saturate(0.85) hue-rotate(8deg)',
+    whiteBalance: { temperature: -12, tint: 5 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 8 }, { x: 64, y: 76 }, { x: 128, y: 134 }, { x: 192, y: 200 }, { x: 255, y: 248 },
+      ],
+      b: [{ x: 0, y: 16 }, { x: 128, y: 138 }, { x: 255, y: 250 }],
+    },
+    hslBands: [
+      { hue: 60, range: 30, saturation: 0.78, lightness: 8, hueShift: 0 },
+      { hue: 210, range: 30, saturation: 1.05, lightness: -2, hueShift: 0 },
+    ],
+    saturation: 0.88,
+    contrast: 0.95,
+    brightness: 1.08,
+  },
+  {
+    id: 'ig-reyes',
+    name: 'Reyes',
+    category: 'vintage',
+    description: 'Warm, faded, dreamy — soft pastel look',
+    previewCss: 'brightness(1.08) contrast(0.85) saturate(0.75) sepia(0.25)',
+    whiteBalance: { temperature: 18, tint: 6 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 40 }, { x: 64, y: 90 }, { x: 128, y: 140 }, { x: 192, y: 200 }, { x: 255, y: 245 },
+      ],
+    },
+    grain: { amount: 0.2, size: 3, mono: false, shadowOnly: 0.5 },
+    vignette: { amount: 0.15, size: 0.65, feather: 0.5, tint: 0.15 },
+    saturation: 0.78,
+    contrast: 0.85,
+    brightness: 1.08,
+  },
+  {
+    id: 'ig-juno',
+    name: 'Juno',
+    category: 'vivid',
+    description: 'Warm vibrant with magenta punch and teal shadows',
+    previewCss: 'contrast(1.2) saturate(1.3) brightness(1.03) hue-rotate(-8deg)',
+    whiteBalance: { temperature: 14, tint: -8 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 6 }, { x: 64, y: 70 }, { x: 128, y: 132 }, { x: 192, y: 205 }, { x: 255, y: 250 },
+      ],
+      r: [{ x: 0, y: 12 }, { x: 128, y: 145 }, { x: 255, y: 252 }],
+    },
+    splitTone: {
+      shadowColor: { r: 50, g: 80, b: 110 },
+      shadowAmount: 0.3,
+      shadowThreshold: 80,
+      highlightColor: { r: 255, g: 150, b: 180 },
+      highlightAmount: 0.25,
+      highlightThreshold: 180,
+    },
+    hslBands: [
+      { hue: 30, range: 30, saturation: 1.4, lightness: 5, hueShift: 0 },
+      { hue: 320, range: 25, saturation: 1.3, lightness: 3, hueShift: 0 },
+      { hue: 200, range: 30, saturation: 1.25, lightness: -3, hueShift: 0 },
+    ],
+    vignette: { amount: 0.18, size: 0.5, feather: 0.5 },
+    saturation: 1.3,
+    contrast: 1.2,
+    brightness: 1.03,
+  },
+  {
+    id: 'ig-slumber',
+    name: 'Slumber',
+    category: 'vintage',
+    description: 'Warm, faded, dreamy — sleepy summer afternoon',
+    previewCss: 'brightness(1.06) contrast(0.92) saturate(0.8) sepia(0.2) hue-rotate(-5deg)',
+    whiteBalance: { temperature: 20, tint: 8 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 32 }, { x: 64, y: 88 }, { x: 128, y: 138 }, { x: 192, y: 200 }, { x: 255, y: 248 },
+      ],
+    },
+    hslBands: [
+      { hue: 40, range: 35, saturation: 0.8, lightness: 6, hueShift: 0 },
+      { hue: 220, range: 25, saturation: 0.85, lightness: 2, hueShift: 0 },
+    ],
+    grain: { amount: 0.18, size: 3, mono: true, shadowOnly: 0.4 },
+    saturation: 0.82,
+    contrast: 0.92,
+    brightness: 1.06,
+  },
+  {
+    id: 'ig-crema',
+    name: 'Crema',
+    category: 'natural',
+    description: 'Warm, muted, soft — cream-toned neutral',
+    previewCss: 'brightness(1.04) contrast(0.95) saturate(0.82) sepia(0.15)',
+    whiteBalance: { temperature: 12, tint: 3 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 18 }, { x: 64, y: 80 }, { x: 128, y: 134 }, { x: 192, y: 200 }, { x: 255, y: 248 },
+      ],
+      r: [{ x: 0, y: 22 }, { x: 128, y: 142 }, { x: 255, y: 250 }],
+    },
+    hslBands: [
+      { hue: 40, range: 30, saturation: 0.85, lightness: 3, hueShift: 0 },
+    ],
+    saturation: 0.85,
+    contrast: 0.95,
+    brightness: 1.04,
+  },
+
+  // ── SNAPCHAT-STYLE BOLD LOOKS ─────────────────────────────────
+  // Heavier stylized presets for users who want a strong,
+  // immediately-recognizable look (gold/platinum/sunset/ocean).
+  {
+    id: 'sc-golden-hour',
+    name: 'Golden Hour',
+    category: 'vivid',
+    description: 'Warm gold glow, soft bloom — sunset portrait look',
+    previewCss: 'brightness(1.1) contrast(1.05) saturate(1.3) sepia(0.18) hue-rotate(-8deg)',
+    whiteBalance: { temperature: 28, tint: 6 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 12 }, { x: 64, y: 78 }, { x: 128, y: 138 }, { x: 192, y: 205 }, { x: 255, y: 250 },
+      ],
+      r: [{ x: 0, y: 18 }, { x: 128, y: 150 }, { x: 255, y: 252 }],
+      b: [{ x: 0, y: 8 }, { x: 128, y: 120 }, { x: 255, y: 240 }],
+    },
+    hslBands: [
+      { hue: 35, range: 30, saturation: 1.5, lightness: 6, hueShift: 0 },
+      { hue: 50, range: 25, saturation: 1.35, lightness: 5, hueShift: 0 },
+    ],
+    bloom: { amount: 0.25, threshold: 200, radius: 10 },
+    vignette: { amount: 0.2, size: 0.55, feather: 0.5, tint: 0.2 },
+    saturation: 1.3,
+    contrast: 1.05,
+    brightness: 1.08,
+  },
+  {
+    id: 'sc-platinum',
+    name: 'Platinum',
+    category: 'mono',
+    description: 'Cool silver B&W, high contrast, modern editorial',
+    previewCss: 'grayscale(1) contrast(1.25) brightness(1.05) hue-rotate(5deg)',
+    toneCurve: {
+      master: [
+        { x: 0, y: 6 }, { x: 64, y: 65 }, { x: 128, y: 128 }, { x: 192, y: 215 }, { x: 255, y: 252 },
+      ],
+    },
+    splitTone: {
+      shadowColor: { r: 80, g: 100, b: 120 },
+      shadowAmount: 0.3,
+      shadowThreshold: 70,
+      highlightColor: { r: 240, g: 250, b: 255 },
+      highlightAmount: 0.2,
+      highlightThreshold: 190,
+    },
+    vignette: { amount: 0.25, size: 0.45, feather: 0.6 },
+    saturation: 0,
+    contrast: 1.25,
+    brightness: 1.05,
+  },
+  {
+    id: 'sc-sunset',
+    name: 'Sunset',
+    category: 'vivid',
+    description: 'Orange/red gradient — golden hour beach vibes',
+    previewCss: 'contrast(1.15) saturate(1.4) brightness(1.05) sepia(0.25) hue-rotate(-10deg)',
+    whiteBalance: { temperature: 32, tint: 8 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 14 }, { x: 64, y: 80 }, { x: 128, y: 138 }, { x: 192, y: 205 }, { x: 255, y: 250 },
+      ],
+      r: [{ x: 0, y: 22 }, { x: 128, y: 155 }, { x: 255, y: 254 }],
+    },
+    splitTone: {
+      shadowColor: { r: 90, g: 30, b: 10 },
+      shadowAmount: 0.4,
+      shadowThreshold: 80,
+      highlightColor: { r: 255, g: 170, b: 60 },
+      highlightAmount: 0.35,
+      highlightThreshold: 170,
+    },
+    hslBands: [
+      { hue: 20, range: 30, saturation: 1.55, lightness: 8, hueShift: 0 },
+      { hue: 0, range: 20, saturation: 1.4, lightness: 6, hueShift: 0 },
+    ],
+    bloom: { amount: 0.22, threshold: 195, radius: 9 },
+    vignette: { amount: 0.3, size: 0.5, feather: 0.5, tint: 0.25 },
+    saturation: 1.35,
+    contrast: 1.15,
+    brightness: 1.05,
+  },
+  {
+    id: 'sc-ocean',
+    name: 'Ocean',
+    category: 'vivid',
+    description: 'Cool blue gradient — fresh seaside mood',
+    previewCss: 'contrast(1.15) saturate(1.25) brightness(1.02) hue-rotate(5deg)',
+    whiteBalance: { temperature: -22, tint: 8 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 14 }, { x: 64, y: 78 }, { x: 128, y: 134 }, { x: 192, y: 205 }, { x: 255, y: 250 },
+      ],
+      b: [{ x: 0, y: 22 }, { x: 128, y: 145 }, { x: 255, y: 252 }],
+    },
+    splitTone: {
+      shadowColor: { r: 30, g: 80, b: 130 },
+      shadowAmount: 0.4,
+      shadowThreshold: 80,
+      highlightColor: { r: 200, g: 230, b: 255 },
+      highlightAmount: 0.3,
+      highlightThreshold: 180,
+    },
+    hslBands: [
+      { hue: 200, range: 35, saturation: 1.45, lightness: 4, hueShift: 0 },
+      { hue: 220, range: 25, saturation: 1.35, lightness: 0, hueShift: 0 },
+    ],
+    vignette: { amount: 0.18, size: 0.55, feather: 0.5, tint: -0.15 },
+    saturation: 1.25,
+    contrast: 1.15,
+    brightness: 1.02,
+  },
+  {
+    id: 'sc-vintage-film',
+    name: 'Vintage Film',
+    category: 'vintage',
+    description: 'Heavy grain + sepia + warm fade — old photo album',
+    previewCss: 'brightness(1.05) contrast(0.9) saturate(0.75) sepia(0.35)',
+    whiteBalance: { temperature: 24, tint: 10 },
+    toneCurve: {
+      master: [
+        { x: 0, y: 38 }, { x: 64, y: 92 }, { x: 128, y: 140 }, { x: 192, y: 200 }, { x: 255, y: 245 },
+      ],
+      r: [{ x: 0, y: 42 }, { x: 128, y: 150 }, { x: 255, y: 250 }],
+      b: [{ x: 0, y: 18 }, { x: 128, y: 118 }, { x: 255, y: 235 }],
+    },
+    hslBands: [
+      { hue: 45, range: 35, saturation: 0.7, lightness: 5, hueShift: 0 },
+      { hue: 220, range: 25, saturation: 0.7, lightness: -2, hueShift: 0 },
+    ],
+    grain: { amount: 0.32, size: 3, mono: false, shadowOnly: 0.6 },
+    lightLeak: { hue: 35, saturation: 0.6, amount: 0.3, angle: 30, position: 0.7 },
+    vignette: { amount: 0.4, size: 0.4, feather: 0.6, tint: 0.3 },
+    saturation: 0.78,
+    contrast: 0.9,
+    brightness: 1.05,
   },
 ]
 

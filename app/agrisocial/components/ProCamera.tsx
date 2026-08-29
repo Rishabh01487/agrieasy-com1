@@ -54,7 +54,7 @@ interface ProCameraProps {
 export default function ProCamera({ mode, onCapture, onClose }: ProCameraProps) {
   const [facing, setFacing] = useState<CameraFacing>('environment')
   const [aspect, setAspect] = useState<AspectRatio>(mode === 'video' ? '9:16' : '4:3')
-  const [quality, setQuality] = useState<QualityPreset>('1080p')
+  const [quality, setQuality] = useState<QualityPreset>('4k')  // 4K default — browser silently downscales if sensor can't deliver, no harm in asking
   const [fps, setFps] = useState<FrameRate>(30)
   const [showGrid, setShowGrid] = useState(true)
   const [torchOn, setTorchOn] = useState(false)

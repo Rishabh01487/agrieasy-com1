@@ -30,6 +30,8 @@ import {
   applySplitTone,
   applyHSLBands,
   applySkinSmooth,
+  applyToneRegions,
+  applyUnsharpMask,
   applyFilmGrain,
   applyMasterAdjust,
   type FilterDefinition,
@@ -55,6 +57,13 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   // we want blemishes erased, then grain added on top (so the smoothed
   // skin still has natural texture from the grain, not plastic-smooth).
   if (filter.beauty) applySkinSmooth(data, w, h, filter.beauty)
+  // Tone region adjustments: highlights, shadows, fade. Runs AFTER beauty
+  // so any fade lifting happens on the already-smoothed pixels.
+  if (filter.toneRegions) applyToneRegions(data, filter.toneRegions)
+  // Unsharp mask sharpen — runs AFTER beauty smoothing (so we don't
+  // re-sharpen the blemishes we just erased) but BEFORE grain (so grain
+  // doesn't get amplified). This order matches Lightroom's pipeline.
+  if (filter.sharpen) applyUnsharpMask(data, w, h, filter.sharpen)
   if (filter.grain) applyFilmGrain(data, w, h, filter.grain)
   applyMasterAdjust(
     data,

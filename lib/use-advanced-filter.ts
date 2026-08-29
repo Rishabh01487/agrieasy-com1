@@ -119,6 +119,8 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
         canvas.height = h
         const ctx = canvas.getContext('2d', { willReadFrequently: true })
         if (!ctx) throw new Error('Canvas context unavailable')
+        ctx.imageSmoothingEnabled = true
+        ctx.imageSmoothingQuality = 'high'
 
         // Step 0: Apply previewCss (CSS-level filter) first
         // If mirroring a selfie, apply the mirror transform BEFORE drawImage
@@ -181,7 +183,7 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
           canvas.toBlob(
             (out) => out ? resolve(out) : reject(new Error('toBlob failed')),
             'image/jpeg',
-            0.92,
+            0.95,
           )
         })
       } finally {
