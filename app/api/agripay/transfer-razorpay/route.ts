@@ -8,7 +8,7 @@ import { validateBody } from '@/lib/validation'
 import { validationError } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
-import { verifyPaymentSignature } from '@/lib/razorpay'
+import { verifyPaymentSignatureWithAmount } from '@/lib/razorpay'
 import { z } from 'zod/v4'
 
 const createTransferOrderSchema = z.object({
@@ -98,12 +98,34 @@ export async function POST(request: NextRequest) {
             if (!v.success) return validationError('Invalid verification data', v.errors)
             const { toIdentifier, amount, razorpayOrderId, razorpayPaymentId, razorpaySignature, note, paymentMethod } = v.data
 
-            if (!verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature)) {
-                return NextResponse.json({ error: 'Payment verification failed. If money was debited, it will be refunded automatically.' }, { status: 400 })
+            // SECURITY: verify HMAC signature AND fetch the order server-side
+            // from Razorpay to confirm `order.amount === claimedAmount * 100`.
+            // Prevents the critical amount-tampering attack (pay ₹1, credit ₹1,00,000).
+            const verify = await verifyPaymentSignatureWithAmount(
+                razorpayOrderId,
+                razorpayPaymentId,
+                razorpaySignature,
+                Math.round(amount * 100),
+            )
+            if (!verify.ok) {
+                return NextResponse.json({ error: verify.reason }, { status: 400 })
             }
 
             const toUser = await findRecipient(toIdentifier)
             if (!toUser) return NextResponse.json({ error: 'Recipient not found.' }, { status: 404 })
+
+            // SECURITY: idempotency — refuse to credit the same Razorpay
+            // payment twice. The unique sparse index on Transaction.razorpayPaymentId
+            // is the backstop; this pre-check avoids a 500 + double-credit race.
+            const already = await Transaction.exists({ razorpayPaymentId })
+            if (already) {
+                const toWalletNow = await Wallet.findOne({ userId: toUser._id }).lean()
+                return NextResponse.json({
+                    success: true,
+                    message: 'This transfer has already been processed.',
+                    paymentMethod: paymentMethod === 'upi' ? 'UPI' : 'Net Banking',
+                })
+            }
 
             let toWallet = await Wallet.findOne({ userId: toUser._id })
             if (!toWallet) {
@@ -120,6 +142,11 @@ export async function POST(request: NextRequest) {
                 description: `Sent to ${recipientLabel} via ${methodLabel}`,
                 category: 'transfer', paymentMethod,
                 note: note || '', referenceId: razorpayPaymentId, razorpayOrderId,
+                // SECURITY: populated so the unique sparse index enforces replay
+                // prevention (the same razorpayPaymentId cannot appear on two
+                // Transaction documents). Set on the 'send' side only — the
+                // paired 'receive' transaction shares referenceId for ledger symmetry.
+                razorpayPaymentId,
             })
             await Transaction.create({
                 fromUserId: auth.user.userId, toUserId: toUser._id, amount,

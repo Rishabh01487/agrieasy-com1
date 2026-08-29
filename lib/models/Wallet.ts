@@ -5,14 +5,15 @@ import { validateUpiId } from '@/lib/validators'
 const encryptedString = {
   type: String,
   set(this: any, v: string) {
-    if (!v || v.includes(':')) return v
-    try { return encrypt(v) } catch {
-      console.warn('ENCRYPTION_KEY not set — storing plaintext')
-      return v
-    }
+    if (!v) return v
+    if (v.includes(':')) return v   // already encrypted (iv:tag:ct) — store as-is
+    // SECURITY: fail-closed — let encrypt() throw if ENCRYPTION_KEY is
+    // missing/malformed. The previous try/catch silently stored plaintext
+    // bank account / UPI / holder-name PII whenever encryption failed.
+    return encrypt(v)
   },
   get(this: any, v: string) {
-    if (!v || !v.includes(':')) return v
+    if (!v || !v.includes(':')) return v   // plaintext (legacy data) — return as-is
     try { return decrypt(v) } catch { return v }
   },
 }

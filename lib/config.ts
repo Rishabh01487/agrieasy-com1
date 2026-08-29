@@ -17,12 +17,13 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be ≥32 characters'),
 
   // Encryption key — used to encrypt PII (aadhar, license, etc.) at rest.
-  // Loosened from `.length(64)` to optional because missing it should NOT
-  // crash every API request. The User model already has a try/catch fallback
-  // that stores plaintext with a console.warn when ENCRYPTION_KEY is absent,
-  // so the app keeps working — just without encryption until the operator
-  // sets the env var. We log a loud warning at config init.
-  ENCRYPTION_KEY: z.string().min(32, 'ENCRYPTION_KEY should be ≥32 chars').optional(),
+  // SECURITY: must be exactly 64 hex chars (32 bytes) for AES-256-GCM. The
+  // previous `.min(32)` allowed any 32-char string (including non-hex), which
+  // made `Buffer.from(key, 'hex')` produce a short key → AES threw → the
+  // User/Wallet setters caught and silently stored plaintext PII. Tightened
+  // to require exact 64-hex format; `lib/encryption.ts` will now throw
+  // (fail-closed) instead of degrading to plaintext.
+  ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/, 'ENCRYPTION_KEY must be 64 hex chars (32 bytes) — generate with: openssl rand -hex 32').optional(),
 
   // Auth — NEXTAUTH_URL validated as string (not strict URL) because some Vercel setups set it without https://
   NEXTAUTH_URL: z.string().optional(),
@@ -121,10 +122,36 @@ export const config = {
   init() {
     if (_env) return _env
     _env = envSchema.parse(process.env)
-    if (!_env.ENCRYPTION_KEY) {
-      // Don't crash — the User/Wallet models have plaintext fallbacks — but
-      // warn loudly so the operator knows PII isn't being encrypted at rest.
-      console.warn('⚠️  ENCRYPTION_KEY is not set — PII (aadhar, license) will be stored in plaintext. Generate one with: openssl rand -hex 32')
+
+    // SECURITY: refuse to boot in production if ENCRYPTION_KEY is missing
+    // or not exactly 64 hex chars (32 bytes). The previous behavior
+    // logged a warning and let User/Wallet models silently store plaintext
+    // PII (Aadhaar / driving license / bank account numbers). Now we throw.
+    if (_env.NODE_ENV === 'production') {
+      if (!_env.ENCRYPTION_KEY) {
+        throw new Error(
+          'ENCRYPTION_KEY missing — refusing to store plaintext PII. ' +
+          'Generate with: openssl rand -hex 32',
+        )
+      }
+      // SECURITY: refuse to boot in production if CORS_ORIGINS is unset.
+      // Without an explicit allowlist the middleware CORS handler is the
+      // only thing protecting credentialed APIs from cross-origin reads.
+      // (middleware.ts now also fail-closes; this is defense-in-depth.)
+      if (!_env.CORS_ORIGINS) {
+        throw new Error(
+          'CORS_ORIGINS is unset in production — refusing to boot with an ' +
+          'open CORS policy. Set it to a comma-separated list of allowed ' +
+          'origins (e.g. https://your-domain.com).',
+        )
+      }
+    }
+
+    if (!_env.ENCRYPTION_KEY && _env.NODE_ENV !== 'production') {
+      // Dev/test only — warn loudly. The User/Wallet setters will throw
+      // (fail-closed) on the next PII write, which is the right behavior
+      // for finding misconfigurations early.
+      console.warn('⚠️  ENCRYPTION_KEY is not set — writes of PII fields (aadhar, license, bank details) will throw. Generate with: openssl rand -hex 32')
     }
     return _env
   },

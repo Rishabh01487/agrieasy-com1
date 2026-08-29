@@ -6,7 +6,24 @@ const TAG_LENGTH = 16
 
 function getKey(): Buffer {
   const key = process.env.ENCRYPTION_KEY
-  if (!key) throw new Error('ENCRYPTION_KEY env var required (64 hex chars = 32 bytes)')
+  // SECURITY: fail-closed — throw with a clear message when the key is
+  // missing/malformed. Callers (User/Wallet pre-save setters) no longer
+  // catch this, so the error surfaces as a Mongoose ValidationError and
+  // blocks the write rather than silently storing plaintext PII.
+  if (!key) {
+    throw new Error('ENCRYPTION_KEY missing — refusing to store plaintext PII. Generate with: openssl rand -hex 32')
+  }
+  // SECURITY: AES-256 needs exactly 32 bytes. The env var must be 64 hex
+  // chars (lib/config.ts enforces this at boot). Buffer.from(key, 'hex')
+  // would silently produce a short buffer for non-hex strings — which is
+  // how the previous silent-plaintext-fallback was triggered. Reject
+  // explicitly here too so the error message is actionable.
+  if (!/^[0-9a-fA-F]{64}$/.test(key)) {
+    throw new Error(
+      'ENCRYPTION_KEY must be 64 hex chars (32 bytes) for AES-256-GCM — ' +
+      'refusing to store plaintext PII. Generate with: openssl rand -hex 32',
+    )
+  }
   return Buffer.from(key, 'hex')
 }
 

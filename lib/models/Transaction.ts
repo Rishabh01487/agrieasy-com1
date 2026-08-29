@@ -37,5 +37,9 @@ TransactionSchema.index({ type: 1, createdAt: -1 })
 TransactionSchema.index({ status: 1, createdAt: -1 })
 TransactionSchema.index({ fromUserId: 1, type: 1 })
 TransactionSchema.index({ paylaterId: 1 })
+// SECURITY: unique sparse index on razorpayPaymentId → prevents the same
+// Razorpay payment from being claimed twice (replay attack on topup /
+// transfer-razorpay). Sparse so non-Razorpay transactions are not affected.
+TransactionSchema.index({ razorpayPaymentId: 1 }, { unique: true, sparse: true })
 
 export default mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema)

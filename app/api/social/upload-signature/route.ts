@@ -3,6 +3,12 @@ import { v2 as cloudinary } from 'cloudinary'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 
+// SECURITY: explicit format allowlists prevent SVG / HTML / PDF upload
+// (stored-XSS vector). Cloudinary's signed-upload treats signed params
+// as authoritative — these cannot be tampered with by the client.
+const IMAGE_FORMATS = 'jpg,jpeg,png,webp,gif'
+const VIDEO_FORMATS = 'mp4,webm,mov'
+
 export async function GET(request: NextRequest) {
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
@@ -28,17 +34,27 @@ export async function GET(request: NextRequest) {
     const timestamp = Math.round(Date.now() / 1000)
     const folder = 'agrieasy'
 
-    // that the browser will send in the upload form — no more, no less.
-    // Cloudinary validates that every signed parameter is present in the
-    // upload AND that every upload parameter (except file, api_key, signature,
-    // resource_type, and a few others) is included in the signature. If they
-    // don't match exactly, Cloudinary returns "Invalid Signature" with the
-    // string that was signed.
+    // SECURITY: support both image (default) and video (clips) uploads.
+    // The client picks `?kind=image|video` per file. Both kinds bind
+    // resource_type + allowed_formats in the signature to prevent format
+    // tampering (e.g. SVG upload via the image endpoint → stored XSS).
+    const { searchParams } = new URL(request.url)
+    const kind = searchParams.get('kind') === 'video' ? 'video' : 'image'
+    const resourceType = kind
+    const allowedFormats = kind === 'video' ? VIDEO_FORMATS : IMAGE_FORMATS
+
+    // SECURITY: every parameter that affects storage / format / rendering
+    // is included in the signature. Cloudinary rejects uploads where the
+    // signed params don't match the upload request exactly. This blocks
+    // SVG / HTML / PDF upload via the image endpoint (stored XSS vector).
     //
-    // The create page sends: api_key, timestamp, signature, folder
+    // SECURITY: upload is always signed — `unsigned: true` is NEVER set.
+    // Unsigned uploads would bypass the allowlist entirely.
     const paramsToSign = {
       timestamp,
       folder,
+      resource_type: resourceType,
+      allowed_formats: allowedFormats,
     }
     const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret)
 
@@ -49,6 +65,10 @@ export async function GET(request: NextRequest) {
       signature,
       timestamp,
       folder,
+      // SECURITY: client MUST forward these to Cloudinary in the upload
+      // form — otherwise Cloudinary rejects with "Invalid Signature".
+      resourceType,
+      allowedFormats,
     })
   } catch {
     return NextResponse.json({ available: false, error: 'Signature generation failed' })

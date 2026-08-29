@@ -107,7 +107,7 @@ export default function LedgerPage() {
             const ctx = canvas.getContext('2d')!
             ctx.drawImage(img, 0, 0, w, h)
             const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
-            const sigRes = await authFetch('/api/social/upload-signature')
+            const sigRes = await authFetch('/api/social/upload-signature?kind=image')
             const sig = await sigRes.json()
             if (!sig.available) { setError('Cloudinary not configured'); return }
             const fd = new FormData()
@@ -116,6 +116,9 @@ export default function LedgerPage() {
             fd.append('timestamp', sig.timestamp.toString())
             fd.append('signature', sig.signature)
             fd.append('folder', sig.folder)
+            // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
+            fd.append('resource_type', sig.resourceType)
+            fd.append('allowed_formats', sig.allowedFormats)
             const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
             const cld = await cldRes.json()
             if (cldRes.ok && cld.secure_url) setBillPhoto(cld.secure_url)

@@ -22,7 +22,11 @@ export function authenticateRequest(req: NextRequest, allowedRoles?: string[]): 
   if (!token) return null
 
   try {
-    const payload = jwt.verify(token, getSecret()) as AuthUser
+    // SECURITY: pin JWT algorithm to HS256. Without this option, jsonwebtoken
+    // accepts any algorithm (HS256/HS384/HS512/RS256/ES256/none) signed with
+    // the same key — classic algorithm-confusion attack (an attacker signs
+    // a token with RS256 using the RSA public key as the HMAC secret).
+    const payload = jwt.verify(token, getSecret(), { algorithms: ['HS256'] }) as AuthUser
     if (allowedRoles && !allowedRoles.includes(payload.role)) {
       return { user: payload, roleMatch: false }
     }

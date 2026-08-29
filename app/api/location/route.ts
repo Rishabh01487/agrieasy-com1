@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import Booking from '@/lib/models/Booking'
-import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError } from '@/lib/api-response'
 
@@ -110,6 +110,29 @@ export async function GET(req: NextRequest) {
 
             if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
 
+            // SECURITY: IDOR fix — verify the authenticated user is a
+            // participant (farmer / buyer / transporter) in this booking.
+            // Previously any authenticated user could fetch any booking's
+            // farmer/buyer/transporter phone numbers + live driver location
+            // by enumerating bookingId values (24-hex pattern).
+            const actorId = auth.user.userId
+            const fId = booking.farmerId as any
+            const bId = booking.buyerId as any
+            const tId = booking.transporterId as any
+            const farmerIdStr =
+                (fId?._id?.toString?.() ?? fId?.toString?.() ?? '') as string
+            const buyerIdStr =
+                (bId?._id?.toString?.() ?? bId?.toString?.() ?? '') as string
+            const transporterIdStr =
+                (tId?._id?.toString?.() ?? tId?.toString?.() ?? '') as string
+            if (
+                actorId !== farmerIdStr &&
+                actorId !== buyerIdStr &&
+                actorId !== transporterIdStr
+            ) {
+                return forbidden('You are not a participant in this booking')
+            }
+
             // Build a commodity summary that works for both new multi-commodity
             // bookings and legacy single-commodity ones.
             let commoditySummary = booking.commodity || ''
@@ -143,6 +166,29 @@ export async function GET(req: NextRequest) {
         }
 
         if (userId) {
+            // SECURITY: IDOR fix — only allow looking up your own location,
+            // OR the location of a user you have an active booking with
+            // (farmer↔buyer, transporter↔buyer, transporter↔farmer).
+            // Previously any authenticated user could stalk any other user's
+            // live location by enumerating ?userId= values.
+            if (userId !== auth.user.userId) {
+                const inActiveBooking = await Booking.exists({
+                    $and: [
+                        { status: { $in: ['confirmed', 'in-transit'] } },
+                        {
+                            $or: [
+                                { farmerId: auth.user.userId, buyerId: userId },
+                                { buyerId: auth.user.userId, farmerId: userId },
+                                { transporterId: auth.user.userId, buyerId: userId },
+                                { transporterId: auth.user.userId, farmerId: userId },
+                            ],
+                        },
+                    ],
+                })
+                if (!inActiveBooking) {
+                    return forbidden('No active booking with that user')
+                }
+            }
             const user = await User.findById(userId).select('farmerName firmName role location').lean()
             if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
             return NextResponse.json({ success: true, user })

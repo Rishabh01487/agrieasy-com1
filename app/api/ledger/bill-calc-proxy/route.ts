@@ -13,13 +13,31 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// ── Z-AI config (written to /tmp/.z-ai-config for the SDK to find) ──
-const ZAI_CONFIG = {
-    baseUrl: 'https://internal-api.z.ai/v1',
-    apiKey: 'Z.ai',
-    chatId: 'chat-7fcc4e40-ad01-4ab0-a83e-bad8f1cf2840',
-    userId: 'e255a2b5-f0be-4835-9279-65e7282d8a50',
-    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o',
+// ── Z-AI config ───────────────────────────────────────────────────────
+// SECURITY: previously held a hardcoded JWT token — removed because it
+// was leaked into git history. Credentials MUST come from env vars now.
+// If env vars are missing, the route returns 503 — it never falls back
+// to embedded credentials.
+interface ZaiConfig {
+    baseUrl: string
+    apiKey: string
+    chatId?: string
+    userId?: string
+    token?: string
+}
+
+function loadZaiConfigFromEnv(): ZaiConfig | null {
+    const baseUrl = process.env.ZAI_BASE_URL
+    const apiKey = process.env.ZAI_API_KEY
+    // SECURITY: fail-closed — no hardcoded fallback.
+    if (!baseUrl || !apiKey) return null
+    return {
+        baseUrl,
+        apiKey,
+        chatId: process.env.ZAI_CHAT_ID,
+        userId: process.env.ZAI_USER_ID,
+        token: process.env.ZAI_TOKEN,
+    }
 }
 
 // ── OCR prompt ──
@@ -64,11 +82,22 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // SECURITY: refuse to run without configured credentials — the
+    // previously hardcoded Z-AI JWT was leaked into git history. Return
+    // a clean 503 instead of falling back to embedded creds.
+    const zaiConfig = loadZaiConfigFromEnv()
+    if (!zaiConfig) {
+      return NextResponse.json(
+        { error: 'Bill scanner service unavailable — ZAI_BASE_URL / ZAI_API_KEY env vars are not set.' },
+        { status: 503 },
+      )
+    }
+
     // Write Z-AI config to /tmp so the SDK can find it
     try {
       const tmpDir = '/tmp'
       await mkdir(tmpDir, { recursive: true }).catch(() => {})
-      await writeFile(join(tmpDir, '.z-ai-config'), JSON.stringify(ZAI_CONFIG))
+      await writeFile(join(tmpDir, '.z-ai-config'), JSON.stringify(zaiConfig))
     } catch { /* best-effort */ }
 
     // Dynamically import the SDK (Node.js runtime only)

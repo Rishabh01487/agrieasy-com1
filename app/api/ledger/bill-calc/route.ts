@@ -14,14 +14,13 @@ export const runtime = 'nodejs'
 /**
  * Z-AI vision API configuration.
  *
- * Resolution order (first one wins):
- *   1. process.env.ZAI_BASE_URL + ZAI_API_KEY + (optional) ZAI_CHAT_ID/ZAI_USER_ID/ZAI_TOKEN
- *      → set these on Vercel → Settings → Environment Variables (preferred)
- *   2. Hardcoded fallback constants below (works out-of-the-box, no Vercel setup)
- *   3. .z-ai-config / z-ai-config.json file in project root, home dir, /etc/, or /tmp/
- *      → for local dev only
+ * SECURITY: All credentials must come from env vars (ZAI_BASE_URL,
+ * ZAI_API_KEY, ZAI_CHAT_ID, ZAI_USER_ID, ZAI_TOKEN) set in the Vercel/
+ * hosting dashboard. The previous hardcoded fallback has been removed
+ * because the token was leaked into git history.
  *
- * After resolving, we call the vision API directly with fetch (no SDK dependency).
+ * If env vars are missing, the route returns 503 — it never falls back
+ * to embedded credentials.
  */
 
 interface ZaiConfig {
@@ -32,19 +31,11 @@ interface ZaiConfig {
     token?: string
 }
 
-// Hardcoded fallback config — works without any Vercel env var setup.
-// These credentials are for the internal Z.ai service tied to this chat session.
-const HARDCODED_FALLBACK_CONFIG: ZaiConfig = {
-    baseUrl: 'https://internal-api.z.ai/v1',
-    apiKey: 'Z.ai',
-    chatId: 'chat-7fcc4e40-ad01-4ab0-a83e-bad8f1cf2840',
-    userId: 'e255a2b5-f0be-4835-9279-65e7282d8a50',
-    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o',
-}
-
+// SECURITY: previously held a hardcoded JWT token — removed. Use env vars.
 function loadZaiConfigFromEnv(): ZaiConfig | null {
     const baseUrl = process.env.ZAI_BASE_URL
     const apiKey = process.env.ZAI_API_KEY
+    // SECURITY: fail-closed — refuse to run with hardcoded creds.
     if (!baseUrl || !apiKey) return null
     return {
         baseUrl,
@@ -81,17 +72,19 @@ async function loadZaiConfigFromFile(): Promise<ZaiConfig | null> {
 
 /**
  * Resolve Z-AI config:
- *   1. Env vars (highest priority — Vercel production override)
- *   2. Hardcoded fallback (works without any setup)
- *   3. Config file (local dev convenience)
+ *   1. Env vars (preferred — set on Vercel/hosting dashboard)
+ *   2. Config file (local dev only)
  *
- * Also writes the resolved config to /tmp/.z-ai-config so any code using the
- * z-ai-web-dev-sdk can find it on Vercel's read-only filesystem.
+ * SECURITY: no hardcoded fallback. Returns null if env/file both empty.
+ * Caller MUST check for null and return a clean 503 response — do NOT
+ * throw, do NOT silently degrade.
  */
-async function loadZaiConfig(): Promise<{ config: ZaiConfig; source: string }> {
-    // 1. Env vars (Vercel production — optional override)
+async function loadZaiConfig(): Promise<{ config: ZaiConfig; source: string } | null> {
+    // 1. Env vars
     const fromEnv = loadZaiConfigFromEnv()
     if (fromEnv) {
+        // Best-effort write to /tmp/.z-ai-config so any code using the
+        // z-ai-web-dev-sdk can find it on Vercel's read-only filesystem.
         try {
             const fs = await import('fs')
             const path = await import('path')
@@ -102,21 +95,21 @@ async function loadZaiConfig(): Promise<{ config: ZaiConfig; source: string }> {
         return { config: fromEnv, source: 'env' }
     }
 
-    // 2. Hardcoded fallback (always works, no setup needed)
-    //    Write it to /tmp so the z-ai SDK can also find it if used elsewhere.
-    try {
-        const fs = await import('fs')
-        const path = await import('path')
-        const tmpDir = '/tmp'
-        if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
-        fs.writeFileSync(path.join(tmpDir, '.z-ai-config'), JSON.stringify(HARDCODED_FALLBACK_CONFIG))
-    } catch { /* best-effort */ }
-    return { config: HARDCODED_FALLBACK_CONFIG, source: 'hardcoded' }
+    // 2. Config file (local dev only)
+    const fromFile = await loadZaiConfigFromFile()
+    if (fromFile) {
+        try {
+            const fs = await import('fs')
+            const path = await import('path')
+            const tmpDir = '/tmp'
+            if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true })
+            fs.writeFileSync(path.join(tmpDir, '.z-ai-config'), JSON.stringify(fromFile))
+        } catch { /* best-effort */ }
+        return { config: fromFile, source: 'file' }
+    }
 
-    // 3. Config file (local dev — never reached because step 2 always returns,
-    //    but kept here for documentation. To re-enable, comment out step 2.)
-    // const fromFile = await loadZaiConfigFromFile()
-    // if (fromFile) return { config: fromFile, source: 'file' }
+    // SECURITY: no hardcoded fallback — return null so caller can 503.
+    return null
 }
 
 /**
@@ -240,7 +233,17 @@ export async function POST(req: NextRequest) {
         // Compose the data URL or pass through
         const finalUrl = imageUrl || `data:${mimeType};base64,${imageBase64}`
 
-        const { config: zaiConfig } = await loadZaiConfig()
+        // SECURITY: refuse to run without configured credentials — the
+        // previously hardcoded Z-AI JWT was leaked into git history. Return
+        // a clean 503 instead of falling back to embedded creds.
+        const resolved = await loadZaiConfig()
+        if (!resolved) {
+            return NextResponse.json(
+                { error: 'Bill OCR service unavailable — ZAI_BASE_URL / ZAI_API_KEY env vars are not set.' },
+                { status: 503 },
+            )
+        }
+        const { config: zaiConfig } = resolved
 
         const prompt = `You are an OCR engine for Indian grain-market bills (परची / बही).
 
@@ -412,7 +415,23 @@ export async function GET(req: NextRequest) {
     const auth = authenticateRequest(req)
     if (!auth) return unauthorized()
     try {
-        const { config, source } = await loadZaiConfig()
+        const resolved = await loadZaiConfig()
+        if (!resolved) {
+            return NextResponse.json({
+                configured: false,
+                error: 'ZAI_BASE_URL / ZAI_API_KEY env vars are not set.',
+                debug: {
+                    envBaseUrl: process.env.ZAI_BASE_URL ? 'set' : 'missing',
+                    envApiKey: process.env.ZAI_API_KEY ? 'set' : 'missing',
+                    envChatId: process.env.ZAI_CHAT_ID ? 'set' : 'missing',
+                    envUserId: process.env.ZAI_USER_ID ? 'set' : 'missing',
+                    envToken: process.env.ZAI_TOKEN ? 'set' : 'missing',
+                    nodeEnv: process.env.NODE_ENV,
+                    vercel: process.env.VERCEL ? 'yes' : 'no',
+                },
+            }, { status: 200 })  // 200 so the user can see the debug info
+        }
+        const { config, source } = resolved
         return apiSuccess({
             configured: true,
             source,

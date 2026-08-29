@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb'
 import Metric from '@/lib/models/Metric'
 import { rateLimitByIp } from '@/lib/rate-limit'
 import { sendAdminAlert } from '@/lib/email'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 
 /**
  * POST /api/analytics/pwa-install
@@ -167,12 +168,12 @@ function prettyPlatform(p: string): string {
  *   }
  */
 export async function GET(request: NextRequest) {
-  // Auth check — only admins can view install stats
-  const authHeader = request.headers.get('authorization') || ''
-  const token = authHeader.replace('Bearer ', '')
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  // SECURITY: previously this only checked that a Bearer header was PRESENT
+  // — `Authorization: Bearer x` (any string) passed. Now we actually
+  // verify the JWT and require admin role via `authenticateRequest`.
+  const auth = authenticateRequest(request, ['admin'])
+  if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden('Admin access required')
 
   try {
     await dbConnect()

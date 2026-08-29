@@ -8,7 +8,7 @@ import { validateBody, topupSchema } from '@/lib/validation'
 import { validationError } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
-import { verifyPaymentSignature } from '@/lib/razorpay'
+import { verifyPaymentSignatureWithAmount } from '@/lib/razorpay'
 
 export async function POST(request: NextRequest) {
     const auth = authenticateRequest(request)
@@ -25,8 +25,30 @@ export async function POST(request: NextRequest) {
         const data = v.data
         const { amount, razorpayOrderId, razorpayPaymentId, razorpaySignature } = data
 
-        if (!verifyPaymentSignature(razorpayOrderId, razorpayPaymentId, razorpaySignature)) {
-            return NextResponse.json({ error: 'Payment verification failed' }, { status: 400 })
+        // SECURITY: verify HMAC signature AND fetch the order server-side from
+        // Razorpay to confirm `order.amount === claimedAmount * 100`. Prevents
+        // the critical amount-tampering attack (pay ₹1, credit ₹1,00,000).
+        const verify = await verifyPaymentSignatureWithAmount(
+            razorpayOrderId,
+            razorpayPaymentId,
+            razorpaySignature,
+            Math.round(amount * 100),
+        )
+        if (!verify.ok) {
+            return NextResponse.json({ error: verify.reason }, { status: 400 })
+        }
+
+        // SECURITY: idempotency — refuse to credit the same Razorpay payment
+        // twice. The unique sparse index on Transaction.razorpayPaymentId is
+        // the backstop; this pre-check avoids a 500 + double-credit race.
+        const already = await Transaction.exists({ razorpayPaymentId })
+        if (already) {
+            const walletNow = await Wallet.findOne({ userId: auth.user.userId }).lean()
+            return NextResponse.json({
+                success: true,
+                newBalance: walletNow?.balance ?? 0,
+                message: 'This payment has already been credited.',
+            })
         }
 
         let wallet = await Wallet.findOne({ userId: auth.user.userId })
@@ -51,6 +73,10 @@ export async function POST(request: NextRequest) {
             category: 'recharge',
             referenceId: razorpayPaymentId,
             razorpayOrderId,
+            // SECURITY: populated so the unique sparse index enforces replay
+            // prevention (the same razorpayPaymentId cannot appear on two
+            // Transaction documents).
+            razorpayPaymentId,
         })
 
         await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Topup', details: { amount }, request })

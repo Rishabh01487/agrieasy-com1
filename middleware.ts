@@ -26,10 +26,20 @@ function applyCors(request: NextRequest, response: NextResponse) {
   const corsRaw = process.env.CORS_ORIGINS || ''
   const allowedOrigins = corsRaw ? corsRaw.split(',').map(s => s.trim()).filter(Boolean) : []
 
-  const isAllowed = isDev || allowedOrigins.length === 0 || allowedOrigins.includes(origin)
+  // SECURITY: fail-closed in production. Previously the `allowedOrigins.length === 0`
+  // clause allowed ANY origin when CORS_ORIGINS was unset — reflecting it back
+  // with Access-Control-Allow-Credentials: true, exposing credentialed APIs to
+  // cross-site reads. Now we only allow an origin if it's in the explicit list.
+  const isAllowed = isDev
+    ? true
+    : (allowedOrigins.length > 0 && allowedOrigins.includes(origin))
 
+  // SECURITY: do NOT set Access-Control-Allow-Origin on disallowed origins
+  // (don't reflect the request origin back). Only add the credentialed CORS
+  // headers when the origin is explicitly allowlisted.
   if (isAllowed && origin) {
     response.headers.set('Access-Control-Allow-Origin', origin)
+    response.headers.set('Vary', 'Origin')
     response.headers.set('Access-Control-Allow-Credentials', 'true')
     response.headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS')
     response.headers.set('Access-Control-Allow-Headers', [

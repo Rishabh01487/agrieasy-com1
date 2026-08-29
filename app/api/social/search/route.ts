@@ -27,9 +27,8 @@ export async function GET(req: NextRequest) {
                     $or: [
                         { farmerName: { $regex: regex } },
                         { firmName: { $regex: regex } },
-                        { phone: { $regex: regex } },
                     ],
-                }).select('farmerName firmName role phone').limit(20).lean()
+                }).select('farmerName firmName role').limit(20).lean()
                 : Promise.resolve([]),
             (kind === 'all' || kind === 'hashtags')
                 ? Post.aggregate([

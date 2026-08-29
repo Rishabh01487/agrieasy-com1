@@ -3,7 +3,7 @@ import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import jwt from 'jsonwebtoken'
 import { rateLimitByIp } from '@/lib/rate-limit'
-import { verifyOtp } from '@/lib/otp'
+import { verifyOtp, incrOtpAttempts, clearOtpAttempts, clearOtp, OTP_BRUTE_FORCE_LIMIT } from '@/lib/otp'
 import { logAudit } from '@/lib/audit'
 import { validateBody, verifyOtpSchema } from '@/lib/validation'
 import { apiSuccess, validationError, badRequest, notFound, apiError, ErrorCodes } from '@/lib/api-response'
@@ -20,9 +20,28 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Invalid phone or OTP', v.errors)
     const data = v.data
 
+    // SECURITY: per-phone brute-force cap. The IP rate-limit alone is bypassable
+    // via rotating IPs (botnet, proxies, IPv6 pool). A per-phone counter caps
+    // attempts at OTP_BRUTE_FORCE_LIMIT (5) per 5-min window per phone —
+    // attacker gets 5 guesses regardless of how many IPs they control.
+    const attempts = await incrOtpAttempts(data.phone)
+    if (attempts > OTP_BRUTE_FORCE_LIMIT) {
+      // Invalidate the stored OTP too — the attacker now has to request a new
+      // one and the 5-min cooldown on the attempts key still applies.
+      await clearOtp(data.phone)
+      return NextResponse.json(
+        { error: 'Too many attempts. Please request a new OTP and try again later.' },
+        { status: 429 },
+      )
+    }
+
     if (!(await verifyOtp(data.phone, data.otp))) {
       return badRequest('Invalid or expired OTP')
     }
+
+    // SECURITY: clear the per-phone attempt counter on success so a legitimate
+    // user who fat-fingered 2-3 times isn't penalised on their next login.
+    await clearOtpAttempts(data.phone)
 
     const user = await User.findOne({ phone: data.phone })
     if (!user) return notFound('User')
