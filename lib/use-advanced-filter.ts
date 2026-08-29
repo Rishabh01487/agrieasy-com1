@@ -23,6 +23,14 @@ import {
 interface PreviewOptions {
   /** Max width or height of the preview (smaller = faster). Default 480. */
   maxWidth?: number
+  /**
+   * Pass `true` for front-camera (selfie) captures so the worker-baked
+   * preview blob is mirrored to match what the user saw during capture.
+   * Without this, the displayed preview flips back to the un-mirrored
+   * "real" orientation as soon as the worker finishes (~150ms after
+   * capture), which feels like the camera is broken.
+   */
+  mirrorSelfie?: boolean
 }
 
 interface UseAdvancedFilterResult {
@@ -214,8 +222,9 @@ export function useAdvancedFilter(): UseAdvancedFilterResult {
       opts?: PreviewOptions,
     ): Promise<string> => {
       const maxDim = opts?.maxWidth ?? 480
+      const mirrorSelfie = opts?.mirrorSelfie ?? false
       try {
-        const processed = await processViaWorker(blob, filter, maxDim)
+        const processed = await processViaWorker(blob, filter, maxDim, mirrorSelfie)
         return URL.createObjectURL(processed)
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Preview failed')

@@ -29,6 +29,7 @@ import {
   applyToneCurves,
   applySplitTone,
   applyHSLBands,
+  applySkinSmooth,
   applyFilmGrain,
   applyMasterAdjust,
   type FilterDefinition,
@@ -50,6 +51,10 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   if (filter.toneCurve) applyToneCurves(data, filter.toneCurve)
   if (filter.splitTone) applySplitTone(data, filter.splitTone)
   if (filter.hslBands && filter.hslBands.length > 0) applyHSLBands(data, filter.hslBands)
+  // Skin smoothing runs AFTER color grading but BEFORE film grain —
+  // we want blemishes erased, then grain added on top (so the smoothed
+  // skin still has natural texture from the grain, not plastic-smooth).
+  if (filter.beauty) applySkinSmooth(data, w, h, filter.beauty)
   if (filter.grain) applyFilmGrain(data, w, h, filter.grain)
   applyMasterAdjust(
     data,

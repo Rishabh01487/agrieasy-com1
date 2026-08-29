@@ -310,7 +310,12 @@ function CreateContent() {
             return
         }
         let cancelled = false
-        previewFilter(mediaFile.blob, FILTERS[selectedFilter], { maxWidth: 480 })
+        // Pass mirrorSelfie so the worker-baked preview blob is already
+        // mirrored for front-camera captures — keeps the displayed
+        // preview WYSIWYG with the uploaded post. Without this, the
+        // selfie would flip back to the un-mirrored "real" orientation
+        // as soon as the worker finishes (~150ms after capture).
+        previewFilter(mediaFile.blob, FILTERS[selectedFilter], { maxWidth: 480, mirrorSelfie: lastCaptureFacing === 'user' })
             .then(url => { if (!cancelled) setAdvancedFilterPreview(url) })
             .catch(() => { if (!cancelled) setAdvancedFilterPreview(null) })
         return () => {
@@ -655,7 +660,7 @@ function CreateContent() {
                 <div style={{ background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
                     {/* Media preview — full photo on neutral black background.
                         objectFit: 'contain' preserves the entire image without cropping. */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', maxHeight: '70vh', overflow: 'hidden', position: 'relative', background: '#000' }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52vh', overflow: 'hidden', position: 'relative', background: '#000' }}>
                         {mediaFile.type === 'image' ? (
                             // Use the Web-Worker-rendered preview when available
                             // (full pixel-level pipeline result, including
@@ -697,8 +702,8 @@ function CreateContent() {
                         shows a CSS-filtered preview for instant feedback;
                         the full pipeline result shows in the main preview
                         once the worker finishes (~150ms). */}
-                    <div style={{ background: '#111', padding: '12px 0' }}>
-                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Advanced Filters</p>
+                    <div style={{ background: '#111', padding: '8px 0' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.68rem', fontWeight: 700, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>Advanced Filters</p>
                         <div style={{ display: 'flex', gap: '14px', padding: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                             {FILTERS.map((f, i) => {
                                 // Insert a category label chip before the first filter of each category
@@ -714,25 +719,25 @@ function CreateContent() {
                                     )}
                                     <button onClick={() => setSelectedFilter(i)}
                                         style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                        <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.15)'}`, transition: 'all 0.2s ease' }}>
+                                        <div style={{ width: '52px', height: '52px', borderRadius: '8px', overflow: 'hidden', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.15)'}`, transition: 'all 0.2s ease' }}>
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img src={mediaFile.url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: f.previewCss === 'none' ? 'none' : f.previewCss }} />
                                         </div>
-                                        <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.55)', fontSize: '0.62rem', fontWeight: 700 }}>{f.name}</span>
+                                        <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.55)', fontSize: '0.58rem', fontWeight: 700 }}>{f.name}</span>
                                     </button>
                                 </div>
                                 )
                             })}
                         </div>
                         {/* Filter description caption — shows what the selected filter does */}
-                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.7rem', textAlign: 'center', marginTop: 8, fontStyle: 'italic' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.66rem', textAlign: 'center', marginTop: 6, fontStyle: 'italic' }}>
                             {FILTERS[selectedFilter].description}
                         </p>
                     </div>
 
                     {/* Adjustments */}
-                    <div style={{ background: '#42476E', padding: '12px 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                    <div style={{ background: '#42476E', padding: '8px 16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
                             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Adjust</p>
                             {/* Rotate buttons */}
                             <div style={{ display: 'flex', gap: 8 }}>
@@ -741,7 +746,7 @@ function CreateContent() {
                                 {rotation !== 0 && <button onClick={() => setRotation(0)} title="Reset" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem' }}>Reset</button>}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>☀️ Bright</span>
                                 <input type="range" min={80} max={120} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
