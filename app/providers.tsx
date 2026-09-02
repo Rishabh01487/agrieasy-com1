@@ -2,6 +2,7 @@
 
 import { SessionProvider } from 'next-auth/react'
 import { Component, ReactNode } from 'react'
+import AuthSync from './components/AuthSync'
 
 // Wrap SessionProvider in an error boundary so that if next-auth ever
 // throws during render (e.g. misconfigured env vars, network error
@@ -21,7 +22,10 @@ class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasEr
         if (this.state.hasError) {
             return this.props.children
         }
-        return <SessionProvider>{this.props.children}</SessionProvider>
+        return <SessionProvider>
+            {this.props.children}
+            <AuthSync />
+        </SessionProvider>
     }
 }
 
