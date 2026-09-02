@@ -811,10 +811,57 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
         setResult(null)
         setRates({})
         try {
-            // Call Z-AI vision API DIRECTLY from the browser — no serverless
-            // function involved, so no Vercel 10s timeout. The OCR takes
-            // ~15-30s but runs entirely client-side.
-            const data = await runClientSideOcr(file)
+            // Compress image client-side before sending to the server
+            const compressedBlob = await compressImageToBlob(file, 1600, 0.85)
+            const b64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader()
+                reader.onload = () => {
+                    const result = reader.result as string
+                    const commaIdx = result.indexOf(',')
+                    resolve(commaIdx >= 0 ? result.slice(commaIdx + 1) : result)
+                }
+                reader.onerror = () => reject(new Error('Could not read file'))
+                reader.readAsDataURL(compressedBlob)
+            })
+
+            // Step 1: Try Qwen3-VL via server proxy (highest accuracy, ~₹0.035/bill)
+            let data: { commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string } | null = null
+            try {
+                const res = await fetch('/api/ledger/bill-ocr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ image: b64 }),
+                })
+                if (res.ok) {
+                    const ocrData = await res.json()
+                    data = {
+                        commodities: (ocrData.commodities || []).map((c: any) => ({
+                            name: c.name || '',
+                            nameEn: c.nameEn || c.name || '',
+                            batches: (c.batches || []).map((b: any) => ({
+                                bagCount: b.bagCount,
+                                weight: b.weight,
+                            })),
+                            totalBags: c.totalBags || 0,
+                            totalWeight: c.totalWeight || 0,
+                            extractedRate: '',
+                            extractedUnit: 'kg' as const,
+                        })),
+                        grandTotalBags: ocrData.grandTotalBags || 0,
+                        grandTotalWeight: ocrData.grandTotalWeight || 0,
+                        rawText: 'Qwen3-VL OCR',
+                    }
+                }
+            } catch {
+                // Qwen3-VL failed (network error, API key not set, etc.)
+                // Fall through to Tesseract fallback
+            }
+
+            // Step 2: Fallback to Tesseract.js (free, client-side, offline)
+            if (!data) {
+                data = await runClientSideOcr(file)
+            }
+
             setResult(data)
             const initial: Record<number, { rate: string; unit: 'kg' | 'quintal' }> = {}
             ;(data.commodities || []).forEach((c: CommodityGroup, i: number) => {
