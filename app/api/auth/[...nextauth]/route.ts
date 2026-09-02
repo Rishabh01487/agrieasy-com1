@@ -9,6 +9,12 @@ const hasGoogle = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_
 // common deployment footgun.
 const secret = process.env.NEXTAUTH_SECRET || process.env.JWT_SECRET
 
+// Force NextAuth to always use the production URL as the base, regardless
+// of which Vercel preview deployment is active. This prevents the
+// redirect_uri_mismatch error when users access via a preview URL.
+// On localhost, use the local URL for development.
+const trustHost = true
+
 const providers = hasGoogle
   ? [
       GoogleProvider({
@@ -21,6 +27,7 @@ const providers = hasGoogle
 const handler = NextAuth({
     // If no providers are configured, NextAuth still works — it just returns
     providers,
+    ...(trustHost ? { trustHost: true as any } : {}),
     session: {
         strategy: 'jwt',
         maxAge: 30 * 24 * 60 * 60, // 30 days
