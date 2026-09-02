@@ -28,25 +28,30 @@ export async function POST(req: NextRequest) {
 
         await dbConnect()
 
-        // Find the user by email (created during NextAuth signIn callback)
         const user = await User.findOne({ email: token.email })
         if (!user) {
-            return NextResponse.json({ error: 'User not found' }, { status: 404 })
+            // User not registered — return a flag so AuthSync can redirect
+            // to the registration page instead of the dashboard
+            return NextResponse.json({
+                registered: false,
+                email: token.email,
+                name: token.name || '',
+            })
         }
 
-        // Sign a JWT token — same format as the login API
-        const secret = process.env.JWT_SECRET
-        if (!secret || secret === 'your-secret-key') {
+        const jwtSecret = process.env.JWT_SECRET
+        if (!jwtSecret || jwtSecret === 'your-secret-key') {
             return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
         }
 
         const jwtToken = jwt.sign(
             { userId: user._id.toString(), email: user.email, role: user.role },
-            secret,
+            jwtSecret,
             { expiresIn: '7d' }
         )
 
         return NextResponse.json({
+            registered: true,
             token: jwtToken,
             userId: user._id.toString(),
             role: user.role,
