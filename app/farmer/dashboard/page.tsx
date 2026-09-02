@@ -78,8 +78,16 @@ export default function FarmerDashboard() {
   useEffect(() => {
     const { userId } = getUserInfo()
     if (!userId) {
-      router.replace('/auth/login')
-      return
+      // Wait for AuthSync (Google Sign-In) to populate localStorage
+      const timeout = setTimeout(() => {
+        const retry = getUserInfo()
+        if (!retry.userId) {
+          router.replace('/auth/login')
+        } else {
+          window.location.reload()
+        }
+      }, 3000)
+      return () => clearTimeout(timeout)
     }
 
     const init = async () => {

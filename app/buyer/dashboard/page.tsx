@@ -94,8 +94,21 @@ export default function BuyerDashboard() {
   useEffect(() => {
     const { userId, userEmail } = getUserInfo()
     if (!userId) {
-      router.replace('/auth/login')
-      return
+      // Wait for AuthSync (Google Sign-In) to populate localStorage.
+      // AuthSync fetches a JWT from /api/auth/session-token which takes ~1s.
+      // If we redirect immediately, Google login users get bounced back to login.
+      // Check localStorage again after 3 seconds — if still no userId, redirect.
+      const timeout = setTimeout(() => {
+        const retry = getUserInfo()
+        if (!retry.userId) {
+          router.replace('/auth/login')
+        } else {
+          setUserEmail(retry.userEmail || '')
+          // Trigger the data fetch by reloading
+          window.location.reload()
+        }
+      }, 3000)
+      return () => clearTimeout(timeout)
     }
     setUserEmail(userEmail || '')
     const fetchAll = async () => {
