@@ -47,31 +47,42 @@ const handler = NextAuth({
             return session
         },
         async redirect({ url, baseUrl }) {
-            if (url.startsWith('/')) return `${baseUrl}${url}`
-            else if (new URL(url).origin === baseUrl) return url
-            return baseUrl
+            // Fix: baseUrl is the NextAuth base (e.g. https://agrieasy.site/api/auth)
+            // but we want to redirect to the app root (https://agrieasy.site)
+            // So we strip /api/auth from baseUrl to get the actual app URL.
+            const appUrl = baseUrl.replace('/api/auth', '')
+            if (url.startsWith('/')) return `${appUrl}${url}`
+            else if (new URL(url).origin === appUrl) return url
+            return appUrl
         },
         async signIn({ account, profile }) {
             if (account?.provider === 'google' && profile?.email) {
-                const dbConnect = (await import('@/lib/mongodb')).default
-                const bcrypt = (await import('bcryptjs')).default
-                const User = (await import('@/lib/models/User')).default
-                await dbConnect()
-                const existingUser = await User.findOne({ email: profile.email })
-                if (!existingUser) {
-                    const crypto = await import('crypto')
-                    const randomPassword = crypto.randomBytes(32).toString('hex')
-                    const emailPrefix = profile.email?.split('@')[0]?.slice(0, 6) || 'user'
-                    const randomSuffix = Math.floor(100000 + Math.random() * 900000)
-                    const phone = (profile as Record<string, unknown>).phone_number as string || `9${randomSuffix}${emailPrefix.length}`
-                    await User.create({
-                        email: profile.email,
-                        phone,
-                        password: await bcrypt.hash(randomPassword, 10),
-                        role: 'buyer',
-                        address: '',
-                        firmName: profile.name || '',
-                    })
+                try {
+                    const dbConnect = (await import('@/lib/mongodb')).default
+                    const bcrypt = (await import('bcryptjs')).default
+                    const User = (await import('@/lib/models/User')).default
+                    await dbConnect()
+                    const existingUser = await User.findOne({ email: profile.email })
+                    if (!existingUser) {
+                        const crypto = await import('crypto')
+                        const randomPassword = crypto.randomBytes(32).toString('hex')
+                        // Generate a unique phone number — add timestamp to avoid collisions
+                        const timestamp = Date.now().toString().slice(-8)
+                        const phone = `9${timestamp}${Math.floor(Math.random() * 100)}`
+                        await User.create({
+                            email: profile.email,
+                            phone,
+                            password: await bcrypt.hash(randomPassword, 10),
+                            role: 'buyer',
+                            address: '',
+                            firmName: profile.name || '',
+                        })
+                    }
+                } catch (err) {
+                    // If user creation fails (e.g. duplicate email from a previous
+                    // Google login attempt, or duplicate phone), don't block the sign-in.
+                    // The user might already exist from a manual registration.
+                    console.warn('[NextAuth] User creation during Google sign-in failed (non-fatal):', err)
                 }
             }
             return true

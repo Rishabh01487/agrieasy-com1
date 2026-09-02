@@ -25,45 +25,36 @@ export default function AuthSync() {
         if (status === 'authenticated' && session?.user) {
             // Google login succeeded — sync to localStorage
             const email = session.user.email || ''
-            const name = session.user.name || ''
-            const id = (session.user as any).id || ''
 
-            // Only set if not already present (avoid overwriting manual login)
-            if (!localStorage.getItem('userId') && email) {
-                localStorage.setItem('userEmail', email)
-                localStorage.setItem('userId', id)
-                // For Google users, we don't have a role from the session.
-                // Default to 'buyer' (the role assigned during NextAuth signIn callback).
-                if (!localStorage.getItem('userRole')) {
-                    localStorage.setItem('userRole', 'buyer')
-                }
-            }
+            if (!email) return
 
-            // Fetch a JWT token from our API so authFetch works
-            // (NextAuth gives us a session cookie, but our API routes expect
-            // a Bearer token. We call /api/auth/session-token to get one.)
-            if (!localStorage.getItem('token')) {
-                fetch('/api/auth/session-token', {
-                    method: 'POST',
-                    credentials: 'include',  // send NextAuth cookie
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email }),
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.token) {
-                            localStorage.setItem('token', data.token)
-                            if (data.userId) localStorage.setItem('userId', data.userId)
-                            if (data.role) localStorage.setItem('userRole', data.role)
+            // Always fetch a fresh JWT from our API (don't check localStorage —
+            // it might have stale data from a previous manual login session)
+            fetch('/api/auth/session-token', {
+                method: 'POST',
+                credentials: 'include',  // send NextAuth cookie
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.token) {
+                        localStorage.setItem('token', data.token)
+                        localStorage.setItem('userId', data.userId)
+                        localStorage.setItem('userEmail', email)
+                        localStorage.setItem('userRole', data.role || 'buyer')
+
+                        // If we're on the login or register page, redirect to dashboard
+                        if (typeof window !== 'undefined') {
+                            const path = window.location.pathname
+                            if (path.includes('/auth/login') || path.includes('/auth/register')) {
+                                const role = data.role || 'buyer'
+                                window.location.href = `/${role}/dashboard`
+                            }
                         }
-                    })
-                    .catch(() => {})
-            }
-        } else if (status === 'unauthenticated') {
-            // User logged out via NextAuth — clear localStorage too
-            // Only clear if there's no manual login token (don't log out manual users)
-            // We check the cookie — if NextAuth session is gone, clear everything
-            // Actually, let's not be aggressive here — the logout button already clears localStorage
+                    }
+                })
+                .catch(() => {})
         }
     }, [status, session])
 
