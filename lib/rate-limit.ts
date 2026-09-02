@@ -12,7 +12,6 @@ async function getRedis(): Promise<Redis | null> {
 
   if (url && token) {
     _redis = new Redis({ url, token })
-    console.log('[rate-limit] Upstash Redis client initialized')
   } else {
     _redis = null
     console.warn('[rate-limit] UPSTASH_REDIS_REST_URL/TOKEN not set — using in-memory fallback (not safe for serverless)')

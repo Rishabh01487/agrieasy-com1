@@ -17,59 +17,6 @@ interface CommodityGroup {
     extractedRate?: string
     extractedUnit?: 'kg' | 'quintal'
 }
-
-// ── OpenRouter API config (client-side, free tier, CORS-friendly) ──
-// OpenRouter returns Access-Control-Allow-Origin: * so the browser can
-// call it directly — no Vercel proxy needed, no 10s timeout, no Cloudflare.
-//
-// Free tier limits:
-//   - Free vision models available (e.g. qwen/qwen-2-vl-7b-instruct:free)
-//   - 20 requests/minute on free tier
-//   - Works in India (unlike Gemini)
-//
-// Get your own free key at https://openrouter.ai/keys
-// Key split into parts to avoid triggering secret scanners in git.
-const _K1 = 'sk-or-v1-c190af1e'
-const _K2 = 'e349b873098f7dcb'
-const _K3 = 'd3601cdb09f4a198'
-const _K4 = '3f927f365904dbca'
-const _K5 = '58a45623'
-const OPENROUTER_API_KEY = `${_K1}${_K2}${_K3}${_K4}${_K5}`
-const OPENROUTER_MODEL = 'nvidia/nemotron-nano-12b-v2-vl:free'
-
-/**
- * Run OCR on a bill image using OpenRouter (free, CORS-friendly, India-supported).
- *
- * Flow:
- *   1. Read the file as base64 (in-memory).
- *   2. Call OpenRouter's chat completions API directly from the browser with
- *      the image inline + OCR prompt. OpenRouter returns CORS headers so
- *      the browser allows the response.
- *   3. Parse the JSON and normalize the commodity batches.
- *
- * Why OpenRouter?
- *   - Returns Access-Control-Allow-Origin: * → browser allows the response.
- *   - Can be called DIRECTLY from the browser → no Vercel proxy → no 10s timeout.
- *   - Works in India (unlike Gemini).
- *   - Has free vision models (Qwen 2 VL, Llama 3.2 Vision, etc.).
- *   - OpenAI-compatible API → same request format.
- */
-/**
- * Run OCR on a bill image using Z-AI glm-4.6v (the most accurate model for
- * handwritten Hindi bills) via our Edge-runtime proxy.
- *
- * Flow:
- *   1. Upload the image to Cloudinary (small body for the proxy).
- *   2. Call our Edge proxy (/api/ledger/bill-calc-proxy) which forwards
- *      to Z-AI. Edge runtime has 25-30s timeout — enough for OCR.
- *   3. Parse the JSON response and normalize the commodity batches.
- *
- * Why Z-AI glm-4.6v instead of OpenRouter free models?
- *   - OpenRouter free models (nvidia 12B, gemma) gave WRONG results:
- *     misread "551" as "5510", duplicated data across commodities.
- *   - Z-AI glm-4.6v gave PERFECT results in testing — correctly read all
- *     3 commodities with accurate weights.
- */
 async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string }> {
     // ── Step 1: Compress image client-side + read as base64 ──
     // No Cloudinary upload needed — we send the base64 directly to our proxy.
@@ -97,7 +44,6 @@ async function runClientSideOcr(file: File): Promise<{ commodities: CommodityGro
     })
 
     const result = await Tesseract.recognize(img, 'hin+eng', {
-        logger: (m: any) => { if (m.status === 'recognizing text') console.log(`[OCR] ${Math.round(m.progress * 100)}%`) }
     })
 
     const rawText = result.data.text || ''
@@ -136,7 +82,7 @@ ${preview}`)
 // This parser was rewritten after a 10,000-bill test run revealed 5 critical
 // bugs (success rate was 7.45%). After fixes + sequence detection + sequence
 // recovery, success rate is 98.3% on clean bills, 82.4% overall (incl. OCR-
-// noisy bills). See /home/z/my-project/scripts/test-results-fixed.json.
+// noisy bills).
 //
 // Key fixes:
 //   1. NEVER auto-create "Unknown Commodity" for lines with numbers but no

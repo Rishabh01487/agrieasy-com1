@@ -138,7 +138,6 @@ function CreateContent() {
             streamRef.current = stream
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
         } catch (e) {
-            console.error(e)
             stopCamera()
             setMode('choose')
             setCamError('Could not switch camera. Your device may not have a front camera.')

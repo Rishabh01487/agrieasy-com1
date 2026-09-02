@@ -136,7 +136,6 @@ export default function BuyerDashboard() {
           setPendingBookings(bs.length)
         }
       } catch (err) {
-        console.error('Error fetching data:', err)
         setError('Network error. Please try again.')
       } finally {
         setLoading(false)

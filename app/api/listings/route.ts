@@ -122,8 +122,13 @@ export async function GET(request: NextRequest) {
       return { success: true, data: { listings: distanceFiltered }, meta: paginationMeta(page, limit, total) }
     }
 
-    const result = await cacheGet(`listings:${JSON.stringify({ commodity, maxPrice, minPrice, buyerId, quality, paymentConditions, sortBy, farmerLat, farmerLng, radiusKm, page, limit })}`, fetchListings, { ttl: 30, prefix: 'listings' })
-    return NextResponse.json(result ?? await fetchListings())
+    const cacheKey = `listings:${JSON.stringify({ commodity, maxPrice, minPrice, buyerId, quality, paymentConditions, sortBy, farmerLat, farmerLng, radiusKm, page, limit })}`
+    const result = await cacheGet(cacheKey, fetchListings, { ttl: 30, prefix: 'listings' })
+    // cacheGet returns null when Redis isn't configured — in that case it
+    // already calls fetchListings internally and returns the result.
+    // If it returns null (no Redis), call fetchListings once.
+    if (result) return NextResponse.json(result)
+    return NextResponse.json(await fetchListings())
   } catch (error: unknown) {
     const e = error as Error & { code?: string; syscall?: string }
     console.error('LISTINGS ERROR CODE:', e.code, '| SYSCALL:', e.syscall, '| MSG:', e.message?.slice(0, 200))
@@ -178,19 +183,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Shared fields applied to every listing in this batch
+    const xss = (await import('xss')).default
     const sharedFields = {
       buyerId: auth.user.userId,
       variety: data.variety,
       quantity: data.quantity ?? 0,
       priceDate: data.priceDate ? new Date(data.priceDate) : new Date(),
-      commodityPhoto: body.commodityPhoto || data.commodityPhoto || '',
-      description: data.description,
-      location: data.location,
+      commodityPhoto: xss(data.commodityPhoto || ''),
+      description: xss(data.description || ''),
+      location: xss(data.location || ''),
       geoLocation,
       images: data.images,
-      shopPhoto: body.shopPhoto || '',
-      quality: body.quality || '',
-      paymentConditions: body.paymentConditions || '',
+      shopPhoto: xss(typeof body.shopPhoto === 'string' ? body.shopPhoto : ''),
+      quality: xss(typeof body.quality === 'string' ? body.quality : ''),
+      paymentConditions: xss(typeof body.paymentConditions === 'string' ? body.paymentConditions : ''),
       isActive: true,
     }
 

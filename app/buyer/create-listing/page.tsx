@@ -271,7 +271,6 @@ export default function CreateListing() {
       // Success — bounce to dashboard
       router.push('/buyer/dashboard')
     } catch (err) {
-      console.error('Error:', err)
       setError('Network error. Please try again.')
     } finally {
       setLoading(false)

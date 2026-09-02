@@ -53,7 +53,6 @@ export default function ScanToPay() {
             startScanLoop()
         } catch (err: any) {
             setCameraError('Camera access denied. Please allow camera permissions or enter ID manually.')
-            console.error('Camera error:', err)
         }
     }
 

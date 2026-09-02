@@ -63,7 +63,6 @@ export default function AddVehicle() {
       // show the newly added vehicle.
       router.push('/transporter/dashboard')
     } catch (err) {
-      console.error('Error:', err)
       setError('Network error. Please try again.')
     } finally { setLoading(false) }
   }

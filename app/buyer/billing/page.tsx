@@ -32,7 +32,6 @@ export default function Billing() {
         const data = await res.json()
         setBillings(data?.data?.billings || data?.billings || [])
       } catch (err) {
-        console.error('Error:', err)
         setError('Network error. Please try again.')
       } finally {
         setLoading(false)

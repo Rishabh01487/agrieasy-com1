@@ -12,7 +12,6 @@ async function getRedis(): Promise<Redis | null> {
 
   if (url && token) {
     _redis = new Redis({ url, token })
-    console.log('[otp] Upstash Redis client initialized')
   } else {
     _redis = null
     console.warn('[otp] UPSTASH_REDIS_REST_URL/TOKEN not set — using in-memory fallback (not safe for serverless)')
@@ -151,7 +150,7 @@ export const OTP_BRUTE_FORCE_LIMIT = OTP_MAX_ATTEMPTS
 // ── SMS sending (unchanged) ────────────────────────────────────────
 
 export async function sendSms(phone: string, message: string): Promise<void> {
-  console.log(`[SMS to ${phone}]: ${message}`)
+  if (process.env.NODE_ENV !== 'production') console.log('[SMS] OTP sent to', phone)
 
   const provider = process.env.SMS_PROVIDER
 

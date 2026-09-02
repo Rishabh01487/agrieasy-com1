@@ -58,9 +58,20 @@ export async function PATCH(
     }
 
     const allowedFields = ['commodity', 'quantity', 'unit', 'pricePerUnit', 'quality', 'paymentConditions', 'firmLocation', 'location', 'isActive', 'commodityPhoto', 'priceDate', 'description']
+    const textFields = ['commodity', 'quality', 'paymentConditions', 'firmLocation', 'location', 'description']
+    const validUnits = ['kg', 'quintal', 'ton', 'bags']
+    const xss = (await import('xss')).default
     const updateData: Record<string, unknown> = {}
     for (const field of allowedFields) {
-      if (body[field] !== undefined) updateData[field] = body[field]
+      if (body[field] !== undefined) {
+        if (textFields.includes(field)) {
+          updateData[field] = xss(String(body[field]))
+        } else if (field === 'unit' && !validUnits.includes(body[field])) {
+          return validationError('Invalid unit', [{ field: 'unit', message: `Must be one of: ${validUnits.join(', ')}` }])
+        } else {
+          updateData[field] = body[field]
+        }
+      }
     }
     if (updateData.priceDate) {
       const d = new Date(updateData.priceDate as string)
