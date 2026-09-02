@@ -409,14 +409,8 @@ function CreateContent() {
 
         if (filesToUpload.length > 0 && filesToUpload.some(f => f.blob)) {
             try {
-                // SECURITY: fetch one signature per kind (image / video)
-                // present. Each signature binds resource_type +
-                // allowed_formats server-side, blocking SVG / HTML / PDF
-                // upload via the image endpoint (stored XSS vector).
                 const kinds = Array.from(new Set(
-                    filesToUpload
-                        .filter(f => f.blob)
-                        .map(f => f.type === 'video' ? 'video' : 'image')
+                    filesToUpload.filter(f => f.blob).map(f => f.type === 'video' ? 'video' : 'image')
                 ))
                 const sigs: Record<string, any> = {}
                 for (const kind of kinds) {
@@ -433,32 +427,12 @@ function CreateContent() {
                         setSubmitting(false)
                         return
                     }
-                    if (!sig.apiKey || !sig.cloudName || !sig.signature) {
-                        setError('Upload signature incomplete — missing apiKey, cloudName, or signature. Check server env vars.')
-                        setSubmitting(false)
-                        return
-                    }
                     sigs[kind] = sig
                 }
 
                 setUploadProgress(0)
                 for (const file of filesToUpload) {
                     if (!file.blob) continue
-                    // *** ADVANCED FILTER PIPELINE ***
-                    // Use the Web Worker-based advanced filter engine.
-                    // Applies the FULL pixel-level pipeline (white balance,
-                    // tone curves, split-toning, HSL bands, film grain,
-                    // vignette, light leak, bloom, Orton) — not just CSS.
-                    // This is what makes our filters competitive with /
-                    // better than Instagram's. Falls back to the simpler
-                    // CSS-based baker if the worker fails.
-                    //
-                    // SECURITY/WYSIWYG: pass `mirrorSelfie: lastCaptureFacing === 'user'`
-                    // so front-camera selfies get a canvas mirror baked into
-                    // the uploaded blob — matches what the user saw during
-                    // capture (CSS-mirrored live preview). Without this, the
-                    // saved post would show the "real" un-mirrored orientation,
-                    // which doesn't match the in-app preview.
                     let uploadBlob: Blob = file.blob
                     const mirrorSelfie = lastCaptureFacing === 'user' && file.type === 'image'
                     if (file.type === 'image') {
@@ -482,14 +456,7 @@ function CreateContent() {
                     fd.append('timestamp', sig.timestamp.toString())
                     fd.append('signature', sig.signature)
                     fd.append('folder', sig.folder)
-                    // SECURITY: forward the signed params to Cloudinary —
-                    // required because the signature now binds resource_type
-                    // + allowed_formats. Cloudinary rejects uploads that
-                    // omit any signed parameter with "Invalid Signature".
-                    fd.append('resource_type', sig.resourceType)
-                    fd.append('allowed_formats', sig.allowedFormats)
 
-                    // Use XMLHttpRequest instead of fetch — gives us upload progress tracking
                     const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`
                     const cld = await new Promise<any>((resolve, reject) => {
                         const xhr = new XMLHttpRequest()
