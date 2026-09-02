@@ -15,66 +15,72 @@ import { NextRequest, NextResponse } from 'next/server'
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
 const MODEL = 'qwen/qwen3-vl-32b-instruct'
 
-const SYSTEM_PROMPT = `You are a bill OCR system specialized in reading Indian agricultural bills (grain merchant bills). These bills are often handwritten in Hindi (Devanagari) or English, and contain commodity names, bag counts, weights, and rates.
+const SYSTEM_PROMPT = `You are a bill OCR system specialized in reading Indian agricultural bills. These bills are handwritten in Hindi (Devanagari) or English.
 
-OUTPUT: Return ONLY valid JSON — no markdown, no explanation, no code blocks. Just the JSON object.
+OUTPUT: Return ONLY valid JSON. No markdown, no explanation.
 
-IMPORTANT NUMBER NORMALIZATION RULES:
-Indian bills use many shorthand notations for weights. You MUST interpret them correctly:
-- "55/-" means 55.000 kg
-- "55-0" means 55.000 kg  
-- "55|0" means 55.000 kg
-- "55|5" means 55.500 kg (the number after | is the decimal part)
-- "55/5" means 55.500 kg (the number after / is the decimal part)
-- "55.5" means 55.500 kg
-- "5½" means 5.500 kg
-- "¼" means 0.250 kg
-- "¾" means 0.750 kg
-- Devanagari digits (०१२३४५६७८९) must be converted to English (0123456789)
-- "५५/५" means 55.500 kg (Devanagari 55/5)
+NUMBER NORMALIZATION:
+- "55/-" = 55.000 kg
+- "55-0" = 55.000 kg
+- "55|0" = 55.000 kg
+- "55|5" = 55.500 kg (pipe = decimal separator)
+- "55/5" = 55.500 kg (slash = decimal separator)
+- "55.5" = 55.500 kg
+- "5½" = 5.500 kg, "¼" = 0.250 kg, "¾" = 0.750 kg
+- Convert Devanagari digits (०-९) to English (0-9): "५५/५" = 55.500
 
-BATCH STRUCTURE:
-Bills are written in BATCHES. Each batch row has:
-- Number of bags weighed together (usually 10, sometimes 5, 3, 2, 1)
-- Total combined weight of those bags
+TWO BILL FORMATS — detect which one this bill uses:
 
-For example, 25 bags of wheat might be written as 3 batch rows:
-  Batch 1: 10 bags, 535.5 kg
-  Batch 2: 10 bags, 539.2 kg  
-  Batch 3: 5 bags, 256.8 kg
+FORMAT A — INDIVIDUAL BAG WEIGHTS:
+Each number is a SINGLE BAG's weight. The bill lists individual bag weights
+in a column, and the number of bags is written separately (e.g. "16 bags").
+Example: "16 bags" + column of numbers: 55|0, 51|0, 56|0, 52|0...
+Each number = 1 bag. Total bags = count of numbers.
 
-COMMODITY NAMES:
-Common Indian agricultural commodities:
-- गेहूँ/Wheat, चावल/राइस/Rice, बाजरा/Bajra, मक्का/Maize, अरहर/Arhar, चना/Chana/Chickpea, सरसो/Mustard, ज्वार/Jowar, उड़द/Urad, मूंग/Mung, सोया/Soya, तिल/Til/Sesame, जुट/Jute, गन्ना/Sugarcane, कपास/Cotton, आलू/Potato, प्याज/Onion, टमाटर/Tomato
+FORMAT B — BATCH WEIGHTS:
+Numbers are grouped in batch rows. Each row has a bag count + combined weight.
+Example: "10 bags 535.5 kg", "10 bags 539.2 kg", "5 bags 256.8 kg"
+Each row's weight is the COMBINED weight of those bags.
 
-OUTPUT FORMAT (strict JSON):
+OUTPUT FORMAT:
 {
   "commodities": [
     {
       "name": "Wheat",
       "nameHindi": "गेहूँ",
+      "format": "individual",
+      "individualWeights": [55.0, 51.0, 56.0, 52.0],
+      "batches": [],
+      "rate": "25",
+      "unit": "kg"
+    },
+    {
+      "name": "Rice",
+      "nameHindi": "चावल",
+      "format": "batch",
+      "individualWeights": [],
       "batches": [
         { "bagCount": 10, "weight": 535.500 },
-        { "bagCount": 10, "weight": 539.200 },
         { "bagCount": 5, "weight": 256.800 }
       ],
-      "rate": "25.25",
+      "rate": "28.50",
       "unit": "kg"
     }
   ]
 }
 
 Rules:
-- "rate" is the price per unit as a string (e.g. "25.25")
-- "unit" is either "kg" or "quintal"
-- If rate is not found, set rate to "" and unit to "kg"
-- Read EACH commodity's batches SEPARATELY — do not copy weights from one commodity to another
-- The last batch is often smaller (remainder of bags)
-- Each batch weight is the COMBINED weight of those bags, NOT a single bag's weight
-- Convert ALL Devanagari digits to English decimal digits
-- Apply the number normalization rules above
-- If you can't read a number, use 0
-- Output ONLY JSON, nothing else`
+- "format": "individual" if each number is 1 bag's weight
+- "format": "batch" if numbers are combined batch totals
+- "individualWeights": array of numbers (for individual format)
+- "batches": array of {bagCount, weight} (for batch format)
+- "rate": price per unit as string (e.g. "25" or "21.10")
+- "unit": "kg" or "quintal"
+- Read EACH commodity separately — do NOT copy data between commodities
+- Convert all Devanagari digits to English
+- Apply number normalization rules
+- If unreadable, use 0
+- Output ONLY JSON`
 
 export async function POST(req: NextRequest) {
   try {
@@ -165,13 +171,32 @@ export async function POST(req: NextRequest) {
     let grandTotalWeight = 0
 
     const commodities = parsed.commodities.map((c: any) => {
-      const batches = (c.batches || []).map((b: any) => ({
-        bagCount: Math.max(0, Math.round(Number(b.bagCount) || 0)),
-        weight: Math.round(Number(b.weight || 0) * 1000) / 1000,
-      }))
+      const isIndividual = c.format === 'individual' || (c.individualWeights && c.individualWeights.length > 0 && (!c.batches || c.batches.length === 0))
 
-      const totalBags = batches.reduce((s: number, b: any) => s + b.bagCount, 0)
-      const totalWeight = Math.round(batches.reduce((s: number, b: any) => s + b.weight, 0) * 1000) / 1000
+      let batches: { bagCount: number; weight: number; individualWeights?: number[] }[] = []
+      let totalBags = 0
+      let totalWeight = 0
+
+      if (isIndividual && c.individualWeights && c.individualWeights.length > 0) {
+        // Individual bag weights — each number is 1 bag
+        const weights = c.individualWeights.map((w: any) => Math.round(Number(w || 0) * 1000) / 1000)
+        totalBags = weights.length
+        totalWeight = Math.round(weights.reduce((s: number, w: number) => s + w, 0) * 1000) / 1000
+        // Store as a single batch with all individual weights
+        batches = [{
+          bagCount: weights.length,
+          weight: totalWeight,
+          individualWeights: weights,
+        }]
+      } else {
+        // Batch format — each row has bagCount + combined weight
+        batches = (c.batches || []).map((b: any) => ({
+          bagCount: Math.max(0, Math.round(Number(b.bagCount) || 0)),
+          weight: Math.round(Number(b.weight || 0) * 1000) / 1000,
+        }))
+        totalBags = batches.reduce((s: number, b: any) => s + b.bagCount, 0)
+        totalWeight = Math.round(batches.reduce((s: number, b: any) => s + b.weight, 0) * 1000) / 1000)
+      }
 
       grandTotalBags += totalBags
       grandTotalWeight += totalWeight
