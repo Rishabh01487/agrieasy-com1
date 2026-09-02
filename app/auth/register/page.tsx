@@ -203,7 +203,7 @@ export default function Register() {
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={lbl}>Full Name</label>
-            <input type="text" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Rishabh Gupta" style={inp} />
+            <input type="text" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Arjun Singh" style={inp} />
             {errors.name && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.name.message}</p>}
           </div>
           <div>
