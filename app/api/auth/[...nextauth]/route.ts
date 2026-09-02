@@ -69,11 +69,23 @@ const handler = NextAuth({
                         // Generate a unique phone number — add timestamp to avoid collisions
                         const timestamp = Date.now().toString().slice(-8)
                         const phone = `9${timestamp}${Math.floor(Math.random() * 100)}`
+                        // Read the role from the OAuth state/query params.
+                        // The login/register page passes the selected role via
+                        // authorization: { params: { role } } which ends up in
+                        // the callback URL. Default to 'buyer' if not found.
+                        const validRoles = ['farmer', 'buyer', 'transporter']
+                        let selectedRole = 'buyer'
+                        const stateStr = (account as any)?.oauth_state || (account as any)?.state || ''
+                        const roleMatch = stateStr.match(/role=(\w+)/)
+                        if (roleMatch && validRoles.includes(roleMatch[1])) {
+                            selectedRole = roleMatch[1]
+                        }
+
                         await User.create({
                             email: profile.email,
                             phone,
                             password: await bcrypt.hash(randomPassword, 10),
-                            role: 'buyer',
+                            role: selectedRole,
                             address: '',
                             firmName: profile.name || '',
                         })
