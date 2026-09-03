@@ -25,14 +25,11 @@ export default function Login() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    // Only allow roles that actually have a dashboard page. Reject anything
-    // else (e.g. ?role=admin would otherwise redirect to a non-existent
-    // /admin/dashboard after OAuth).
     const allowedRoles = ['farmer', 'buyer', 'transporter'] as const
     const paramRole = params.get('role') || 'farmer'
     setRole(allowedRoles.includes(paramRole as any) ? paramRole : 'farmer')
     if (params.get('registered') === '1') {
-      setSuccess('Account created! Please sign in.')
+      setSuccess(params.get('google') === '1' ? 'Account created! Click "Continue with Google" to sign in.' : 'Account created! Please sign in.')
     }
   }, [])
 
@@ -67,8 +64,6 @@ export default function Login() {
       localStorage.setItem('userEmail', user.email)
       localStorage.setItem('userRole', user.role)
       localStorage.setItem('token', token)
-      // Role-aware redirect — only farmer/buyer/transporter have a /dashboard
-      // route. Admin goes to /admin. Driver goes to the transporter dashboard
       const dashboardPath =
         user.role === 'admin' ? '/admin' :
         user.role === 'farmer' ? '/farmer/dashboard' :

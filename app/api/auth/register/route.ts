@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Invalid registration data', v.errors)
     const data = v.data
 
-    if (data.role === 'farmer' && !data.aadhaarNumber) {
+    const isGoogleUser = body.isGoogleUser === true || (typeof body.password === 'string' && body.password.startsWith('google_oauth_'))
+
+    if (data.role === 'farmer' && !isGoogleUser && !data.aadhaarNumber) {
       return badRequest('Aadhar number required for farmers')
     }
 
@@ -36,12 +38,7 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
 
-    // Normalize address: the schema accepts either a string (from the
-    const addressStr = (() => {
-      if (!data.address) return ''
-      if (typeof data.address === 'string') return data.address
-      return `${data.address.fullAddress}, ${data.address.district}, ${data.address.state} - ${data.address.pinCode}`
-    })()
+    const addressStr = typeof data.address === 'string' ? data.address : (data.address ? `${data.address.fullAddress}, ${data.address.district}, ${data.address.state} - ${data.address.pinCode}` : '')
 
     const user = await User.create({
       name: data.name,

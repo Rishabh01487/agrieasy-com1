@@ -20,29 +20,20 @@ export default function AuthSync() {
             .then(res => res.json())
             .then(data => {
                 if (data.registered === false) {
-                    // User not in DB — redirect to registration with Google info prefilled
                     if (typeof window !== 'undefined') {
                         const path = window.location.pathname
-                        // Only redirect if we're on login/register page (not already on register)
                         if (path.includes('/auth/login')) {
-                            const params = new URLSearchParams({
-                                google: '1',
-                                email: data.email || email,
-                                name: data.name || '',
-                            })
+                            const params = new URLSearchParams({ google: '1', email: data.email || email, name: data.name || '' })
                             window.location.href = `/auth/register?${params}`
                         }
                     }
                     return
                 }
-
                 if (data.registered === true && data.token) {
                     localStorage.setItem('token', data.token)
                     localStorage.setItem('userId', data.userId)
                     localStorage.setItem('userEmail', email)
                     localStorage.setItem('userRole', data.role || 'buyer')
-
-                    // Redirect to dashboard if on auth pages
                     if (typeof window !== 'undefined') {
                         const path = window.location.pathname
                         if (path.includes('/auth/login') || path.includes('/auth/register')) {

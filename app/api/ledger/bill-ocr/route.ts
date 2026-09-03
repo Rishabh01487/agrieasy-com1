@@ -172,30 +172,22 @@ export async function POST(req: NextRequest) {
 
     const commodities = parsed.commodities.map((c: any) => {
       const isIndividual = c.format === 'individual' || (c.individualWeights && c.individualWeights.length > 0 && (!c.batches || c.batches.length === 0))
-
-      let batches: { bagCount: number; weight: number; individualWeights?: number[] }[] = []
+      let batches: any[] = []
       let totalBags = 0
       let totalWeight = 0
 
       if (isIndividual && c.individualWeights && c.individualWeights.length > 0) {
-        // Individual bag weights — each number is 1 bag
         const weights = c.individualWeights.map((w: any) => Math.round(Number(w || 0) * 1000) / 1000)
         totalBags = weights.length
         totalWeight = Math.round(weights.reduce((s: number, w: number) => s + w, 0) * 1000) / 1000
-        // Store as a single batch with all individual weights
-        batches = [{
-          bagCount: weights.length,
-          weight: totalWeight,
-          individualWeights: weights,
-        }]
+        batches = [{ bagCount: weights.length, weight: totalWeight, individualWeights: weights }]
       } else {
-        // Batch format — each row has bagCount + combined weight
         batches = (c.batches || []).map((b: any) => ({
           bagCount: Math.max(0, Math.round(Number(b.bagCount) || 0)),
           weight: Math.round(Number(b.weight || 0) * 1000) / 1000,
         }))
         totalBags = batches.reduce((s: number, b: any) => s + b.bagCount, 0)
-        totalWeight = Math.round(batches.reduce((s: number, b: any) => s + b.weight, 0) * 1000) / 1000)
+        totalWeight = Math.round(batches.reduce((s: number, b: any) => s + b.weight, 0) * 1000) / 1000
       }
 
       grandTotalBags += totalBags
