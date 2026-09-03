@@ -8,6 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Spinner } from '@/app/components/Spinner'
 import { Icon, IconButton } from '@/lib/icons'
 import CommentSheet from './components/CommentSheet'
+import './cssfx.css'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -722,16 +723,9 @@ export default function AgriSocialFeed() {
 
                     {/* Posts */}
                     {loading ? (
-                        <div>
-                            {[1, 2, 3].map(i => (
-                                <div key={i} style={{ background: SOCIAL.white, borderRadius: '12px', border: `1px solid ${SOCIAL.border}`, padding: '16px', marginBottom: '16px', boxShadow: SHARED.shadow }}>
-                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: SOCIAL.border, flexShrink: 0 }} />
-                                        <div style={{ flex: 1 }}><div style={{ height: '14px', background: SOCIAL.bgSub, borderRadius: '4px', marginBottom: '6px', width: '60%' }} /><div style={{ height: '10px', background: SOCIAL.bgSub, borderRadius: '4px', width: '40%' }} /></div>
-                                    </div>
-                                    <div style={{ height: '220px', background: SOCIAL.bgSub, borderRadius: '8px' }} />
-                                </div>
-                            ))}
+                        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                            <div className="fx-loader-dots"><span></span><span></span><span></span></div>
+                            <p className="fx-text-shimmer" style={{ color: SOCIAL.muted, fontSize: '0.86rem', fontWeight: 700, marginTop: 16 }}>Loading feed…</p>
                         </div>
                     ) : error ? (
                         <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
@@ -763,7 +757,7 @@ export default function AgriSocialFeed() {
                             <div ref={sentinelRef} style={{ height: 1 }} />
                             {loadingMore && (
                                 <div style={{ textAlign: 'center', padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
-                                    <Spinner size={24} color={SOCIAL.primary} />
+                                    <div className="fx-loader-bars"><span></span><span></span><span></span><span></span><span></span></div>
                                 </div>
                             )}
                             {!hasMore && posts.length > 0 && (

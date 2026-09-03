@@ -9,6 +9,7 @@ import { applyInstagramFilterToBlob } from '@/lib/camera-presets'
 import { ADVANCED_FILTERS, FILTER_CATEGORIES } from '@/lib/advanced-filters'
 import { useAdvancedFilter } from '@/lib/use-advanced-filter'
 import ProCamera from '../components/ProCamera'
+import '../cssfx.css'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
@@ -894,10 +895,10 @@ function CreateContent() {
                             {submitting ? (uploadProgress > 0 && uploadProgress < 100 ? `⏳ Uploading… ${uploadProgress}%` : '⏳ Sharing…') : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
                         </button>
 
-                        {/* Upload progress bar */}
+                        {/* Upload progress bar — CSSFX animated stripes */}
                         {submitting && uploadProgress > 0 && uploadProgress < 100 && (
-                            <div style={{ width: '100%', height: '6px', background: 'rgba(0,0,0,0.1)', borderRadius: '100px', marginTop: '8px', overflow: 'hidden' }}>
-                                <div style={{ width: `${uploadProgress}%`, height: '100%', background: SOCIAL.primary, borderRadius: '100px', transition: 'width 0.3s ease' }} />
+                            <div className="fx-upload-progress" style={{ marginTop: 8 }}>
+                                <div className="fx-upload-progress-bar" style={{ width: `${uploadProgress}%` }} />
                             </div>
                         )}
                     </div>
