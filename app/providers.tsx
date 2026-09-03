@@ -2,10 +2,8 @@
 
 import { SessionProvider } from 'next-auth/react'
 import { Component, ReactNode } from 'react'
+import AuthSync from './components/AuthSync'
 
-// Wrap SessionProvider in an error boundary so that if next-auth ever
-// throws during render (e.g. misconfigured env vars, network error
-// fetching /api/auth/session), it doesn't take down the entire app —
 class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
     constructor(props: { children: ReactNode }) {
         super(props)
@@ -15,13 +13,18 @@ class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasEr
         return { hasError: true }
     }
     componentDidCatch(error: Error) {
-        console.warn('SessionProvider crashed (non-fatal — phone+password auth still works):', error.message)
+        console.warn('SessionProvider crashed:', error.message)
     }
     render() {
         if (this.state.hasError) {
             return this.props.children
         }
-        return <SessionProvider>{this.props.children}</SessionProvider>
+        return (
+            <SessionProvider>
+                {this.props.children}
+                <AuthSync />
+            </SessionProvider>
+        )
     }
 }
 
