@@ -103,22 +103,52 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [address, setAddress] = useState('')
+  const [isGoogleUser, setIsGoogleUser] = useState(false)
+  const [googleEmail, setGoogleEmail] = useState('')
   const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormData>()
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('google') === '1') {
+      setIsGoogleUser(true)
+      const email = params.get('email') || ''
+      const name = params.get('name') || ''
+      setGoogleEmail(email)
+      if (email) setValue('email', email)
+      if (name) setValue('name', name)
+    }
+    const r = params.get('role') as 'farmer' | 'buyer' | 'transporter' | null
+    if (r && ['farmer', 'buyer', 'transporter'].includes(r)) setRole(r)
+  }, [setValue])
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
     setError('')
     if (!address.trim()) { setError('Please enter your address'); setIsLoading(false); return }
     try {
+      const body: Record<string, any> = {
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        role,
+        address,
+        ...(isGoogleUser
+          ? { password: 'google_oauth_' + Math.random().toString(36).slice(2) + Date.now() }
+          : { password: data.password }
+        ),
+      }
+      if (role === 'buyer') { body.firmName = data.firmName; body.gstin = data.gstin }
+      if (role === 'farmer' && !isGoogleUser) { body.aadhaarNumber = data.aadhar }
+      if (role === 'transporter') {
+        body.transporterCompanyName = data.companyName
+        body.transporterGstin = data.transporterGstin
+        body.drivingLicense = data.drivingLicense
+      }
+
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          role,
-          address,
-          aadhaarNumber: data.aadhar,
-        }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -132,7 +162,11 @@ export default function Register() {
         setIsLoading(false)
         return
       }
-      router.push('/auth/login?role=' + role + '&registered=1')
+      if (isGoogleUser) {
+        router.push('/auth/login?role=' + role + '&registered=1&google=1')
+      } else {
+        router.push('/auth/login?role=' + role + '&registered=1')
+      }
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -140,7 +174,7 @@ export default function Register() {
     }
   }
 
-  useEffect(() => { setValue('address', address) }, [address, setValue])
+  useEffect(() => { /* address tracked via state */ }, [address])
 
   const lbl = labelStyle({ text: AUTH.text, muted: AUTH.muted })
   const inp = inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' })
@@ -177,8 +211,8 @@ export default function Register() {
           ))}
         </div>
 
-        {/* Google Sign Up */}
-        <button onClick={() => signIn('google', { callbackUrl: `/${role}/dashboard` })} style={{ width: '100%', padding: '11px', borderRadius: '12px', background: AUTH.bg, border: `1.5px solid ${AUTH.border}`, color: AUTH.text, fontSize: '0.93rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px', fontFamily: SHARED.font, transition: 'background 0.2s, border-color 0.2s' }}>
+        {!isGoogleUser && (
+        <button onClick={() => signIn('google', { callbackUrl: '/auth/register' })} style={{ width: '100%', padding: '11px', borderRadius: '12px', background: AUTH.bg, border: `1.5px solid ${AUTH.border}`, color: AUTH.text, fontSize: '0.93rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px', fontFamily: SHARED.font, transition: 'background 0.2s, border-color 0.2s' }}>
           <svg width="18" height="18" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -187,6 +221,13 @@ export default function Register() {
           </svg>
           Sign up with Google
         </button>
+        )}
+
+        {isGoogleUser && (
+          <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#16a34a', fontSize: '0.82rem', fontWeight: 600, fontFamily: SHARED.font }}>
+            ✅ Complete your registration with {googleEmail}
+          </div>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
           <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
@@ -203,19 +244,21 @@ export default function Register() {
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={lbl}>Full Name</label>
-            <input type="text" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Rishabh Gupta" style={inp} />
+            <input type="text" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Arjun Singh" style={inp} />
             {errors.name && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.name.message}</p>}
           </div>
           <div>
             <label style={lbl}>Email</label>
-            <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} />
+            <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} disabled={isGoogleUser} />
             {errors.email && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.email.message}</p>}
           </div>
+          {!isGoogleUser && (
           <div>
             <label style={lbl}>Password</label>
-            <input type="password" {...register('password', { required: 'Password required', minLength: { value: 8, message: 'Min 8 characters' } })} placeholder="Min 8 characters" style={inp} />
+            <input type="password" {...register('password', { required: !isGoogleUser ? 'Password required' : false, minLength: { value: 8, message: 'Min 8 characters' } })} placeholder="Min 8 characters" style={inp} />
             {errors.password && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.password.message}</p>}
           </div>
+          )}
           <div>
             <label style={lbl}>Phone</label>
             <input type="text" {...register('phone', { required: 'Phone is required' })} placeholder="+91 XXXXX XXXXX" style={inp} />
@@ -241,7 +284,7 @@ export default function Register() {
               </div>
             </>
           )}
-          {role === 'farmer' && (
+          {role === 'farmer' && !isGoogleUser && (
             <div>
               <label style={lbl}>Aadhar Number</label>
               <input type="text" {...register('aadhar', { required: 'Aadhar is required' })} placeholder="XXXX XXXX XXXX" style={inp} />

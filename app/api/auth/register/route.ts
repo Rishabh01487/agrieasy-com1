@@ -21,7 +21,9 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Invalid registration data', v.errors)
     const data = v.data
 
-    if (data.role === 'farmer' && !data.aadhaarNumber) {
+    const isGoogleUser = typeof data.password === 'string' && data.password.startsWith('google_oauth_')
+
+    if (data.role === 'farmer' && !isGoogleUser && !data.aadhaarNumber) {
       return badRequest('Aadhar number required for farmers')
     }
 
