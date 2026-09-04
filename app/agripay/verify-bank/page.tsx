@@ -31,7 +31,7 @@ interface BankStatus {
     ifscCode?: string
 }
 
-function _VerifyBank_original() {
+function VerifyBankOriginal() {
     const router = useRouter()
     const [selectedBank, setSelectedBank] = useState<null | typeof BANKS[0]>(null)
     const [accountNumber, setAccountNumber] = useState('')

@@ -34,7 +34,7 @@ const typeLabel: Record<string, string> = {
 
 const FILTERS = [['all', 'All'], ['topup', 'Added'], ['send', 'Sent'], ['receive', 'Received'], ['bill_pay', 'Bills'], ['paylater_borrow', 'PayLater']]
 
-function _TransactionHistory_original() {
+function TransactionHistoryOriginal() {
     const [txns, setTxns] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')

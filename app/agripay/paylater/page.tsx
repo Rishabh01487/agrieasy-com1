@@ -19,7 +19,7 @@ interface Loan {
     interestRateDefault: number
 }
 
-function _PayLaterPage_original() {
+function PayLaterPageOriginal() {
     const [wallet, setWallet] = useState<any>(null)
     const [activeLoans, setActiveLoans] = useState<Loan[]>([])
     const [closedLoans, setClosedLoans] = useState<Loan[]>([])

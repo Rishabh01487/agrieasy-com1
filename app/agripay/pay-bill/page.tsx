@@ -112,7 +112,7 @@ function PayBillContent() {
     )
 }
 
-function _PayBill_original() {
+function PayBillOriginal() {
     return (
         <Suspense fallback={<div style={{ minHeight: '100vh', background: AGRI.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: AGRI.primary, fontWeight: 700, fontFamily: SHARED.font }}>Loading…</div>}>
             <PayBillContent />

@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { AGRI, SHARED, navStyle, inputStyle } from '@/lib/styles'
 
-function _ScanToPay_original() {
+function ScanToPayOriginal() {
     const [agripayId, setAgripayId] = useState('')
     const [userName, setUserName] = useState('')
     const [loading, setLoading] = useState(true)

@@ -10,7 +10,7 @@ import { AGRI, SHARED, navStyle, labelStyle } from '@/lib/styles'
 
 const PRESETS = [100, 200, 500, 1000, 2000, 5000]
 
-function _AddMoney_original() {
+function AddMoneyOriginal() {
     const router = useRouter()
     const [amount, setAmount] = useState('')
     const [loading, setLoading] = useState(false)
