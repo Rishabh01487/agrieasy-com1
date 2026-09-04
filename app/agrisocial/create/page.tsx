@@ -404,7 +404,7 @@ function CreateContent() {
 
         let mediaUrl = ''
         let mediaType = 'text'
-        let allMediaUrls: string[] = []
+        const allMediaUrls: string[] = []
 
         const filesToUpload = carouselFiles.length > 0 ? carouselFiles : (mediaFile ? [mediaFile] : [])
 

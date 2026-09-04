@@ -1,0 +1,17 @@
+# AgriEasy.com — robots.txt
+# Allow all crawlers full access. Sitemap is referenced at the bottom.
+
+User-agent: *
+Allow: /
+
+# Block API endpoints from being indexed (they return JSON, not user content)
+Disallow: /api/
+Disallow: /admin/
+Disallow: /beta
+Disallow: /gamma
+
+# Allow all public-facing pages (home, auth, dashboards, agripay, agrisocial, ledger)
+# by leaving them out of the Disallow list.
+
+# Sitemap
+Sitemap: https://agrieasy.site/sitemap.xml

@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       if (paymentConditions) query.paymentConditions = new RegExp(escapeRegex(paymentConditions), 'i')
 
       const total = await Listing.countDocuments(query)
-      let listings = await Listing.find(query)
+      const listings = await Listing.find(query)
         .populate('buyerId', 'firmName address location shopPhoto')
         .sort({ createdAt: -1 })
         .skip(skip)

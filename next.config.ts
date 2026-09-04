@@ -28,6 +28,10 @@ const nextConfig: NextConfig = {
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
+          // HSTS — force HTTPS for 2 years, include subdomains, eligible for preload list
+          // (visit https://hstspreload.org after deploy to add agrieasy.site to the list)
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
         ],
       },
       {
@@ -37,6 +41,14 @@ const nextConfig: NextConfig = {
       {
         source: '/manifest.json',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+      {
+        source: '/robots.txt',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+      {
+        source: '/sitemap.xml',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }],
       },
       {
         source: '/sw.js',
