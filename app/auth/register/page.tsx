@@ -107,6 +107,25 @@ function generateGooglePassword(): string {
   return 'Google_Oauth_' + Math.random().toString(36).slice(2, 10) + Date.now() + 'X9'
 }
 
+/** Normalize phone: strip +91, spaces, dashes — keep only 10 digits. */
+function normalizePhone(raw: string): string {
+  return (raw || '').replace(/[\s\-()]/g, '').replace(/^(\+91|91)/, '')
+}
+
+const PENDING_REG_KEY = 'pendingGoogleRegistration'
+
+/**
+ * Save role + phone to sessionStorage before triggering Google OAuth,
+ * so AuthSync can auto-register the user after OAuth completes — no
+ * second form needed.
+ */
+function savePendingRegistration(role: Role, phone: string) {
+  if (typeof window === 'undefined') return
+  try {
+    sessionStorage.setItem(PENDING_REG_KEY, JSON.stringify({ role, phone, ts: Date.now() }))
+  } catch {}
+}
+
 function RegisterContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -117,6 +136,11 @@ function RegisterContent() {
   const [isGoogleUser, setIsGoogleUser] = useState(false)
   const [googleEmail, setGoogleEmail] = useState('')
   const [googleName, setGoogleName] = useState('')
+  // Phone for one-click Google signup — collected BEFORE OAuth, so the user
+  // only needs to fill it once. After OAuth, AuthSync auto-registers using
+  // this stored value.
+  const [googlePhone, setGooglePhone] = useState('')
+  const [googlePhoneError, setGooglePhoneError] = useState('')
   const { register: formRegister, handleSubmit, formState: { errors }, setValue } = useForm<FormData>()
 
   useEffect(() => {
@@ -134,11 +158,37 @@ function RegisterContent() {
     if (r && ['farmer', 'buyer', 'transporter'].includes(r)) setRole(r)
   }, [searchParams, setValue])
 
+  /** Validate phone for one-click Google signup. */
+  function validateGooglePhone(): boolean {
+    const clean = normalizePhone(googlePhone)
+    if (!clean) {
+      setGooglePhoneError('Phone number is required')
+      return false
+    }
+    if (!/^[6-9]\d{9}$/.test(clean)) {
+      setGooglePhoneError('Enter a valid 10-digit Indian mobile number (starts with 6-9)')
+      return false
+    }
+    setGooglePhoneError('')
+    return true
+  }
+
+  /** Trigger Google OAuth, but first save role + phone to sessionStorage
+   *  so AuthSync can auto-register the user when they come back. */
+  const handleGoogleSignup = async () => {
+    if (!validateGooglePhone()) return
+    savePendingRegistration(role, normalizePhone(googlePhone))
+    // callbackUrl: '/auth/login' — AuthSync runs on this page and detects
+    // the pending registration, auto-creates the user, then redirects to
+    // the dashboard. User sees ZERO additional forms.
+    await signIn('google', { callbackUrl: '/auth/login' })
+  }
+
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
     setError('')
 
-    // Address is REQUIRED for manual users, OPTIONAL for Google users
+    // Address is REQUIRED for manual users, OPTIONAL (i.e. hidden) for Google users
     if (!isGoogleUser && !address.trim()) {
       setError('Please enter your address')
       setIsLoading(false)
@@ -190,8 +240,6 @@ function RegisterContent() {
     }
 
     try {
-      // For Google users: generate a strong password (they don't see it)
-      // For manual users: use the entered password
       const password = isGoogleUser ? generateGooglePassword() : data.password
 
       const body: Record<string, any> = {
@@ -199,7 +247,6 @@ function RegisterContent() {
         email: data.email,
         phone: data.phone,
         role,
-        // For Google users, address may be empty — server allows it
         address: address.trim() || '',
         password,
         isGoogleUser,
@@ -232,15 +279,14 @@ function RegisterContent() {
       }
 
       // After registration:
-      // - Google users: send to /auth/login with a hint to click "Continue with Google"
-      //   AuthSync will detect their existing Google session and the now-registered
-      //   user in DB, and redirect to their dashboard.
-      // - Manual users: send to /auth/login with a "Account created" success message.
-      if (isGoogleUser) {
-        router.push('/auth/login?role=' + role + '&registered=1&google=1')
-      } else {
-        router.push('/auth/login?role=' + role + '&registered=1')
-      }
+      // - Google users: AuthSync should already have detected the pending
+      //   registration and auto-registered them via the one-click flow.
+      //   Reaching this fallback form means they didn't use the one-click
+      //   flow (e.g. cleared sessionStorage, or came directly to this URL).
+      //   Send them to /auth/login — AuthSync will detect the now-registered
+      //   user and redirect to dashboard.
+      // - Manual users: send to /auth/login with success message.
+      router.push('/auth/login?role=' + role + (isGoogleUser ? '&google=1' : '') + '&registered=1')
     } catch {
       setError('Network error. Please try again.')
     } finally {
@@ -283,7 +329,70 @@ function RegisterContent() {
           ))}
         </div>
 
-        {/* Google registration banner — only for Google users */}
+        {/* Google one-click signup section.
+            For NON-Google users (first visit): show phone + Google button.
+              - User picks role (above), enters phone, clicks Google
+              - We save role+phone to sessionStorage, then trigger OAuth
+              - AuthSync auto-registers them when they return → dashboard
+              - NO second form, NO second OAuth
+            For Google users (came back via ?google=1, e.g. cleared sessionStorage):
+              - Show the fallback manual form below
+              - Hide this section */}
+        {!isGoogleUser && (
+          <>
+            <div style={{
+              background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '14px',
+              padding: '14px 16px', marginBottom: '14px',
+            }}>
+              <p style={{ margin: 0, marginBottom: '10px', fontSize: '0.83rem', fontWeight: 700, color: '#1e40af', fontFamily: SHARED.font }}>
+                ⚡ One-click Google sign-up
+              </p>
+              <label style={{ ...lbl, fontSize: '0.8rem', color: '#1e40af' }}>Phone Number <span style={{ color: '#3b82f6' }}>(required for Google sign-up)</span></label>
+              <input
+                type="tel"
+                value={googlePhone}
+                onChange={e => { setGooglePhone(e.target.value); if (googlePhoneError) setGooglePhoneError('') }}
+                placeholder="+91 XXXXX XXXXX"
+                style={{ ...inp, marginTop: '4px' }}
+              />
+              {googlePhoneError && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '4px', fontFamily: SHARED.font }}>{googlePhoneError}</p>}
+              <button
+                onClick={handleGoogleSignup}
+                type="button"
+                disabled={isLoading}
+                style={{
+                  width: '100%', padding: '11px', borderRadius: '12px',
+                  background: AUTH.bg, border: `1.5px solid ${AUTH.border}`,
+                  color: AUTH.text, fontSize: '0.93rem', fontWeight: 600,
+                  cursor: isLoading ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: '10px', marginTop: '10px',
+                  fontFamily: SHARED.font,
+                  transition: 'background 0.2s, border-color 0.2s',
+                  opacity: isLoading ? 0.7 : 1,
+                }}>
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                </svg>
+                Sign up with Google → one-click
+              </button>
+              <p style={{ margin: '8px 0 0', fontSize: '0.72rem', color: AUTH.muted, fontFamily: SHARED.font }}>
+                Google gives us your name + email. We use the phone you entered above to register you in one click — no second form.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
+              <span style={{ color: AUTH.muted, fontSize: '0.78rem', fontFamily: SHARED.font }}>or register manually</span>
+              <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
+            </div>
+          </>
+        )}
+
+        {/* Google registration banner — only for the fallback Google form */}
         {isGoogleUser && (
           <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#16a34a', fontSize: '0.82rem', fontWeight: 600, fontFamily: SHARED.font, display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>✅</span>
@@ -291,39 +400,39 @@ function RegisterContent() {
           </div>
         )}
 
-        {/* Google sign-up button — ALWAYS visible for all three roles.
-            - For non-Google users: "Sign up with Google"
-            - For Google users: "Use a different Google account"
-            callbackUrl: '/auth/login' — AuthSync will detect unregistered Google
-            users and redirect them back here with ?google=1&email=...&name=... */}
-        <button
-          onClick={() => signIn('google', { callbackUrl: '/auth/login' })}
-          type="button"
-          style={{
-            width: '100%', padding: '11px', borderRadius: '12px',
-            background: AUTH.bg, border: `1.5px solid ${AUTH.border}`,
-            color: AUTH.text, fontSize: '0.93rem', fontWeight: 600,
-            cursor: 'pointer', display: 'flex', alignItems: 'center',
-            justifyContent: 'center', gap: '10px', marginBottom: '16px',
-            fontFamily: SHARED.font,
-            transition: 'background 0.2s, border-color 0.2s',
-          }}>
-          <svg width="18" height="18" viewBox="0 0 24 24">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-          </svg>
-          {isGoogleUser ? 'Use a different Google account' : 'Sign up with Google'}
-        </button>
+        {/* Fallback Google form (shown only when ?google=1 in URL).
+            Most users won't see this — the one-click flow above handles
+            everything via sessionStorage. */}
+        {isGoogleUser && (
+          <>
+            <button
+              onClick={() => signIn('google', { callbackUrl: '/auth/login' })}
+              type="button"
+              style={{
+                width: '100%', padding: '11px', borderRadius: '12px',
+                background: AUTH.bg, border: `1.5px solid ${AUTH.border}`,
+                color: AUTH.text, fontSize: '0.93rem', fontWeight: 600,
+                cursor: 'pointer', display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: '10px', marginBottom: '16px',
+                fontFamily: SHARED.font,
+                transition: 'background 0.2s, border-color 0.2s',
+              }}>
+              <svg width="18" height="18" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+              </svg>
+              Use a different Google account
+            </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
-          <span style={{ color: AUTH.muted, fontSize: '0.78rem', fontFamily: SHARED.font }}>
-            {isGoogleUser ? 'or complete the form below' : 'or register with email'}
-          </span>
-          <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
+              <span style={{ color: AUTH.muted, fontSize: '0.78rem', fontFamily: SHARED.font }}>or complete the form below</span>
+              <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
+            </div>
+          </>
+        )}
 
         {error && (
           <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#dc2626', fontSize: '0.875rem', fontWeight: 600, fontFamily: SHARED.font }}>
@@ -331,6 +440,7 @@ function RegisterContent() {
           </div>
         )}
 
+        {/* Manual form (always visible for non-Google users, fallback form for Google users) */}
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={lbl}>Full Name</label>
@@ -353,20 +463,18 @@ function RegisterContent() {
           )}
           <div>
             <label style={lbl}>Phone</label>
-            <input type="text" {...formRegister('phone', { required: 'Phone is required' })} placeholder="+91 XXXXX XXXXX" style={inp} />
+            <input type="tel" {...formRegister('phone', { required: 'Phone is required' })} placeholder="+91 XXXXX XXXXX" style={inp} />
             {errors.phone && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.phone.message}</p>}
           </div>
 
-          {/* Address — REQUIRED for manual users, OPTIONAL for Google users */}
-          <div>
-            <label style={lbl}>
-              Address
-              {isGoogleUser && <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.78rem' }}> (optional — you can add it later from your dashboard)</span>}
-              {!isGoogleUser && <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.78rem' }}> (start typing — suggestions will appear)</span>}
-            </label>
-            <AddressAutocomplete value={address} onChange={setAddress} placeholder="Village, City, State…" />
-            {!address && !isGoogleUser && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>Address is required</p>}
-          </div>
+          {/* Address — REQUIRED for manual users, HIDDEN for Google users (not even optional) */}
+          {!isGoogleUser && (
+            <div>
+              <label style={lbl}>Address <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.78rem' }}>(start typing — suggestions will appear)</span></label>
+              <AddressAutocomplete value={address} onChange={setAddress} placeholder="Village, City, State…" />
+              {!address && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>Address is required</p>}
+            </div>
+          )}
 
           {role === 'buyer' && (
             <>
