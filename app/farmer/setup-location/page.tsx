@@ -131,13 +131,13 @@ export default function FarmerSetupLocation() {
       return
     }
     setUsingGps(true)
-    setGpsStatus('Getting your location…')
+    setGpsStatus('Getting your location… (please tap "Allow" in the browser popup)')
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords
         setLat(latitude)
         setLng(longitude)
-        setGpsStatus('Location captured! Reversing to address…')
+        setGpsStatus('✅ GPS captured! Reversing to address…')
         try {
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=14&accept-language=en`,
@@ -151,16 +151,34 @@ export default function FarmerSetupLocation() {
           }
           setGpsStatus('✅ Location captured from GPS')
         } catch {
-          setGpsStatus('✅ Location captured (address autofill skipped)')
+          setGpsStatus('✅ GPS captured (address autofill skipped — type your village in the box below)')
         } finally {
           setUsingGps(false)
         }
       },
       (err) => {
-        setGpsStatus(`GPS error: ${err.message}`)
+        // Translate cryptic geolocation errors into actionable messages
+        let msg = 'GPS error: '
+        switch (err.code) {
+          case 1:  // PERMISSION_DENIED
+            msg = '⚠️ Location permission denied. To fix: tap the lock icon (🔒) in the address bar → Site settings → Allow "Location" → Reload this page.'
+            break
+          case 2:  // POSITION_UNAVAILABLE
+            msg = '⚠️ GPS signal unavailable. Move to an open area (away from walls/roof) and try again, or type your village in the box below.'
+            break
+          case 3:  // TIMEOUT
+            msg = '⚠️ GPS timed out. Move to an open area and try again, or type your village name in the box below.'
+            break
+          default:
+            msg = `⚠️ GPS error: ${err.message}. You can still type your village in the box below.`
+        }
+        setGpsStatus(msg)
         setUsingGps(false)
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 },
+      // enableHighAccuracy: use GPS (not Wi-Fi) for precise location
+      // timeout: 20 seconds (mobile GPS locks can be slow on first use)
+      // maximumAge: 0 — never use cached position (always fresh)
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
     )
   }
 
@@ -243,25 +261,39 @@ export default function FarmerSetupLocation() {
             </div>
           )}
 
-          {/* GPS button */}
+          {/* GPS button — primary CTA, more prominent so users notice it */}
           <button
             type="button"
             onClick={useGps}
             disabled={usingGps}
             style={{
-              width: '100%', padding: '11px 16px',
-              background: usingGps ? FARMER.muted : FARMER.white,
-              color: FARMER.primary, border: `1.5px solid ${FARMER.border}`,
-              borderRadius: 12, fontSize: '0.9rem', fontWeight: 700,
+              width: '100%', padding: '13px 16px',
+              background: usingGps ? FARMER.muted : FARMER.gradient,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 12, fontSize: '0.95rem', fontWeight: 800,
               cursor: usingGps ? 'not-allowed' : 'pointer', marginBottom: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              boxShadow: usingGps ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
               transition: 'all 0.2s ease',
             }}
           >
-            {usingGps ? '⏳ Detecting…' : '📍 Use my current location (GPS)'}
+            {usingGps ? '⏳ Detecting your location…' : '📍 Use my current location (GPS)'}
           </button>
           {gpsStatus && (
-            <p style={{ margin: '0 0 14px', color: FARMER.muted, fontSize: '0.78rem', textAlign: 'center' }}>{gpsStatus}</p>
+            <div style={{
+              margin: '0 0 14px',
+              padding: '10px 12px',
+              background: gpsStatus.startsWith('✅') ? '#dcfce7' : (gpsStatus.startsWith('⚠️') ? '#fef3c7' : FARMER.primaryLight),
+              border: `1px solid ${gpsStatus.startsWith('✅') ? '#86efac' : (gpsStatus.startsWith('⚠️') ? '#fcd34d' : FARMER.border)}`,
+              borderRadius: 10,
+              color: gpsStatus.startsWith('✅') ? '#16a34a' : (gpsStatus.startsWith('⚠️') ? '#92400e' : FARMER.text),
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              lineHeight: 1.4,
+            }}>
+              {gpsStatus}
+            </div>
           )}
 
           {/* Address autocomplete */}
