@@ -1,0 +1,24 @@
+# Cloudflare Workers configuration
+#
+# This file tells Cloudflare Workers Builds (the GitHub integration) how to
+# build & deploy the OCR worker from this repo on every push.
+#
+# Two Cloudflare services are connected to this repo's Workers Builds:
+#   1. agrieasy-ocr        — the legitimate worker (CORS proxy for Z-AI vision API)
+#   2. agrieasy-com1       — auto-created mirror; we leave it building the same
+#                           worker code (harmless — just an extra Worker endpoint)
+#
+# Before this file existed, Workers Builds failed on every commit because it
+# couldn't find the entry point. Now it deploys cloudflare-worker/worker.js
+# to both services on every push to main.
+
+name = "agrieasy-ocr"
+main = "cloudflare-worker/worker.js"
+
+# ES modules support — needed for `export default { fetch() {} }` syntax
+# in cloudflare-worker/worker.js. Any date on/after 2024-09-23 enables the
+# modern Workers runtime.
+compatibility_date = "2024-09-23"
+
+# Workers Builds auto-deploys on every push to the production branch.
+# No build command needed — the worker is plain JS, no bundler required.
