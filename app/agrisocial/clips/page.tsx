@@ -561,28 +561,97 @@ export default function KrishiClips() {
     const containerRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
 
+    // Track which clip IDs we've already fired a view event for, so we
+    // don't re-fire when the same clip scrolls back into view.
+    const viewedClipsRef = useRef<Set<string>>(new Set())
+
+    // localStorage cache key — per-category, last page only.
+    // This is the stale-while-revalidate pattern: show cached clips
+    // IMMEDIATELY (0s load time), then fetch fresh ones in the background.
+    const cacheKey = `agrieasy:clips:${category}:p1`
 
     const loadClips = async (pageNum: number, append: boolean) => {
         try {
             if (append) setLoadingMore(true)
-            else setLoading(true)
+            // First load: try to show cached clips instantly (0s) before
+            // the network call completes. The "loading" state stays true
+            // only if there's NO cached data — so users with a previous
+            // visit see clips immediately.
+            if (!append) {
+                try {
+                    const cached = localStorage.getItem(cacheKey)
+                    if (cached) {
+                        const parsed = JSON.parse(cached)
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            setClips(parsed)
+                            setLoading(false)
+                        }
+                    }
+                } catch {}
+            }
             const url = category === 'all' ? `/api/social/clips?page=${pageNum}` : `/api/social/clips?page=${pageNum}&category=${category}`
             const res = await authFetch(url)
+            if (!res.ok) throw new Error('Server error')
             const d = await res.json()
             const clipsData = d?.data?.clips || d?.clips || []
             const total = d?.meta?.total || d?.data?.meta?.total || 0
             setClips(prev => append ? [...prev, ...clipsData] : clipsData)
             setHasMore(clipsData.length > 0 && (append ? (clips.length + clipsData.length < total) : (clipsData.length < total)))
             pageRef.current = pageNum
-        } catch {}
+            // Cache page 1 for instant load next time
+            if (!append && pageNum === 1) {
+                try { localStorage.setItem(cacheKey, JSON.stringify(clipsData)) } catch {}
+            }
+        } catch {
+            if (!append) {
+                // Network error: keep cached clips visible if we have them,
+                // otherwise show the empty state.
+                if (clips.length === 0) setLoading(false)
+            }
+        }
         setLoading(false)
         setLoadingMore(false)
     }
 
+    // Fire the view endpoint for the active clip — but only once per clip
+    // per page session. This implements the "1 view per account per clip"
+    // rule: even if the user scrolls back and forth 100 times, we only
+    // hit the server ONCE per clip.
+    useEffect(() => {
+        if (!clips[activeIdx]?._id) return
+        const clipId = clips[activeIdx]._id
+        if (viewedClipsRef.current.has(clipId)) return
+        viewedClipsRef.current.add(clipId)
+        // Fire-and-forget — don't block the UI on this
+        const url = userId
+            ? `/api/social/clips/${clipId}/view?userId=${userId}`
+            : `/api/social/clips/${clipId}/view`
+        authFetch(url, { method: 'POST' }).catch(() => {})
+    }, [activeIdx, clips, userId])
+
+    // Preload cached clips synchronously on mount so first paint is instant
+    useEffect(() => {
+        try {
+            const cached = localStorage.getItem(cacheKey)
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setClips(parsed)
+                    setLoading(false)
+                }
+            }
+        } catch {}
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [category])
+
     useEffect(() => {
         pageRef.current = 1
         setHasMore(true)
+        // Reset the viewed-clips set when category changes so the new
+        // batch of clips can be viewed again.
+        viewedClipsRef.current = new Set()
         void loadClips(1, false)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [category])
 
     useEffect(() => {

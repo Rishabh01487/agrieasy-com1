@@ -5,10 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
-import { Spinner } from '@/app/components/Spinner'
 import { Icon, IconButton } from '@/lib/icons'
-import CommentSheet from './components/CommentSheet'
-import './cssfx.css'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -68,10 +65,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [liked, setLiked] = useState(viewerId ? post.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(post.likesCount || 0)
     const [saved, setSaved] = useState(viewerId ? post.savedBy?.includes(viewerId) : false)
-    const [following, setFollowing] = useState(false)
-    const [followLoading, setFollowLoading] = useState(false)
-    const [commentSheetOpen, setCommentSheetOpen] = useState(false)
+    const [showComments, setShowComments] = useState(false)
+    const [commentText, setCommentText] = useState('')
     const [comments, setComments] = useState<Comment[]>(post.comments || [])
+    const [posting, setPosting] = useState(false)
     const [imgErr, setImgErr] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [burst, setBurst] = useState(false)
@@ -126,10 +123,18 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         lastTapRef.current = now
     }
 
-    const handleCommentCountUpdate = (newCount: number) => {
-        // CommentSheet calls this when a comment is added — updates the count badge
-        // We don't need to do anything special here since comments state is managed
-        // inside CommentSheet, but we keep this for future count sync if needed.
+    const handleComment = async () => {
+        if (!commentText.trim() || !viewerId) return
+        setPosting(true)
+        try {
+            const res = await authFetch('/api/social/comment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: viewerId, postId: post._id, text: commentText }) })
+            if (res.ok) {
+                const d = await res.json()
+                setComments(c => [...c, d.comment])
+                setCommentText('')
+            }
+        } catch {}
+        finally { setPosting(false) }
     }
 
     const handleSave = async () => {
@@ -176,62 +181,16 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const ytId = post.mediaUrl ? (post.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
 
     return (
-        <div className="fade-in-up" style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', boxShadow: SHARED.shadowMd }}>
+        <div className="fade-in-up" style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', overflow: 'hidden', marginBottom: '16px', boxShadow: SHARED.shadowMd }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 14px' }}>
                 <Link href={`/agrisocial/profile/${authorId}`} style={{ textDecoration: 'none' }}>
                     <Avatar name={authorName} size={38} src={!isDeletedUser ? (post.userId as User).profilePic : undefined} />
                 </Link>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {makeHandle(authorName)}
-                        </Link>
-                        {viewerId !== authorId && authorId && (
-                            <button
-                                onClick={async () => {
-                                    if (!viewerId) { window.location.href = '/auth/login'; return }
-                                    if (followLoading) return
-                                    setFollowLoading(true)
-                                    const prev = following
-                                    setFollowing(!prev)
-                                    try {
-                                        await authFetch('/api/social/follow', {
-                                            method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
-                                            body: JSON.stringify({ followerId: viewerId, followingId: authorId }),
-                                        })
-                                    } catch { setFollowing(prev) }
-                                    setFollowLoading(false)
-                                }}
-                                style={{
-                                    // Glass effect: semi-transparent blue + blur + subtle border + shadow
-                                    background: following
-                                        ? 'linear-gradient(135deg, rgba(217,83,79,0.12), rgba(217,83,79,0.06))'
-                                        : 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))',
-                                    color: following ? SOCIAL.primary : '#fff',
-                                    border: following
-                                        ? '1px solid rgba(217,83,79,0.3)'
-                                        : '1px solid rgba(217,83,79,0.5)',
-                                    borderRadius: '100px',
-                                    padding: '4px 14px',
-                                    fontSize: '0.68rem',
-                                    fontWeight: 800,
-                                    cursor: followLoading ? 'wait' : 'pointer',
-                                    transition: 'all 0.25s ease',
-                                    flexShrink: 0,
-                                    backdropFilter: 'blur(8px) saturate(180%)',
-                                    WebkitBackdropFilter: 'blur(8px) saturate(180%)',
-                                    boxShadow: following
-                                        ? 'inset 0 1px 0 rgba(255,255,255,0.5), 0 1px 3px rgba(217,83,79,0.15)'
-                                        : 'inset 0 1px 0 rgba(255,255,255,0.3), 0 2px 6px rgba(217,83,79,0.25)',
-                                    textShadow: following ? 'none' : '0 1px 2px rgba(0,0,0,0.1)',
-                                }}
-                            >
-                                {!viewerId ? '+ Follow' : following ? 'Following' : '+ Follow'}
-                            </button>
-                        )}
-                    </div>
+                    <Link href={`/agrisocial/profile/${authorId}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', textDecoration: 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {makeHandle(authorName)}
+                    </Link>
                     <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {roleLabel[authorRole || ''] || 'User'}
                         {post.location ? ` · 📍 ${post.location}` : ''}
@@ -260,7 +219,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     {carouselImages.length > 1 && (
                         <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
                             {carouselImages.map((_, i) => (
-                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#D9534F' : 'rgba(255,255,255,0.5)' }} />
+                                <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#3b82f6' : 'rgba(255,255,255,0.5)' }} />
                             ))}
                         </div>
                     )}
@@ -278,16 +237,16 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     )}
                 </div>
             ) : post.mediaUrl && post.mediaType === 'video' ? (
-                <video src={post.mediaUrl} controls preload="metadata" style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
+                <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
             ) : null}
 
             {/* Actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '8px 10px' }}>
                 <IconButton name="heart" size={24} title="Like" onClick={handleLike}
-                    active={liked} activeColor="#D9534F" color={SOCIAL.text}
+                    active={liked} activeColor="#ef4444" color={SOCIAL.text}
                     style={{ transform: liked ? 'scale(1.05)' : 'scale(1)' }}
                 />
-                <IconButton name="comment" size={24} title="Comment" onClick={() => setCommentSheetOpen(true)} color={SOCIAL.text} />
+                <IconButton name="comment" size={24} title="Comment" onClick={() => setShowComments(s => !s)} color={SOCIAL.text} />
                 <Link href={`/agrisocial/dm?sharePost=${post._id}`} title="Share via DM" style={{ textDecoration: 'none', display: 'inline-flex' }}>
                     <IconButton name="send" size={22} color={SOCIAL.text} />
                 </Link>
@@ -297,7 +256,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     style={{ marginLeft: 'auto' }}
                 />
                 {isOwner && (
-                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#8A6060" />
+                    <IconButton name="trash" size={22} title="Delete" onClick={() => setShowDeleteConfirm(true)} color="#94a3b8" />
                 )}
             </div>
 
@@ -333,10 +292,10 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* View comments link — opens the Instagram-style bottom sheet */}
-            {comments.length > 0 && (
+            {/* View comments link */}
+            {comments.length > 0 && !showComments && (
                 <div style={{ padding: '0 14px 10px' }}>
-                    <button onClick={() => setCommentSheetOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: SOCIAL.muted, fontSize: '0.82rem', fontWeight: 600, padding: 0 }}>
+                    <button onClick={() => setShowComments(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: SOCIAL.muted, fontSize: '0.82rem', fontWeight: 600, padding: 0 }}>
                         View all {comments.length} comments
                     </button>
                 </div>
@@ -359,16 +318,35 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* Instagram-style comment bottom sheet */}
-            <CommentSheet
-                postId={post._id}
-                postOwnerId={typeof post.userId === 'object' ? (post.userId as User)._id : post.userId}
-                viewerId={viewerId}
-                isOpen={commentSheetOpen}
-                onClose={() => setCommentSheetOpen(false)}
-                initialComments={comments}
-                onCommentAdded={handleCommentCountUpdate}
-            />
+            {/* Comments */}
+            {showComments && (
+                <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 14px' }}>
+                    {comments.length === 0 && <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 8px', textAlign: 'center' }}>No comments yet — be first! 🌾</p>}
+                    {comments.slice(-3).map((c: Comment, i: number) => {
+                        const cn = typeof c.userId === 'object' ? ((c.userId as User).farmerName || (c.userId as User).firmName || 'User') : 'User'
+                        const cPic = typeof c.userId === 'object' ? (c.userId as User).profilePic : undefined
+                        return (
+                            <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                                <Avatar name={cn} size={28} src={cPic} />
+                                <p style={{ color: SOCIAL.text, fontSize: '0.84rem', margin: 0, paddingTop: '4px', flex: 1 }}>
+                                    <Link href={`/agrisocial/profile/${typeof c.userId === 'object' ? (c.userId as User)._id : ''}`} style={{ color: SOCIAL.text, fontWeight: 700, textDecoration: 'none' }}>{cn}</Link>{' '}{c.text}
+                                </p>
+                                <span style={{ color: SOCIAL.muted, fontSize: '0.68rem', paddingTop: '6px' }}>{timeAgo(c.createdAt)}</span>
+                            </div>
+                        )
+                    })}
+                    {viewerId ? (
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <input value={commentText} onChange={e => setCommentText(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleComment()} placeholder="Add a comment…"
+                                style={{ flex: 1, padding: '8px 14px', background: SOCIAL.bg, border: `1px solid ${SOCIAL.border}`, borderRadius: '100px', fontSize: '0.84rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }} />
+                            <button onClick={handleComment} disabled={posting || !commentText.trim()}
+                                style={{ background: SOCIAL.primary, border: 'none', borderRadius: '100px', padding: '8px 16px', color: '#fff', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', opacity: posting || !commentText.trim() ? 0.5 : 1 }}>Post</button>
+                        </div>
+                    ) : (
+                        <Link href="/auth/login" style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none' }}>Log in to comment</Link>
+                    )}
+                </div>
+            )}
         </div>
     )
 }
@@ -447,7 +425,7 @@ function SuggestedSidebar({ users, viewerId }: { users: SuggestedUser[]; viewerI
     if (users.length === 0) return null
 
     return (
-        <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '16px', boxShadow: SHARED.shadowMd }}>
+        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '16px', boxShadow: SHARED.shadowMd }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <h3 style={{ color: SOCIAL.muted, fontSize: '0.84rem', fontWeight: 700, margin: 0 }}>Suggested for you</h3>
                 <Link href="/agrisocial/search" style={{ color: SOCIAL.text, fontSize: '0.74rem', fontWeight: 700, textDecoration: 'none' }}>Find more</Link>
@@ -491,7 +469,7 @@ export default function AgriSocialFeed() {
     const pageRef = useRef(1)
     const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [category, setCategory] = useState('all')
-    const [feed, setFeed] = useState<'following' | 'ranked' | 'latest'>('latest')
+    const [feed, setFeed] = useState<'following' | 'ranked' | 'latest'>('following')
     const [unreadNotifs, setUnreadNotifs] = useState(0)
     const [unreadDMs, setUnreadDMs] = useState(0)
     const [userId] = useState(() => { try { return typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : '' } catch { return '' } })
@@ -500,51 +478,53 @@ export default function AgriSocialFeed() {
     const fetchPosts = useCallback(async (uid: string, cat: string, feedMode: typeof feed, pageNum: number, append: boolean) => {
         try {
             if (append) setLoadingMore(true)
-            else setLoading(true)
+            // First load: show cached posts INSTANTLY (0s) before the network
+            // call completes. This is the stale-while-revalidate pattern —
+            // the "loading" state stays true only if there's no cache.
+            if (!append) {
+                const cacheKey = `agrieasy:feed:${feedMode}:${cat}`
+                try {
+                    const cached = localStorage.getItem(cacheKey)
+                    if (cached) {
+                        const parsed = JSON.parse(cached)
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            setPosts(parsed)
+                            setLoading(false)
+                        }
+                    }
+                } catch {}
+            }
             setError('')
-
             const params = new URLSearchParams({ page: String(pageNum), feed: feedMode })
             if (uid) params.set('userId', uid)
             if (cat && cat !== 'all') params.set('category', cat)
-
-            // Retry logic: try up to 4 times with increasing delay.
-            // First attempt gets a long timeout (30s) to allow the server to
-            // warm up. Subsequent retries use 15s. This makes the feed resilient
-            // to transient network blips and server cold starts.
-            let lastErr: Error | null = null
-            let res: Response | null = null
-            for (let attempt = 1; attempt <= 4; attempt++) {
-                try {
-                    const timeoutMs = attempt === 1 ? 30000 : 15000
-                    const controller = new AbortController()
-                    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-                    res = await authFetch(`/api/social/posts?${params}`, { signal: controller.signal })
-                    clearTimeout(timeoutId)
-                    if (!res.ok) throw new Error(`Server error (${res.status})`)
-                    break
-                } catch (e) {
-                    lastErr = e as Error
-                    if (attempt < 4) {
-                        await new Promise(r => setTimeout(r, attempt * 1000))
-                    }
-                }
-            }
-
-            if (!res || !res.ok) throw lastErr || new Error('Server error')
+            const res = await authFetch(`/api/social/posts?${params}`)
+            if (!res.ok) throw new Error('Server error')
             const d = await res.json()
             const newPosts = d.posts || d.data?.posts || []
             const total = d.meta?.total || d.data?.meta?.total || 0
             setPosts(prev => append ? [...prev, ...newPosts] : newPosts)
             setHasMore(newPosts.length > 0 && (append ? (posts.length + newPosts.length < total) : (newPosts.length < total)))
             pageRef.current = pageNum
+            // Cache page 1 of this feed+category for instant load next time
+            if (!append && pageNum === 1) {
+                const cacheKey = `agrieasy:feed:${feedMode}:${cat}`
+                try { localStorage.setItem(cacheKey, JSON.stringify(newPosts)) } catch {}
+            }
         } catch {
-            // User-friendly message — no technical details exposed to end users.
-            if (!append) { setError('network'); setPosts([]) }
+            if (!append) {
+                if (posts.length === 0) {
+                    setError('Could not load posts. Please check your connection.')
+                    setPosts([])
+                }
+                // If we have cached posts visible, keep them rather than
+                // showing an empty state on a network blip.
+            }
         } finally {
             setLoading(false)
             setLoadingMore(false)
         }
-    }, [posts.length])
+    }, [posts.length, feed])
 
     const fetchStories = useCallback(async () => {
         if (!userId) return
@@ -591,30 +571,10 @@ export default function AgriSocialFeed() {
     useEffect(() => {
         pageRef.current = 1
         setHasMore(true)
-        // Auto-retry: if the first fetch fails, retry once after 2.5s.
-        // This handles the common case where MongoDB is still spinning up
-        // when the user first lands on the feed after login.
-        let cancelled = false
-        const loadWithRetry = async (attempt = 1) => {
-            try {
-                if (attempt === 1) {
-                    await fetchPosts(userId, category, feed, 1, false)
-                } else {
-                    // small delay before retry
-                    await new Promise(r => setTimeout(r, 2500))
-                    if (!cancelled) await fetchPosts(userId, category, feed, 1, false)
-                }
-            } catch {
-                if (attempt === 1 && !cancelled) {
-                    await loadWithRetry(2)
-                }
-            }
-        }
-        loadWithRetry(1).catch(() => {})
+        fetchPosts(userId, category, feed, 1, false).catch(() => {})
         fetchStories()
         fetchSuggested()
         fetchUnreadCounts()
-        return () => { cancelled = true }
     }, [fetchPosts, fetchStories, fetchSuggested, fetchUnreadCounts, userId, category, feed])
 
     const loadMore = useCallback(() => {
@@ -662,7 +622,7 @@ export default function AgriSocialFeed() {
                     <Link href="/" title="AgriEasy Home" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         <Icon name="home" size={24} color={SOCIAL.text} />
                     </Link>
-                    <Link href="/agrisocial/clips" title="KrishiClips" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
+                    <Link href="/agrisocial/clips" title="Reels" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         <Icon name="reels" size={24} color={SOCIAL.text} />
                     </Link>
                     <Link href="/agrisocial/explore" title="Explore" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
@@ -694,7 +654,7 @@ export default function AgriSocialFeed() {
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto' }} className="no-scrollbar">
                         {([['following', 'Following'], ['ranked', '🔥 Top'], ['latest', '⏱ Latest']] as const).map(([k, label]) => (
                             <button key={k} onClick={() => setFeed(k)}
-                                style={{ padding: '7px 16px', background: feed === k ? 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))' : 'rgba(255,255,255,0.6)', border: `1.5px solid ${feed === k ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === k ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                style={{ padding: '7px 16px', background: feed === k ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${feed === k ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === k ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                 {label}
                             </button>
                         ))}
@@ -704,7 +664,7 @@ export default function AgriSocialFeed() {
                     <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '14px', marginBottom: '6px' }} className="no-scrollbar">
                         {CATEGORIES.map(c => (
                             <button key={c.key} onClick={() => setCategory(c.key)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', background: category === c.key ? 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))' : 'rgba(255,255,255,0.6)', border: `1.5px solid ${category === c.key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: category === c.key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', background: category === c.key ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${category === c.key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: category === c.key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                 {c.icon} {c.label}
                             </button>
                         ))}
@@ -712,7 +672,7 @@ export default function AgriSocialFeed() {
 
                     {/* Create post CTA */}
                     <div onClick={() => router.push('/agrisocial/create')}
-                        style={{ background: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', boxShadow: SHARED.shadowMd }}>
+                        style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', boxShadow: SHARED.shadowMd }}>
                         <Avatar name={userId || '🌾'} size={36} />
                         <div style={{ flex: 1, padding: '9px 14px', background: SOCIAL.bg, borderRadius: '100px', color: SOCIAL.muted, fontSize: '0.86rem' }}>What&apos;s happening on your farm today?</div>
                         <div style={{ display: 'flex', gap: '6px' }}>
@@ -723,22 +683,29 @@ export default function AgriSocialFeed() {
 
                     {/* Posts */}
                     {loading ? (
-                        <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                            <div className="fx-loader-dots"><span></span><span></span><span></span></div>
-                            <p className="fx-text-shimmer" style={{ color: SOCIAL.muted, fontSize: '0.86rem', fontWeight: 700, marginTop: 16 }}>Loading feed…</p>
+                        <div>
+                            {[1, 2, 3].map(i => (
+                                <div key={i} style={{ background: SOCIAL.white, borderRadius: '12px', border: `1px solid ${SOCIAL.border}`, padding: '16px', marginBottom: '16px', boxShadow: SHARED.shadow }}>
+                                    <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: SOCIAL.border, flexShrink: 0 }} />
+                                        <div style={{ flex: 1 }}><div style={{ height: '14px', background: SOCIAL.bgSub, borderRadius: '4px', marginBottom: '6px', width: '60%' }} /><div style={{ height: '10px', background: SOCIAL.bgSub, borderRadius: '4px', width: '40%' }} /></div>
+                                    </div>
+                                    <div style={{ height: '220px', background: SOCIAL.bgSub, borderRadius: '8px' }} />
+                                </div>
+                            ))}
                         </div>
                     ) : error ? (
-                        <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
+                        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '40px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
                             <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📡</div>
-                            <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Network issue</h3>
-                            <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>A temporary network issue occurred. Please try again.</p>
+                            <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>Could not connect to server</h3>
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.88rem', margin: '0 0 20px' }}>MongoDB Atlas might be paused. Check your connection.</p>
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <button onClick={() => { pageRef.current = 1; setHasMore(true); fetchPosts(userId, category, feed, 1, false) }} style={{ padding: '10px 20px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>Try Again</button>
                                 <Link href="/agrisocial/create" style={{ padding: '10px 20px', background: SOCIAL.primaryLight, color: SOCIAL.textSecondary, border: `1px solid ${SOCIAL.border}`, borderRadius: '10px', fontWeight: 700, textDecoration: 'none' }}>+ Create Post</Link>
                             </div>
                         </div>
                     ) : posts.length === 0 ? (
-                        <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '48px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
+                        <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '48px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
                             <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>{category === 'all' ? '🌾' : catIcon[category] || '📢'}</div>
                             <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>{category === 'all' ? 'No posts yet!' : `No ${category} posts yet`}</h3>
                             <p style={{ color: SOCIAL.muted, fontSize: '0.9rem', margin: '0 0 20px' }}>
@@ -756,8 +723,8 @@ export default function AgriSocialFeed() {
                             {/* Infinite scroll sentinel + loading spinner */}
                             <div ref={sentinelRef} style={{ height: 1 }} />
                             {loadingMore && (
-                                <div style={{ textAlign: 'center', padding: '20px 0', display: 'flex', justifyContent: 'center' }}>
-                                    <div className="fx-loader-bars"><span></span><span></span><span></span><span></span><span></span></div>
+                                <div style={{ textAlign: 'center', padding: '20px 0', color: SOCIAL.muted, fontSize: '0.84rem' }}>
+                                    Loading more posts…
                                 </div>
                             )}
                             {!hasMore && posts.length > 0 && (
@@ -778,7 +745,7 @@ export default function AgriSocialFeed() {
                 {/* Right sidebar (desktop only) */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                     {userId && (
-                        <Link href={`/agrisocial/profile/${userId}`} style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(217,83,79,0.2)', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', boxShadow: SHARED.shadowMd }}>
+                        <Link href={`/agrisocial/profile/${userId}`} style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', boxShadow: SHARED.shadowMd }}>
                             <Avatar name="You" size={44} />
                             <div>
                                 <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.86rem', margin: 0 }}>My Profile</p>
@@ -798,15 +765,15 @@ export default function AgriSocialFeed() {
             <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.95)', borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', justifyContent: 'space-around', padding: '8px 0', zIndex: 50, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 {([
                     ['home', 'Feed', '/agrisocial'],
-                    ['reels', 'KrishiClips', '/agrisocial/clips'],
+                    ['reels', 'Reels', '/agrisocial/clips'],
                     ['plus', 'Create', '/agrisocial/create'],
                     ['search', 'Search', '/agrisocial/search'],
                     ['heart-nav', 'Activity', '/agrisocial/notifications'],
                     ['explore', 'Profile', userId ? `/agrisocial/profile/${userId}` : '/auth/login'],
                 ] as const).map(([iconName, label, href]) => (
                     <Link key={label} href={href}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: SOCIAL.primary, fontSize: '0.6rem', fontWeight: 700, gap: '2px', flex: 1 }}>
-                        <Icon name={iconName as any} size={24} color={SOCIAL.primary} />{label}
+                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: SOCIAL.muted, fontSize: '0.6rem', fontWeight: 700, gap: '2px', flex: 1 }}>
+                        <Icon name={iconName as any} size={24} color={SOCIAL.muted} />{label}
                     </Link>
                 ))}
             </div>

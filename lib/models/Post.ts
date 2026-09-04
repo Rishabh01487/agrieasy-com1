@@ -31,6 +31,12 @@ const PostSchema = new mongoose.Schema({
     comments: [CommentSchema],
     commentsCount: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
+    // UNIQUE view tracking — array of user IDs who have viewed this post/clip.
+    // A view is counted only ONCE per account (no matter how many times the
+    // same person re-opens the page). Anonymous (not-logged-in) views are
+    // tracked by IP hash so the same device doesn't double-count.
+    viewedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    viewedByIpHash: [{ type: String }],
     location: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
     // Ranked-feed scoring helpers
