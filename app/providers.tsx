@@ -7,6 +7,7 @@ import AuthSync from './components/AuthSync'
 // Wrap SessionProvider in an error boundary so that if next-auth ever
 // throws during render (e.g. misconfigured env vars, network error
 // fetching /api/auth/session), it doesn't take down the entire app —
+// phone+password auth still works without it.
 class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
     constructor(props: { children: ReactNode }) {
         super(props)
@@ -22,10 +23,19 @@ class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasEr
         if (this.state.hasError) {
             return this.props.children
         }
-        return <SessionProvider>
-            {this.props.children}
-            <AuthSync />
-        </SessionProvider>
+        return (
+            <SessionProvider
+                // Performance: only fetch the session once on mount. Default
+                // behavior re-fetches on every window focus, which adds a
+                // network request every tab switch — and each fetch triggers
+                // AuthSync → /api/auth/session-token too, doubling overhead.
+                refetchOnWindowFocus={false}
+                refetchInterval={0}
+            >
+                {this.props.children}
+                <AuthSync />
+            </SessionProvider>
+        )
     }
 }
 

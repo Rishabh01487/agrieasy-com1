@@ -1,45 +1,13 @@
 'use client'
 
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import Link from 'next/link'
 import { signIn } from 'next-auth/react'
+import Link from 'next/link'
 import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
 
 type Role = 'farmer' | 'buyer' | 'transporter'
-
-function AddressAutocomplete({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
-  const [suggestions, setSuggestions] = useState<string[]>([])
-  const [showSuggestions, setShowSuggestions] = useState(false)
-
-  useEffect(() => {
-    if (value.length < 3) { setSuggestions([]); return }
-    const t = setTimeout(async () => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&countrycodes=in&limit=5`)
-        const data = await res.json()
-        setSuggestions(data.map((r: any) => r.display_name).filter(Boolean))
-      } catch { setSuggestions([]) }
-    }, 500)
-    return () => clearTimeout(t)
-  }, [value])
-
-  return (
-    <div style={{ position: 'relative' }}>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)} onFocus={() => setShowSuggestions(true)} onBlur={() => setTimeout(() => setShowSuggestions(false), 200)} placeholder={placeholder} style={{ ...inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' }), width: '100%' }} />
-      {showSuggestions && suggestions.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: `1px solid ${AUTH.border}`, borderRadius: '0 0 8px 8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: 200, overflowY: 'auto' }}>
-          {suggestions.map((s, i) => (
-            <div key={i} onClick={() => { onChange(s); setShowSuggestions(false) }} style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '0.82rem', color: AUTH.text, borderBottom: i < suggestions.length - 1 ? `1px solid ${AUTH.border}` : 'none' }}>
-              {s}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 type FormData = {
   name: string
@@ -51,7 +19,92 @@ type FormData = {
   aadhar?: string
   companyName?: string
   transporterGstin?: string
-  drivingLicense?: string
+}
+
+interface NominatimAddress {
+  city?: string
+  town?: string
+  village?: string
+  county?: string
+  state_district?: string
+  state?: string
+  country?: string
+}
+interface NominatimResult {
+  place_id: number
+  display_name: string
+  address?: NominatimAddress
+  shortLabel?: string
+}
+
+function AddressAutocomplete({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const [suggestions, setSuggestions] = useState<NominatimResult[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const searchAddress = useCallback(async (query: string) => {
+    if (query.length < 3) { setSuggestions([]); return }
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=in&limit=6&addressdetails=1`,
+        { headers: { 'Accept-Language': 'en' } }
+      )
+      const data: NominatimResult[] = await res.json()
+      const enriched = data.map(item => {
+        const a = item.address || {}
+        const parts = [
+          a.city || a.town || a.village,
+          a.state_district || a.county,
+          a.state,
+          'India',
+        ].filter(Boolean)
+        return { ...item, shortLabel: parts.join(', ') || item.display_name }
+      })
+      setSuggestions(enriched)
+      setShowDropdown(true)
+    } catch { setSuggestions([]) }
+  }, [])
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value
+    onChange(v)
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    timeoutRef.current = setTimeout(() => searchAddress(v), 400)
+  }
+
+  useEffect(() => () => { if (timeoutRef.current) clearTimeout(timeoutRef.current) }, [])
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <input
+        type="text" value={value} onChange={handleChange}
+        placeholder={placeholder || 'Type your address…'}
+        style={inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' })}
+        onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+        onFocus={() => suggestions.length > 0 && setShowDropdown(true)}
+      />
+      {showDropdown && suggestions.length > 0 && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: AUTH.white, border: `1.5px solid ${AUTH.border}`, borderRadius: '12px', zIndex: 100, boxShadow: '0 4px 16px rgba(109,40,217,0.12)', overflow: 'hidden', marginTop: '4px' }}>
+          {suggestions.map(s => (
+            <button key={s.place_id} type="button" onMouseDown={() => { onChange(s.shortLabel || s.display_name); setSuggestions([]); setShowDropdown(false) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '10px 14px', background: 'none', border: 'none', cursor: 'pointer', color: AUTH.text, fontSize: '0.85rem', borderBottom: `1px solid ${AUTH.bg}`, fontFamily: SHARED.font, transition: 'background 0.15s' }}>
+              📍 {s.shortLabel || s.display_name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Generate a strong random password that meets the server-side regex:
+ * min 8 chars + uppercase + lowercase + digit.
+ * Used for Google users — they never see this; it's just to satisfy the
+ * User schema's required password field and the strict passwordSchema regex.
+ */
+function generateGooglePassword(): string {
+  return 'Google_Oauth_' + Math.random().toString(36).slice(2, 10) + Date.now() + 'X9'
 }
 
 function RegisterContent() {
@@ -64,14 +117,14 @@ function RegisterContent() {
   const [isGoogleUser, setIsGoogleUser] = useState(false)
   const [googleEmail, setGoogleEmail] = useState('')
   const [googleName, setGoogleName] = useState('')
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormData>()
+  const { register: formRegister, handleSubmit, formState: { errors }, setValue } = useForm<FormData>()
 
   useEffect(() => {
     const g = searchParams.get('google')
     if (g === '1') {
-      setIsGoogleUser(true)
       const email = searchParams.get('email') || ''
       const name = searchParams.get('name') || ''
+      setIsGoogleUser(true)
       setGoogleEmail(email)
       setGoogleName(name)
       if (email) setValue('email', email)
@@ -84,25 +137,80 @@ function RegisterContent() {
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
     setError('')
-    if (!address.trim()) { setError('Please enter your address'); setIsLoading(false); return }
+
+    // Address is REQUIRED for manual users, OPTIONAL for Google users
+    if (!isGoogleUser && !address.trim()) {
+      setError('Please enter your address')
+      setIsLoading(false)
+      return
+    }
+
+    // Client-side Aadhar validation (only for manual farmer registration)
+    if (role === 'farmer' && !isGoogleUser) {
+      const cleanAadhar = (data.aadhar || '').replace(/\s/g, '')
+      if (!cleanAadhar) {
+        setError('Aadhar number is required for manual farmer registration')
+        setIsLoading(false)
+        return
+      }
+      if (!/^\d{12}$/.test(cleanAadhar)) {
+        setError('Aadhar must be exactly 12 digits (e.g. 1234 5678 9012)')
+        setIsLoading(false)
+        return
+      }
+    }
+
+    // Password validation (manual users only)
+    if (!isGoogleUser) {
+      if (!data.password) {
+        setError('Password is required')
+        setIsLoading(false)
+        return
+      }
+      if (data.password.length < 8) {
+        setError('Password must be at least 8 characters')
+        setIsLoading(false)
+        return
+      }
+      if (!/[A-Z]/.test(data.password)) {
+        setError('Password must contain at least one uppercase letter')
+        setIsLoading(false)
+        return
+      }
+      if (!/[a-z]/.test(data.password)) {
+        setError('Password must contain at least one lowercase letter')
+        setIsLoading(false)
+        return
+      }
+      if (!/[0-9]/.test(data.password)) {
+        setError('Password must contain at least one digit')
+        setIsLoading(false)
+        return
+      }
+    }
+
     try {
+      // For Google users: generate a strong password (they don't see it)
+      // For manual users: use the entered password
+      const password = isGoogleUser ? generateGooglePassword() : data.password
+
       const body: Record<string, any> = {
         name: data.name,
         email: data.email,
         phone: data.phone,
         role,
-        address,
-        ...(isGoogleUser
-          ? { password: 'google_oauth_' + Math.random().toString(36).slice(2) + Date.now() }
-          : { password: data.password }
-        ),
+        // For Google users, address may be empty — server allows it
+        address: address.trim() || '',
+        password,
+        isGoogleUser,
       }
       if (role === 'buyer') { body.firmName = data.firmName; body.gstin = data.gstin }
-      if (role === 'farmer' && !isGoogleUser) { body.aadhaarNumber = data.aadhar }
+      if (role === 'farmer' && !isGoogleUser) {
+        body.aadhaarNumber = (data.aadhar || '').replace(/\s/g, '')
+      }
       if (role === 'transporter') {
         body.transporterCompanyName = data.companyName
         body.transporterGstin = data.transporterGstin
-        body.drivingLicense = data.drivingLicense
       }
 
       const res = await fetch('/api/auth/register', {
@@ -123,8 +231,12 @@ function RegisterContent() {
         return
       }
 
+      // After registration:
+      // - Google users: send to /auth/login with a hint to click "Continue with Google"
+      //   AuthSync will detect their existing Google session and the now-registered
+      //   user in DB, and redirect to their dashboard.
+      // - Manual users: send to /auth/login with a "Account created" success message.
       if (isGoogleUser) {
-        // Auto-login after Google registration
         router.push('/auth/login?role=' + role + '&registered=1&google=1')
       } else {
         router.push('/auth/login?role=' + role + '&registered=1')
@@ -135,8 +247,6 @@ function RegisterContent() {
       setIsLoading(false)
     }
   }
-
-  useEffect(() => { /* address is tracked separately via state */ }, [address])
 
   const lbl = labelStyle({ text: AUTH.text, muted: AUTH.muted })
   const inp = inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' })
@@ -149,49 +259,69 @@ function RegisterContent() {
       <div style={{ position: 'relative', zIndex: 1, background: AUTH.white, borderRadius: '24px', padding: '36px', width: '100%', maxWidth: '460px', boxShadow: SHARED.shadowXl, border: `1px solid transparent`, backgroundImage: `linear-gradient(${AUTH.white}, ${AUTH.white}), ${AUTH.gradient}`, backgroundOrigin: 'border-box', backgroundClip: 'padding-box, border-box' }}>
         <Link href="/" style={{ color: AUTH.muted, textDecoration: 'none', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '20px', fontFamily: SHARED.font }}>← Back to home</Link>
 
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <img src="/icons/icon-192.png" alt="logo" style={{ width: '52px', height: '52px', borderRadius: '12px', marginBottom: '14px', boxShadow: '0 2px 12px rgba(124,58,237,0.2)' }} />
-          <h2 style={{ color: AUTH.text, fontSize: '1.5rem', fontWeight: 800, margin: 0, fontFamily: SHARED.font }}>Create Account</h2>
-          <p style={{ color: AUTH.muted, fontSize: '0.85rem', marginTop: '4px', fontFamily: SHARED.font }}>Join AgriEasy as a farmer, buyer, or transporter</p>
+        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+          <img src="/icons/icon-192.png" alt="logo" style={{ width: '52px', height: '52px', borderRadius: '12px', marginBottom: '12px', boxShadow: '0 2px 12px rgba(109,40,217,0.2)' }} />
+          <h2 style={{ color: AUTH.text, fontSize: '1.5rem', fontWeight: 800, margin: 0, marginBottom: '5px', fontFamily: SHARED.font }}>Create Account</h2>
+          <p style={{ color: AUTH.muted, fontSize: '0.875rem', fontFamily: SHARED.font }}>Join AgriEasy as a farmer, buyer, or transporter</p>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+        {/* Role selector */}
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
           {(['farmer', 'buyer', 'transporter'] as const).map(r => (
-            <button key={r} onClick={() => setRole(r)}
-              style={{
-                flex: 1, padding: '10px', borderRadius: '10px',
-                background: role === r ? AUTH.primaryLight : AUTH.bg,
-                border: `1.5px solid ${role === r ? AUTH.primary : AUTH.border}`,
-                color: role === r ? AUTH.primary : AUTH.muted,
-                fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', fontFamily: SHARED.font,
-                transition: 'all 0.2s ease',
-              }}>
-              {r === 'farmer' ? '🌾 Farmer' : r === 'buyer' ? '🛒 Buyer' : '🚛 Transporter'}
+            <button key={r} onClick={() => setRole(r)} type="button" style={{
+              flex: 1, padding: '10px 6px', borderRadius: '12px', cursor: 'pointer',
+              background: role === r ? AUTH.primaryLight : AUTH.bg,
+              border: `1.5px solid ${role === r ? AUTH.primary : AUTH.border}`,
+              color: role === r ? AUTH.primary : AUTH.muted,
+              fontWeight: 700, fontSize: '0.82rem', transition: 'all 0.2s',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+              fontFamily: SHARED.font,
+            }}>
+              {r === 'farmer' ? '🌾' : r === 'buyer' ? '🛒' : '🚛'}{' '}
+              {r === 'farmer' ? 'Farmer/Vyapari' : r === 'buyer' ? 'Buyer' : 'Transporter'}
             </button>
           ))}
         </div>
 
-        {!isGoogleUser && (
-          <button onClick={() => signIn('google', { callbackUrl: '/auth/register' })} style={{ width: '100%', padding: '11px', borderRadius: '12px', background: AUTH.bg, border: `1.5px solid ${AUTH.border}`, color: AUTH.text, fontSize: '0.93rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '16px', fontFamily: SHARED.font, transition: 'background 0.2s, border-color 0.2s' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-            </svg>
-            Sign up with Google
-          </button>
-        )}
-
+        {/* Google registration banner — only for Google users */}
         {isGoogleUser && (
-          <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#16a34a', fontSize: '0.82rem', fontWeight: 600, fontFamily: SHARED.font }}>
-            ✅ Complete your registration with {googleEmail}
+          <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: '10px', padding: '10px 14px', marginBottom: '14px', color: '#16a34a', fontSize: '0.82rem', fontWeight: 600, fontFamily: SHARED.font, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>✅</span>
+            <span>Complete your registration with <strong style={{ fontWeight: 700 }}>{googleEmail}</strong></span>
           </div>
         )}
 
+        {/* Google sign-up button — ALWAYS visible for all three roles.
+            - For non-Google users: "Sign up with Google"
+            - For Google users: "Use a different Google account"
+            callbackUrl: '/auth/login' — AuthSync will detect unregistered Google
+            users and redirect them back here with ?google=1&email=...&name=... */}
+        <button
+          onClick={() => signIn('google', { callbackUrl: '/auth/login' })}
+          type="button"
+          style={{
+            width: '100%', padding: '11px', borderRadius: '12px',
+            background: AUTH.bg, border: `1.5px solid ${AUTH.border}`,
+            color: AUTH.text, fontSize: '0.93rem', fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', gap: '10px', marginBottom: '16px',
+            fontFamily: SHARED.font,
+            transition: 'background 0.2s, border-color 0.2s',
+          }}>
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+          </svg>
+          {isGoogleUser ? 'Use a different Google account' : 'Sign up with Google'}
+        </button>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
           <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
-          <span style={{ color: AUTH.muted, fontSize: '0.78rem', fontFamily: SHARED.font }}>or fill the form</span>
+          <span style={{ color: AUTH.muted, fontSize: '0.78rem', fontFamily: SHARED.font }}>
+            {isGoogleUser ? 'or complete the form below' : 'or register with email'}
+          </span>
           <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
         </div>
 
@@ -204,63 +334,80 @@ function RegisterContent() {
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={lbl}>Full Name</label>
-            <input type="text" {...register('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Arjun Singh" style={inp} />
+            <input type="text" {...formRegister('name', { required: 'Name is required', minLength: { value: 2, message: 'Name must be at least 2 characters' } })} placeholder="e.g., Rishabh Gupta" style={inp} disabled={isGoogleUser && !!googleName} />
             {errors.name && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.name.message}</p>}
           </div>
           <div>
             <label style={lbl}>Email</label>
-            <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} disabled={isGoogleUser} />
+            <input type="email" {...formRegister('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} disabled={isGoogleUser} />
             {errors.email && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.email.message}</p>}
           </div>
+          {/* Password — hidden for Google users */}
           {!isGoogleUser && (
             <div>
               <label style={lbl}>Password</label>
-              <input type="password" {...register('password', { required: 'Password is required', minLength: { value: 8, message: 'Min 8 characters' } })} placeholder="Min 8 characters" style={inp} />
+              <input type="password" {...formRegister('password', { required: 'Password is required', minLength: { value: 8, message: 'Min 8 characters' } })} placeholder="Min 8 chars, with A-Z, a-z, 0-9" style={inp} />
               {errors.password && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.password.message}</p>}
+              <p style={{ color: AUTH.muted, fontSize: '0.72rem', marginTop: '4px', fontFamily: SHARED.font }}>Must contain uppercase, lowercase, and a digit.</p>
             </div>
           )}
           <div>
             <label style={lbl}>Phone</label>
-            <input type="text" {...register('phone', { required: 'Phone is required' })} placeholder="+91 XXXXX XXXXX" style={inp} />
+            <input type="text" {...formRegister('phone', { required: 'Phone is required' })} placeholder="+91 XXXXX XXXXX" style={inp} />
             {errors.phone && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.phone.message}</p>}
           </div>
+
+          {/* Address — REQUIRED for manual users, OPTIONAL for Google users */}
           <div>
-            <label style={lbl}>Address</label>
+            <label style={lbl}>
+              Address
+              {isGoogleUser && <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.78rem' }}> (optional — you can add it later from your dashboard)</span>}
+              {!isGoogleUser && <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.78rem' }}> (start typing — suggestions will appear)</span>}
+            </label>
             <AddressAutocomplete value={address} onChange={setAddress} placeholder="Village, City, State…" />
-            {!address && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>Address is required</p>}
+            {!address && !isGoogleUser && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>Address is required</p>}
           </div>
 
           {role === 'buyer' && (
             <>
               <div>
                 <label style={lbl}>Firm Name</label>
-                <input type="text" {...register('firmName', { required: 'Firm name is required' })} placeholder="Your company name" style={inp} />
+                <input type="text" {...formRegister('firmName', { required: 'Firm name is required' })} placeholder="Your company name" style={inp} />
                 {errors.firmName && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.firmName.message}</p>}
               </div>
               <div>
                 <label style={lbl}>GSTIN</label>
-                <input type="text" {...register('gstin', { required: 'GSTIN is required' })} placeholder="22AAAAA0000A1Z5" style={inp} />
+                <input type="text" {...formRegister('gstin', { required: 'GSTIN is required' })} placeholder="22AAAAA0000A1Z5" style={inp} />
                 {errors.gstin && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.gstin.message}</p>}
               </div>
             </>
           )}
+
+          {/* Aadhar — hidden for Google users */}
           {role === 'farmer' && !isGoogleUser && (
             <div>
               <label style={lbl}>Aadhar Number</label>
-              <input type="text" {...register('aadhar', { required: 'Aadhar is required' })} placeholder="XXXX XXXX XXXX" style={inp} />
+              <input type="text" {...formRegister('aadhar', { required: 'Aadhar is required' })} placeholder="XXXX XXXX XXXX" style={inp} />
               {errors.aadhar && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.aadhar.message}</p>}
+              <p style={{ color: AUTH.muted, fontSize: '0.72rem', marginTop: '4px', fontFamily: SHARED.font }}>12 digits. Required for manual registration, skipped for Google users.</p>
             </div>
           )}
+          {role === 'farmer' && isGoogleUser && (
+            <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: '8px', padding: '8px 12px', marginBottom: '4px', color: '#92400e', fontSize: '0.78rem', fontFamily: SHARED.font }}>
+              ℹ️ Aadhar and Address are not required for Google sign-up. You can add them later from your profile.
+            </div>
+          )}
+
           {role === 'transporter' && (
             <>
               <div>
                 <label style={lbl}>Company / Firm Name</label>
-                <input type="text" {...register('companyName', { required: 'Company name is required' })} placeholder="e.g., Sharma Transport Co." style={inp} />
+                <input type="text" {...formRegister('companyName', { required: 'Company name is required' })} placeholder="e.g., Gupta Transport Co." style={inp} />
                 {errors.companyName && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.companyName.message}</p>}
               </div>
               <div>
                 <label style={lbl}>GSTIN (if applicable)</label>
-                <input type="text" {...register('transporterGstin')} placeholder="22AAAAA0000A1Z5 (optional)" style={inp} />
+                <input type="text" {...formRegister('transporterGstin')} placeholder="22AAAAA0000A1Z5 (optional)" style={inp} />
               </div>
             </>
           )}

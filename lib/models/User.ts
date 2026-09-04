@@ -25,7 +25,7 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String, unique: true, required: true },
   password: { type: String, required: true },
   role: { type: String, enum: ['farmer', 'buyer', 'transporter', 'driver'], required: true },
-  address: { type: String, required: true },
+  address: { type: String, default: '' },
 
   // Profile (Instagram-style)
   profilePic: { type: String, default: '' },   // Cloudinary URL
