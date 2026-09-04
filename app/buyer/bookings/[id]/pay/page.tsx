@@ -283,7 +283,7 @@ export default function PayBookingPage() {
                   selected={method === 'wallet'}
                   onClick={() => setMethod('wallet')}
                   icon="💳"
-                  title="AgriPay Wallet"
+                  title="EasyPay Wallet"
                   subtitle={walletBalance != null ? `Balance: ₹${walletBalance.toLocaleString('en-IN')}` : 'Loading balance…'}
                   disabled={walletBalance != null && walletBalance < effectiveBill}
                 />
@@ -291,8 +291,8 @@ export default function PayBookingPage() {
                   selected={method === 'agripay-upi'}
                   onClick={() => setMethod('agripay-upi')}
                   icon="📱"
-                  title="AgriPay UPI"
-                  subtitle="Pay via your AgriPay UPI ID"
+                  title="EasyPay UPI"
+                  subtitle="Pay via your EasyPay UPI ID"
                 />
                 <PaymentMethodCard
                   selected={method === 'direct-upi'}

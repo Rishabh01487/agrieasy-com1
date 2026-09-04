@@ -1,5 +1,7 @@
 'use client'
 
+import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
@@ -32,7 +34,7 @@ const typeLabel: Record<string, string> = {
 
 const FILTERS = [['all', 'All'], ['topup', 'Added'], ['send', 'Sent'], ['receive', 'Received'], ['bill_pay', 'Bills'], ['paylater_borrow', 'PayLater']]
 
-export default function TransactionHistory() {
+function _TransactionHistory_original() {
     const [txns, setTxns] = useState<Transaction[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
@@ -153,3 +155,7 @@ export default function TransactionHistory() {
         </div>
     )
 }
+
+// EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
+// To re-enable this page later: delete this export and rename _original back to the default export.
+export default EasyPayComingSoonRedirect

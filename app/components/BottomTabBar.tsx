@@ -8,7 +8,7 @@ import { SHARED } from '@/lib/styles'
 import { TabIcon } from './CardIcons'
 
 interface TabItem {
-  icon: string  // now a key for TabIcon instead of emoji
+  icon: string
   label: string
   href: string
   match: string[]
@@ -38,6 +38,10 @@ const TABS: Record<string, TabItem[]> = {
   ],
 }
 
+// Tabs that are not yet live — show "SOON" badge + Coming Soon notice
+// when tapped, instead of navigating to the underlying route.
+const COMING_SOON_HREFS = new Set(['/agripay'])
+
 const HIDE_ON_PREFIXES = [
   '/auth/',
   '/admin',
@@ -50,11 +54,19 @@ const HIDE_ON_PREFIXES = [
 export default function BottomTabBar() {
   const pathname = usePathname() || ''
   const [role, setRole] = useState<string | null>(null)
+  const [comingSoonMsg, setComingSoonMsg] = useState<string | null>(null)
 
   useEffect(() => {
     const { userRole } = getUserInfo()
     setRole(userRole)
   }, [])
+
+  // Auto-hide the Coming Soon notice after 3s
+  useEffect(() => {
+    if (!comingSoonMsg) return
+    const t = setTimeout(() => setComingSoonMsg(null), 3000)
+    return () => clearTimeout(t)
+  }, [comingSoonMsg])
 
   if (!role || !TABS[role]) return null
 
@@ -87,10 +99,18 @@ export default function BottomTabBar() {
         {tabs.map(tab => {
           const active = isActive(tab)
           const iconColor = active ? '#31372B' : '#A8A695'
+          const isComingSoon = COMING_SOON_HREFS.has(tab.href)
+          const handleTap = (e: React.MouseEvent) => {
+            if (!isComingSoon) return
+            e.preventDefault()
+            setComingSoonMsg(`${tab.label} is coming soon — stay tuned! 🚀`)
+          }
           return (
             <Link
               key={tab.label}
-              href={tab.href}
+              href={isComingSoon ? '#' : tab.href}
+              onClick={handleTap}
+              aria-disabled={isComingSoon}
               style={{
                 flex: 1,
                 display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -99,6 +119,7 @@ export default function BottomTabBar() {
                 color: active ? '#31372B' : '#8E8D8A',
                 transition: 'color 0.15s ease',
                 position: 'relative',
+                opacity: isComingSoon ? 0.7 : 1,
               }}
             >
               {active && (
@@ -108,7 +129,20 @@ export default function BottomTabBar() {
                   background: '#31372B',
                 }} />
               )}
-              <TabIcon name={tab.icon} size={26} color={iconColor} />
+              <div style={{ position: 'relative' }}>
+                <TabIcon name={tab.icon} size={26} color={iconColor} />
+                {isComingSoon && (
+                  <span style={{
+                    position: 'absolute', top: -6, right: -10,
+                    background: '#E98074', color: '#fff',
+                    fontSize: '0.5rem', fontWeight: 800,
+                    padding: '1px 4px', borderRadius: 100,
+                    letterSpacing: '0.04em', textTransform: 'uppercase',
+                    boxShadow: '0 1px 4px rgba(233,128,116,0.5)',
+                    lineHeight: 1.2,
+                  }}>SOON</span>
+                )}
+              </div>
               <span style={{
                 fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.02em',
                 color: active ? '#31372B' : '#8E8D8A',
@@ -117,6 +151,35 @@ export default function BottomTabBar() {
           )
         })}
       </nav>
+
+      {/* Coming Soon toast — appears above the tab bar */}
+      {comingSoonMsg && (
+        <div
+          role="status"
+          style={{
+            position: 'fixed',
+            bottom: 'calc(80px + env(safe-area-inset-bottom))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#31372B',
+            color: '#fff',
+            padding: '10px 18px',
+            borderRadius: 100,
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            fontFamily: SHARED.font,
+            boxShadow: '0 8px 24px rgba(49,55,43,0.35)',
+            zIndex: 1100,
+            maxWidth: 'calc(100vw - 32px)',
+            textAlign: 'center',
+            animation: 'slideUpFade 0.25s ease-out',
+          }}
+        >
+          {comingSoonMsg}
+        </div>
+      )}
+
+      <style>{`@keyframes slideUpFade { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }`}</style>
     </>
   )
 }

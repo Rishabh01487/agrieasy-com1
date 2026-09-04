@@ -78,7 +78,7 @@ export default function SideMenu({ items = [], header }: SideMenuProps) {
 
   const sharedItems: SideMenuItem[] = [
     { icon: '📱', label: 'AgriSocial', href: '/agrisocial' },
-    { icon: '💳', label: 'AgriPay Wallet', href: '/agripay' },
+    { icon: '💳', label: 'EasyPay', href: '/agripay' },
   ]
 
   return (

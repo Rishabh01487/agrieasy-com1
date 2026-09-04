@@ -17,10 +17,14 @@ const ROLE_CARDS: Card[] = [
 
 const FEATURE_CARDS: Card[] = [
   { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#31372B' },
-  { href: '/agripay', title: 'AgriPay', sub: 'Pay & transfer', color: '#E98074' },
+  { href: '/agripay', title: 'EasyPay', sub: 'Pay & transfer', color: '#E98074' },
   { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
   { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
 ]
+
+// Feature cards that are not yet live — show a "Coming Soon" badge and
+// disable navigation. User taps → see Coming Soon state, no real page.
+const COMING_SOON = new Set(['EasyPay'])
 
 const FEATURES = ['Zero middlemen', 'Instant UPI payments', 'Real-time tracking', 'Live GPS tracking']
 
@@ -197,31 +201,46 @@ export default function Home() {
 
         {/* Feature cards — secondary */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 28, maxWidth: 560, width: '100%' }}>
-          {FEATURE_CARDS.map((c, i) => (
-            <Link key={c.title} href={c.href} className={`home-card-sm fade-up${c.title === 'Bill Calculator' ? ' home-card-feat' : ''}`} style={{
-              background: c.title === 'Bill Calculator' ? 'linear-gradient(135deg, rgba(49,55,43,0.10), rgba(74,82,64,0.10))' : 'rgba(255,255,255,0.55)',
-              backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-              border: c.title === 'Bill Calculator' ? '1.5px solid rgba(49,55,43,0.35)' : '1px solid rgba(49,55,43,0.10)',
-              borderRadius: 12, padding: '14px 8px', textAlign: 'center',
-              textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
-              transition: 'transform .3s, background .2s, box-shadow .2s',
-              animationDelay: `${0.28 + i * 0.06}s`,
-              position: 'relative',
-            }}>
+          {FEATURE_CARDS.map((c, i) => {
+            const isComingSoon = COMING_SOON.has(c.title)
+            return (
+            <Link
+              key={c.title}
+              href={isComingSoon ? '#' : c.href}
+              onClick={isComingSoon ? (e) => { e.preventDefault() } : undefined}
+              aria-disabled={isComingSoon}
+              className={`home-card-sm fade-up${c.title === 'Bill Calculator' ? ' home-card-feat' : ''}`}
+              style={{
+                background: c.title === 'Bill Calculator' ? 'linear-gradient(135deg, rgba(49,55,43,0.10), rgba(74,82,64,0.10))' : 'rgba(255,255,255,0.55)',
+                backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                border: c.title === 'Bill Calculator' ? '1.5px solid rgba(49,55,43,0.35)' : '1px solid rgba(49,55,43,0.10)',
+                borderRadius: 12, padding: '14px 8px', textAlign: 'center',
+                textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center',
+                transition: 'transform .3s, background .2s, box-shadow .2s',
+                animationDelay: `${0.28 + i * 0.06}s`,
+                position: 'relative',
+                opacity: isComingSoon ? 0.75 : 1,
+                cursor: isComingSoon ? 'not-allowed' : 'pointer',
+              }}
+            >
               {c.title === 'Bill Calculator' && (
                 <span style={{ position: 'absolute', top: -7, right: -3, background: '#31372B', color: '#fff', fontSize: '0.56rem', fontWeight: 800, padding: '2px 6px', borderRadius: 100, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: '0 2px 6px rgba(49,55,43,0.3)' }}>NEW</span>
+              )}
+              {isComingSoon && (
+                <span style={{ position: 'absolute', top: -7, right: -3, background: '#E98074', color: '#fff', fontSize: '0.56rem', fontWeight: 800, padding: '2px 6px', borderRadius: 100, letterSpacing: '0.05em', textTransform: 'uppercase', boxShadow: '0 2px 6px rgba(233,128,116,0.4)' }}>SOON</span>
               )}
               <div style={{
                 width: 44, height: 44, borderRadius: 12, marginBottom: 6,
                 background: `${c.color}12`, border: `1px solid ${c.color}25`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                <CardIcon name={c.title} size={28} color={c.color} />
+                <CardIcon name={isComingSoon ? 'EasyPay' : c.title} size={28} color={c.color} />
               </div>
               <p style={{ color: '#31372B', fontWeight: 700, fontSize: '0.78rem', margin: 0 }}>{c.title}</p>
-              <p style={{ color: '#6B6E5A', fontSize: '0.64rem', opacity: 0.75, margin: '2px 0 0' }}>{c.sub}</p>
+              <p style={{ color: '#6B6E5A', fontSize: '0.64rem', opacity: 0.75, margin: '2px 0 0' }}>{isComingSoon ? 'Coming soon' : c.sub}</p>
             </Link>
-          ))}
+            )
+          })}
         </div>
 
         {/* Quote */}

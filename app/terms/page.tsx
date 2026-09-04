@@ -42,7 +42,7 @@ export default function TermsOfService() {
         </section>
 
         <section style={{ background: '#fff', borderRadius: 12, padding: 24, marginBottom: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>4. Payments (AgriPay)</h2>
+          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>4. Payments (EasyPay)</h2>
           <p style={{ color: '#334155', fontSize: '0.9rem', lineHeight: 1.7, margin: 0 }}>
             Payments are processed through Razorpay, a PCI-DSS compliant payment gateway. AgriEasy does not store
             your card number, CVV, or net banking credentials. Wallet balances are maintained in our database.

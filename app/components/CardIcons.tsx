@@ -59,11 +59,13 @@ export function CalculatorIcon({ size = 32, color = '#31372B', style }: IconProp
     )
 }
 
-// ── AgriPay: logo image ──
+// ── EasyPay / AgriPay: logo image ──
+// (EasyPay is the new public brand name; the route stays /agripay
+// so existing bookmarks + API endpoints keep working.)
 export function WalletIcon({ size = 32, color = '#31372B', style }: IconProps) {
     return (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src="/logo-agripay.png" alt="AgriPay" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
+        <img src="/logo-agripay.png" alt="EasyPay" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover', ...style }} />
     )
 }
 
@@ -145,7 +147,8 @@ export function CardIcon({ name, size = 32, color = '#31372B' }: { name: string;
         case 'Buyer': return <BuyerIcon size={size} color={color} />
         case 'Transporter': return <TransporterIcon size={size} color={color} />
         case 'Bill Calculator': return <CalculatorIcon size={size} color={color} />
-        case 'AgriPay': return <WalletIcon size={size} color={color} />
+        case 'AgriPay':
+        case 'EasyPay': return <WalletIcon size={size} color={color} />
         case 'AgriSocial': return <SocialIcon size={size} color={color} />
         case 'Ledger': return <LedgerIcon size={size} color={color} />
         default: return <FarmerIcon size={size} color={color} />

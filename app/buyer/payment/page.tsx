@@ -7,7 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { BUYER, SHARED, inputStyle, labelStyle, cardStyle, buttonPrimary, navStyle } from '@/lib/styles'
 
 const PAYMENT_METHODS = [
-  { key: 'wallet', label: 'AgriPay Wallet', icon: '💳', desc: 'Instant • From wallet balance', color: BUYER.primary },
+  { key: 'wallet', label: 'EasyPay Wallet', icon: '💳', desc: 'Instant • From wallet balance', color: BUYER.primary },
 ]
 
 function PaymentContent() {
@@ -77,7 +77,7 @@ function PaymentContent() {
 
             {step === 'recipient' && (
               <div>
-                <label style={lbl}>Recipient Phone or AgriPay ID</label>
+                <label style={lbl}>Recipient Phone or EasyPay ID</label>
                 <input type="text" value={recipient} onChange={e => setRecipient(e.target.value)}
                   placeholder="e.g., 9876543210 or 9876543210@agripay" style={inp} autoFocus />
 
@@ -96,7 +96,7 @@ function PaymentContent() {
                     borderRadius: '12px', color: BUYER.primary, fontWeight: 700, fontSize: '0.875rem',
                     textDecoration: 'none', transition: 'all 0.2s ease',
                   }}>
-                    <span style={{ fontSize: '1.2rem' }}>💳</span> AgriPay
+                    <span style={{ fontSize: '1.2rem' }}>💳</span> EasyPay
                   </Link>
                 </div>
               </div>
@@ -163,7 +163,7 @@ function PaymentContent() {
               )}
               <button onClick={() => {
                 setError('')
-                if (step === 'recipient') { if (!recipient.trim()) { setError('Enter phone or AgriPay ID'); return } setStep('amount') }
+                if (step === 'recipient') { if (!recipient.trim()) { setError('Enter phone or EasyPay ID'); return } setStep('amount') }
                 else if (step === 'amount') { if (!amount || parseFloat(amount) < 1) { setError('Enter valid amount (min ₹1)'); return } setStep('confirm') }
                 else handleSend()
               }} disabled={loading}

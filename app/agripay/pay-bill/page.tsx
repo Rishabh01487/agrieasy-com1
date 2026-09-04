@@ -1,5 +1,7 @@
 'use client'
 
+import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
+
 import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
@@ -110,10 +112,14 @@ function PayBillContent() {
     )
 }
 
-export default function PayBill() {
+function _PayBill_original() {
     return (
         <Suspense fallback={<div style={{ minHeight: '100vh', background: AGRI.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: AGRI.primary, fontWeight: 700, fontFamily: SHARED.font }}>Loading…</div>}>
             <PayBillContent />
         </Suspense>
     )
 }
+
+// EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
+// To re-enable this page later: delete this export and rename _original back to the default export.
+export default EasyPayComingSoonRedirect

@@ -1,5 +1,7 @@
 'use client'
 
+import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -29,7 +31,7 @@ interface BankStatus {
     ifscCode?: string
 }
 
-export default function VerifyBank() {
+function _VerifyBank_original() {
     const router = useRouter()
     const [selectedBank, setSelectedBank] = useState<null | typeof BANKS[0]>(null)
     const [accountNumber, setAccountNumber] = useState('')
@@ -235,3 +237,7 @@ export default function VerifyBank() {
         </div>
     )
 }
+
+// EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
+// To re-enable this page later: delete this export and rename _original back to the default export.
+export default EasyPayComingSoonRedirect

@@ -28,7 +28,7 @@ export default function PrivacyPolicy() {
           <p style={{ color: '#334155', fontSize: '0.9rem', lineHeight: 1.7, margin: 0 }}>
             Your information is used to:
             <br />• Provide core marketplace features (finding buyers, booking transporters, tracking deliveries)
-            <br />• Process payments through AgriPay
+            <br />• Process payments through EasyPay
             <br />• Display your profile and posts on AgriSocial
             <br />• Send PWA install notifications and email alerts
             <br />• Improve our services through aggregated analytics

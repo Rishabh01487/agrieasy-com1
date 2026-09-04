@@ -138,7 +138,7 @@ export default function BetaPage() {
             <li>Register as a <strong>buyer</strong> → add commodities with prices → check the dashboard</li>
             <li>Register as a <strong>farmer</strong> → set your location → search buyers nearby → book a sale</li>
             <li>Register as a <strong>transporter</strong> → add a vehicle → accept bookings → dispatch with live tracking</li>
-            <li>As the buyer, confirm the booking → mark delivered → bill & pay the farmer via AgriPay</li>
+            <li>As the buyer, confirm the booking → mark delivered → bill & pay the farmer via EasyPay</li>
             <li>Toggle feature flags above to test with/without specific features</li>
           </ol>
         </div>
