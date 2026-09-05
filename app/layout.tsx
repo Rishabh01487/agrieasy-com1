@@ -67,7 +67,23 @@ export const metadata: Metadata = {
     "apple-mobile-web-app-title": "AgriEasy",
     // Use the navy theme color — consistent with manifest.json
     "theme-color": "#31372B",
-  }
+  },
+  // Google Search Console verification — get this from
+  // https://search.google.com/search-console → Add property → URL prefix
+  // → https://agrieasy.site → "HTML tag" verification method.
+  // The string after 'content=' is what goes in GOOGLE_SITE_VERIFICATION.
+  // Set it on Vercel: Project Settings → Environment Variables → add
+  // GOOGLE_SITE_VERIFICATION = "your-verification-string-here".
+  // Once deployed, return to Search Console and click "Verify".
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    // Yahoo verification (optional — for Bing/Yahoo webmaster tools)
+    yahoo: process.env.YAHOO_SITE_VERIFICATION,
+    // Yandex verification (optional — for Yandex webmaster)
+    yandex: process.env.YANDEX_SITE_VERIFICATION,
+    // Me: for Mastodon/link verification (optional)
+    me: ['https://agrieasy.site'],
+  },
 };
 
 export const viewport: Viewport = {
