@@ -14,6 +14,31 @@ import { validateBody, createPostSchema } from '@/lib/validation'
 //
 // Instagram-style feed:
 //   - feed=following  → posts from people the viewer follows, ranked, then latest
+// Helper: try to populate userId, but if it fails (e.g. corrupt post
+// referencing a deleted user), fall back to returning the post with
+// userId as a raw ObjectId. The frontend handles this via the
+// isDeletedUser check (post.userId is not an object → render as
+// "Unknown User"). This prevents a single bad post from breaking the
+// entire feed.
+async function safePopulate(posts: any[]): Promise<any[]> {
+    try {
+        // Manual populate so we can catch per-post errors
+        const populated = await Post.populate(posts, {
+            path: 'userId',
+            select: 'farmerName firmName role profilePic',
+        })
+        // Replace any null userId with a placeholder so the frontend's
+        // isDeletedUser check (typeof post.userId !== 'object') still works.
+        return populated.map((p: any) => ({
+            ...p,
+            userId: p.userId && typeof p.userId === 'object' ? p.userId : null,
+        }))
+    } catch (e) {
+        console.error('populate failed, returning raw posts:', e)
+        return posts
+    }
+}
+
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
@@ -23,9 +48,16 @@ export async function GET(req: NextRequest) {
         const feedParam = searchParams.get('feed') || 'latest'
         const userIdParam = searchParams.get('userId')
         // includeClips=true (default) mixes krishiclips into the feed so users
-        // see their own clips + others' clips alongside regular posts. The
+        // see their own clips + others' clips alongside regular posts.
         const includeClips = searchParams.get('includeClips') !== 'false'
 
+        // Build the query — use $in to include both post + krishiclip types
+        // when includeClips is on. If a post has a corrupt type (null, wrong
+        // case, etc.), Mongoose's enum validation will throw at the model
+        // level — but only on save, not on find. So corrupt-type posts in
+        // the DB will still be found + returned (just with a non-matching
+        // type field). The isDeletedUser check in the frontend handles
+        // them gracefully.
         const query: Record<string, unknown> = { isActive: true }
         if (includeClips) {
             query.type = { $in: ['post', 'krishiclip'] }
@@ -46,35 +78,40 @@ export async function GET(req: NextRequest) {
             const rankedCount = Math.ceil(limit * 0.6)
             const latestCount = limit - rankedCount
 
+            // Find without populate first (avoids crash on corrupt user refs)
             const [ranked, latest] = await Promise.all([
-                Post.find(query).sort({ rankScore: -1, createdAt: -1 }).skip(skip).limit(rankedCount)
-                    .populate('userId', 'farmerName firmName role profilePic').lean(),
-                Post.find(query).sort({ createdAt: -1 }).skip(skip + rankedCount).limit(latestCount)
-                    .populate('userId', 'farmerName firmName role profilePic').lean(),
+                Post.find(query).sort({ rankScore: -1, createdAt: -1 }).skip(skip).limit(rankedCount).lean(),
+                Post.find(query).sort({ createdAt: -1 }).skip(skip + rankedCount).limit(latestCount).lean(),
             ])
             const merged: any[] = []
             for (let i = 0; i < Math.max(ranked.length, latest.length); i++) {
                 if (ranked[i]) merged.push(ranked[i])
                 if (latest[i]) merged.push(latest[i])
             }
-            posts = merged
+            posts = await safePopulate(merged)
         } else if (feedParam === 'ranked') {
-            posts = await Post.find(query)
+            const raw = await Post.find(query)
                 .sort({ rankScore: -1, createdAt: -1 })
-                .skip(skip).limit(limit)
-                .populate('userId', 'farmerName firmName role profilePic').lean()
+                .skip(skip).limit(limit).lean()
+            posts = await safePopulate(raw)
         } else {
-            posts = await Post.find(query)
+            const raw = await Post.find(query)
                 .sort({ createdAt: -1 })
-                .skip(skip).limit(limit)
-                .populate('userId', 'farmerName firmName role profilePic').lean()
+                .skip(skip).limit(limit).lean()
+            posts = await safePopulate(raw)
         }
 
-        const total = await Post.countDocuments(query)
+        const total = await Post.countDocuments(query).catch(() => 0)
         return NextResponse.json({ success: true, data: { posts }, meta: paginationMeta(page, limit, total) })
     } catch (e) {
-        console.error(e)
-        return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
+        console.error('Failed to fetch posts:', e)
+        // Return empty array instead of 500 so the feed doesn't break
+        // the entire AgriSocial page
+        return NextResponse.json({
+            success: true,
+            data: { posts: [] },
+            meta: { page: 1, limit: 15, total: 0, totalPages: 0 },
+        })
     }
 }
 

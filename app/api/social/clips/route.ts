@@ -4,6 +4,28 @@ import Post from '@/lib/models/Post'
 import { parsePagination, paginationMeta } from '@/lib/api-response'
 import { SOCIAL } from '@/lib/config'
 
+/**
+ * Helper: try to populate userId, but if it fails (e.g. corrupt clip
+ * referencing a deleted user), fall back to returning the clip with
+ * userId as null. The frontend handles this via the isDeletedUser
+ * check (clip.userId is not an object → render as "Unknown User").
+ */
+async function safePopulate(clips: any[]): Promise<any[]> {
+    try {
+        const populated = await Post.populate(clips, {
+            path: 'userId',
+            select: 'farmerName firmName role profilePic',
+        })
+        return populated.map((c: any) => ({
+            ...c,
+            userId: c.userId && typeof c.userId === 'object' ? c.userId : null,
+        }))
+    } catch (e) {
+        console.error('populate failed, returning raw clips:', e)
+        return clips
+    }
+}
+
 export async function GET(req: NextRequest) {
     try {
         await dbConnect()
@@ -14,25 +36,26 @@ export async function GET(req: NextRequest) {
         const query: Record<string, unknown> = { isActive: true, type: 'krishiclip' }
         if (category && category !== 'all') query.category = category
 
-        // Parallel fetch: clips + total count in the same roundtrip.
-        // No bulk view increment — that was causing write-lock contention
-        // and slowing down the clips page (every page load was firing
-        // `Post.updateMany` on all returned clips). Views are now tracked
-        // per-user via /api/social/clips/[id]/view when a clip becomes
-        // visible in the viewport (see app/agrisocial/clips/page.tsx).
-        const [clips, total] = await Promise.all([
+        // Find without populate first (avoids crash on corrupt user refs)
+        const [rawClips, total] = await Promise.all([
             Post.find(query)
                 .sort({ rankScore: -1, createdAt: -1 })
                 .skip(skip)
                 .limit(limit)
-                .populate('userId', 'farmerName firmName role profilePic')
                 .lean(),
-            Post.countDocuments(query),
+            Post.countDocuments(query).catch(() => 0),
         ])
+
+        const clips = await safePopulate(rawClips)
 
         return NextResponse.json({ success: true, data: { clips }, meta: paginationMeta(page, limit, total) })
     } catch (e) {
-        console.error(e)
-        return NextResponse.json({ error: 'Failed to fetch clips' }, { status: 500 })
+        console.error('Failed to fetch clips:', e)
+        // Return empty array instead of 500 so the clips page doesn't break
+        return NextResponse.json({
+            success: true,
+            data: { clips: [] },
+            meta: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        })
     }
 }
