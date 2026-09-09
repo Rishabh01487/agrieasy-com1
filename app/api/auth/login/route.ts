@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     if (rl) return rl
 
     await dbConnect()
-    const body = await request.json()
+    let body: any = {}; try { body = await request.json() } catch { return validationError("Invalid login data", [{field: "phone", message: "Invalid input: expected string, received undefined"}, {field: "password", message: "Invalid input: expected string, received undefined"}]) }
 
     const v = validateBody(loginSchema, body)
     if (!v.success) return validationError('Invalid login data', v.errors)

@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json()
+    let body: any = {}; try { body = await req.json() } catch { return NextResponse.json({ error: "Image (base64) is required" }, { status: 400 }) }
     const { image } = body
 
     if (!image || typeof image !== 'string') {

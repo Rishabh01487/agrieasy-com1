@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
             mimeType = file.type || 'image/jpeg'
             imageBase64 = buf.toString('base64')
         } else {
-            const body = await req.json()
+            let body: any = {}; try { body = await req.json() } catch { return NextResponse.json({ error: "imageUrl or imageBase64 is required" }, { status: 400 }) }
             imageUrl = body.imageUrl
             imageBase64 = body.imageBase64
             mimeType = body.mimeType || 'image/jpeg'

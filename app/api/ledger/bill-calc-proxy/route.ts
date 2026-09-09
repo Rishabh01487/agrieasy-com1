@@ -73,7 +73,7 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 export async function POST(req: NextRequest) {
   const t0 = Date.now()
   try {
-    const body = await req.json()
+    let body: any = {}; try { body = await req.json() } catch { return NextResponse.json({ error: "Please upload a bill image to scan." }, { status: 400 }) }
 
     if (!body.imageBase64 && !body.imageUrl) {
       return NextResponse.json(
