@@ -1,159 +1,69 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-/**
- * Generate a stable anonymous device ID so we don't double-count
- * re-installs from the same device. Hashed from userAgent + screen +
- * timezone — NOT personally identifiable.
- */
-function getDeviceId(): string {
-  if (typeof window === 'undefined') return ''
-  const parts = [
-    navigator.userAgent,
-    `${window.screen.width}x${window.screen.height}`,
-    Intl.DateTimeFormat().resolvedOptions().timeZone || '',
-    navigator.language || '',
-  ].join('|')
-  // Simple FNV-1a hash (no crypto needed — this is just for dedup)
-  let hash = 0
-  for (let i = 0; i < parts.length; i++) {
-    hash = ((hash << 5) - hash) + parts.charCodeAt(i)
-    hash |= 0
-  }
-  return Math.abs(hash).toString(36)
-}
+// Pages where the PWA install prompt is too disruptive — it covers
+// the main content on these immersive pages, so we skip showing it there.
+// (User can still install from any other page.)
+const HIDE_ON_PREFIXES = ['/agrisocial/clips', '/agripay', '/auth/']
 
-/**
- * Detect the user's platform for analytics.
- * Returns one of: 'android' | 'ios' | 'desktop-chrome' | 'desktop-edge' |
- * 'desktop-firefox' | 'desktop-safari' | 'other'
- */
-function getPlatform(): string {
-  if (typeof window === 'undefined') return 'unknown'
-  const ua = navigator.userAgent
-  if (/Android/i.test(ua)) return 'android'
-  if (/iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream) return 'ios'
-  const isDesktop = !/Mobi|Android/i.test(ua)
-  if (isDesktop) {
-    if (/Edg\//.test(ua)) return 'desktop-edge'
-    if (/Chrome\//.test(ua) && !/Edg|OPR/.test(ua)) return 'desktop-chrome'
-    if (/Firefox\//.test(ua)) return 'desktop-firefox'
-    if (/Safari\//.test(ua) && !/Chrome/.test(ua)) return 'desktop-safari'
-    return 'desktop-other'
-  }
-  return 'other'
-}
-
-/** Fire-and-forget POST to record the install on the server. */
-function recordInstall() {
-  try {
-    const deviceId = getDeviceId()
-    const platform = getPlatform()
-    const language = (navigator.language || '').slice(0, 16)
-    const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''
-    fetch('/api/analytics/pwa-install', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, platform, language, userId: userId || undefined }),
-      keepalive: true,  // ensures the request completes even if page unmounts
-    }).catch(() => {})  // silent fail — don't bother the user
-  } catch {
-    // ignore — analytics should never break the UX
-  }
-}
+// Delay before showing the install prompt — was 3s (too aggressive, covers
+// content before user can read it). 30s gives the user time to scroll + see
+// the actual app content before being asked to install.
+const INSTALL_PROMPT_DELAY_MS = 30_000
 
 export default function PWABootstrap() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showInstall, setShowInstall] = useState(false)
   const [showIOSHint, setShowIOSHint] = useState(false)
   const [installed, setInstalled] = useState(false)
-  const [recordedInstall, setRecordedInstall] = useState(false)
+  const pathname = usePathname() || ''
+  const isHiddenPage = HIDE_ON_PREFIXES.some(p => pathname.startsWith(p))
 
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone === true) {
       setInstalled(true)
-      // If launched as installed PWA, record the install once (in case the
-      // appinstalled event was missed — e.g. iOS Safari installs)
-      if (!recordedInstall) {
-        recordInstall()
-        setRecordedInstall(true)
-      }
       return
     }
 
-    // Register service worker + force-update logic.
-    // The service worker caches aggressively — without this, users would be stuck
-    // running old code for days after a deploy. This block:
-    //   1. Registers the SW
-    //   2. Listens for a NEW SW version to be installed by the browser
-    //   3. When a new SW is found, forces it to "skip waiting" (become active immediately)
-    //   4. Triggers a page reload so the new SW + new cached assets take effect
+    // Register service worker (always, regardless of page)
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
-          // Listen for new SW versions
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing
-            if (!newWorker) return
-            newWorker.addEventListener('statechange', () => {
-              // When the new SW has finished installing, force it to activate
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // There's a new SW waiting — force it to take over immediately
-                newWorker.postMessage({ type: 'SKIP_WAITING' })
-              }
-            })
-          })
-          // Check for updates every 60 seconds (in case the user keeps the PWA open)
-          setInterval(() => {
-            registration.update().catch(() => {})
-          }, 60_000)
-        })
-        .catch((err) => {
-          console.warn('SW registration failed:', err)
-        })
-
-      // When the new SW takes control, reload the page so the new code runs
-      let refreshing = false
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (refreshing) return
-        refreshing = true
-        window.location.reload()
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('SW registration failed:', err)
       })
     }
+
+    // Don't show install prompts on immersive pages
+    if (isHiddenPage) return
 
     const handler = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setShowInstall(true)
+      // Delay showing the install banner so user sees content first
+      setTimeout(() => setShowInstall(true), INSTALL_PROMPT_DELAY_MS)
     }
     window.addEventListener('beforeinstallprompt', handler)
 
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
     const isSafari = /^((?!chrome|android|crios|fxios).)*safari/i.test(navigator.userAgent)
     if (isIOS && isSafari) {
-      const t = setTimeout(() => setShowIOSHint(true), 3000)
+      const t = setTimeout(() => setShowIOSHint(true), INSTALL_PROMPT_DELAY_MS)
       return () => {
         clearTimeout(t)
         window.removeEventListener('beforeinstallprompt', handler)
       }
     }
 
-    // Detect appinstalled event — this fires on Android/Chrome/Edge
-    // when the user actually taps "Install" on the browser prompt.
     const installedHandler = () => {
       setInstalled(true)
       setShowInstall(false)
       setShowIOSHint(false)
-      if (!recordedInstall) {
-        recordInstall()
-        setRecordedInstall(true)
-      }
     }
     window.addEventListener('appinstalled', installedHandler)
 
@@ -161,7 +71,7 @@ export default function PWABootstrap() {
       window.removeEventListener('beforeinstallprompt', handler)
       window.removeEventListener('appinstalled', installedHandler)
     }
-  }, [recordedInstall])
+  }, [isHiddenPage])
 
   const handleInstall = async () => {
     if (!deferredPrompt) return
@@ -169,18 +79,15 @@ export default function PWABootstrap() {
     const choice = await deferredPrompt.userChoice
     if (choice.outcome === 'accepted') {
       setInstalled(true)
-      // Record on accepted — backup for the appinstalled event,
-      // which sometimes doesn't fire on certain Android devices.
-      if (!recordedInstall) {
-        recordInstall()
-        setRecordedInstall(true)
-      }
     }
     setShowInstall(false)
     setDeferredPrompt(null)
   }
 
   if (installed) return null
+
+  // Don't render any install UI on hidden pages
+  if (isHiddenPage) return null
 
   return (
     <>
@@ -189,7 +96,7 @@ export default function PWABootstrap() {
         <div style={{
           position: 'fixed', bottom: 16, left: 16, right: 16, maxWidth: 480, margin: '0 auto',
           background: '#fff', borderRadius: 16, padding: 16, boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
-          border: '1.5px solid #31372B', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
+          border: '1.5px solid #AC3B61', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 12,
           fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
         }}>
           <div style={{ width: 44, height: 44, borderRadius: 10, background: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', flexShrink: 0 }}>🌾</div>
