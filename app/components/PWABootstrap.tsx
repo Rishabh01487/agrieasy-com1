@@ -13,10 +13,9 @@ interface BeforeInstallPromptEvent extends Event {
 // (User can still install from any other page.)
 const HIDE_ON_PREFIXES = ['/agrisocial/clips', '/agripay', '/auth/']
 
-// Delay before showing the install prompt — was 3s (too aggressive, covers
-// content before user can read it). 30s gives the user time to scroll + see
-// the actual app content before being asked to install.
-const INSTALL_PROMPT_DELAY_MS = 30_000
+// Delay before showing the install prompt — show immediately (was 30s,
+// reverted to 0 per user request: "make sure it pops up immediately")
+const INSTALL_PROMPT_DELAY_MS = 0
 
 export default function PWABootstrap() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
