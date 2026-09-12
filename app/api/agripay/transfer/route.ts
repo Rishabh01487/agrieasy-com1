@@ -47,40 +47,72 @@ export async function POST(request: NextRequest) {
             toWallet = await Wallet.create({ userId: toUser._id, balance: 0, agripayId: `${toUser.phone}@agripay` })
         }
 
-        const debited = await Wallet.findOneAndUpdate(
-          { _id: fromWallet._id, balance: { $gte: amount } },
-          { $inc: { balance: -amount } },
-          { new: true }
-        )
-        if (!debited) {
-          return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+        // CRIT-3 FIX: Use MongoDB session transaction for atomic debit + credit.
+        // If the server crashes between debit and credit, MongoDB rolls back
+        // the entire transaction — no money disappears.
+        const mongoose = (await import('mongoose')).default
+        const session = await mongoose.startSession()
+
+        let debited: any = null
+        let credited: any = null
+
+        try {
+          await session.withTransaction(async () => {
+            // Atomic debit with $gte guard — prevents double-spend
+            debited = await Wallet.findOneAndUpdate(
+              { _id: fromWallet._id, balance: { $gte: amount } },
+              { $inc: { balance: -amount } },
+              { new: true, session }
+            )
+            if (!debited) throw new Error('Insufficient balance')
+
+            // Atomic credit — if this fails, the debit is rolled back too
+            credited = await Wallet.findByIdAndUpdate(
+              toWallet._id,
+              { $inc: { balance: amount } },
+              { new: true, session }
+            )
+            if (!credited) throw new Error('Failed to credit recipient')
+
+            // Create both transaction records in the same session
+            const recipientLabel = toUser.phone || toUser.email || 'user'
+            await Transaction.create([{
+                fromUserId: auth.user.userId,
+                toUserId: toUser._id,
+                amount,
+                type: 'send',
+                status: 'success',
+                description: `Sent to ${recipientLabel} via ${method.toUpperCase()}`,
+                category: 'transfer',
+                paymentMethod: method,
+                note,
+            }], { session })
+            await Transaction.create([{
+                fromUserId: auth.user.userId,
+                toUserId: toUser._id,
+                amount,
+                type: 'receive',
+                status: 'success',
+                description: `Received from AgriEasy user via ${method.toUpperCase()}`,
+                category: 'transfer',
+                paymentMethod: method,
+                note,
+            }], { session })
+          })
+        } catch (txError: any) {
+          await session.endSession()
+          if (txError.message === 'Insufficient balance') {
+            return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+          }
+          return NextResponse.json({ error: 'Transfer failed. Please try again.' }, { status: 500 })
         }
-        await Wallet.findByIdAndUpdate(toWallet._id, { $inc: { balance: amount } })
+        await session.endSession()
+
+        if (!debited) {
+            return NextResponse.json({ error: 'Insufficient balance. Try again.' }, { status: 400 })
+        }
 
         const recipientLabel = toUser.phone || toUser.email || 'user'
-
-        await Transaction.create({
-            fromUserId: auth.user.userId,
-            toUserId: toUser._id,
-            amount,
-            type: 'send',
-            status: 'success',
-            description: `Sent to ${recipientLabel} via ${method.toUpperCase()}`,
-            category: 'transfer',
-            paymentMethod: method,
-            note,
-        })
-        await Transaction.create({
-            fromUserId: auth.user.userId,
-            toUserId: toUser._id,
-            amount,
-            type: 'receive',
-            status: 'success',
-            description: `Received from AgriPay user via ${method.toUpperCase()}`,
-            category: 'transfer',
-            paymentMethod: method,
-            note,
-        })
 
         const updatedFromWallet = await Wallet.findById(fromWallet._id)
         await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'Transfer', details: { toUserId: toUser._id.toString(), amount, method }, request })

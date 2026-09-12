@@ -35,13 +35,23 @@ export async function GET(req: NextRequest) {
             Ledger.countDocuments(query),
         ])
 
-        const allEntries = await Ledger.find({ userId: auth.user.userId }).lean()
-        const summary = {
-            totalEarnings: allEntries.filter(e => e.type === 'earning' && e.status === 'paid').reduce((s, e) => s + e.amount, 0),
-            totalExpenses: allEntries.filter(e => e.type === 'expense' && e.status === 'paid').reduce((s, e) => s + e.amount, 0),
-            pendingReceivables: allEntries.filter(e => (e.type === 'bill' || e.type === 'invoice') && e.status === 'pending').reduce((s, e) => s + e.amount, 0),
-            pendingPayables: allEntries.filter(e => e.type === 'expense' && e.status === 'pending').reduce((s, e) => s + e.amount, 0),
-            entryCount: allEntries.length,
+        // MED-5 FIX: Use MongoDB aggregation pipeline instead of fetching all entries.
+        // Prevents performance DoS when a user has thousands of ledger entries.
+        const mongoose = (await import('mongoose')).default
+        const summaryAgg = await Ledger.aggregate([
+            { $match: { userId: new mongoose.Types.ObjectId(auth.user.userId) } },
+            { $group: {
+                _id: null,
+                totalEarnings: { $sum: { $cond: [{ $and: [{ $eq: ['$type', 'earning'] }, { $eq: ['$status', 'paid'] }] }, '$amount', 0] } },
+                totalExpenses: { $sum: { $cond: [{ $and: [{ $eq: ['$type', 'expense'] }, { $eq: ['$status', 'paid'] }] }, '$amount', 0] } },
+                pendingReceivables: { $sum: { $cond: [{ $and: [{ $or: [{ $eq: ['$type', 'bill'] }, { $eq: ['$type', 'invoice'] }] }, { $eq: ['$status', 'pending'] }] }, '$amount', 0] } },
+                pendingPayables: { $sum: { $cond: [{ $and: [{ $eq: ['$type', 'expense'] }, { $eq: ['$status', 'pending'] }] }, '$amount', 0] } },
+                entryCount: { $sum: 1 },
+            } },
+        ])
+        const summary = summaryAgg.length > 0 ? summaryAgg[0] : {
+            totalEarnings: 0, totalExpenses: 0,
+            pendingReceivables: 0, pendingPayables: 0, entryCount: 0,
         }
 
         return apiSuccess({ entries, summary }, { page, limit, total, totalPages: Math.max(1, Math.ceil(total / limit)) })
