@@ -1,38 +1,33 @@
 /**
  * AgriEasy Bill OCR — Cloudflare Worker
  *
- * This is a FREE Cloudflare Worker that acts as a CORS proxy to the Z-AI
- * vision API. It solves three problems:
- *   1. Z-AI API doesn't return CORS headers → browser blocks the response
- *   2. Vercel Hobby tier kills functions at 10s → OCR (15-25s) times out
- *   3. Gemini API is blocked in India
+ * Acts as a CORS proxy to the Z-AI vision API for bill OCR.
+ * Reads ALL credentials from Cloudflare Worker environment variables
+ * (set via dash.cloudflare.com → Workers → agrieasy-ocr → Settings → Variables).
+ *
+ * SECURITY: No credentials are hardcoded in this file. All secrets are
+ * read from the `env` parameter passed to the fetch handler by the
+ * Cloudflare Workers runtime.
+ *
+ * ── REQUIRED ENVIRONMENT VARIABLES (set in Cloudflare dashboard) ──
+ *
+ *   ZAI_BASE_URL   — e.g. https://internal-api.z.ai/v1
+ *   ZAI_API_KEY    — API key (e.g. "Z.ai")
+ *   ZAI_CHAT_ID    — Chat session ID
+ *   ZAI_USER_ID    — User ID
+ *   ZAI_TOKEN      — JWT auth token
+ *
+ * ── HOW TO DEPLOY ──
+ * 1. Go to https://dash.cloudflare.com → Workers & Pages → agrieasy-ocr
+ * 2. Settings → Variables → Add each env var above (mark as Secret)
+ * 3. Deploy (auto-deploys on every push to main via Workers Builds)
  *
  * Cloudflare Workers:
  *   - Free tier: 100,000 requests/day
  *   - 30 second CPU time limit (plenty for OCR)
  *   - Works in India
  *   - Returns CORS headers (browser allows the response)
- *
- * ── HOW TO DEPLOY (takes 2 minutes) ──
- * 1. Go to https://dash.cloudflare.com → sign in (free account)
- * 2. Left sidebar → "Workers & Pages" → click "Create"
- * 3. Click "Create Worker"
- * 4. Give it a name (e.g. "agrieasy-ocr")
- * 5. Delete the default code and PASTE THIS ENTIRE FILE
- * 6. Click "Deploy"
- * 7. Copy the Worker URL (e.g. https://agrieasy-ocr.your-name.workers.dev)
- * 8. Paste that URL into BillCalculator.tsx (replace WORKER_URL)
- *
- * That's it! The Worker is now live and free forever.
  */
-
-const ZAI_CONFIG = {
-    baseUrl: 'https://internal-api.z.ai/v1',
-    apiKey: 'Z.ai',
-    chatId: 'chat-7fcc4e40-ad01-4ab0-a83e-bad8f1cf2840',
-    userId: 'e255a2b5-f0be-4835-9279-65e7282d8a50',
-    token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiZTI1NWEyYjUtZjBiZS00ODM1LTkyNzktNjVlNzI4MmQ4YTUwIiwiY2hhdF9pZCI6ImNoYXQtN2ZjYzRlNDAtYWQwMS00YWIwLWE4M2UtYmFkOGYxY2YyODQwIiwicGxhdGZvcm0iOiJ6YWkifQ._LiPn8RNbsG86TBREaaZYvI5LSZf4hBot3muo19pb4o',
-}
 
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
@@ -41,7 +36,7 @@ const CORS_HEADERS = {
 }
 
 export default {
-    async fetch(request) {
+    async fetch(request, env) {
         if (request.method === 'OPTIONS') {
             return new Response(null, { headers: CORS_HEADERS })
         }
@@ -49,6 +44,30 @@ export default {
         if (request.method !== 'POST') {
             return new Response(JSON.stringify({ error: 'Use POST' }), {
                 status: 405,
+                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+            })
+        }
+
+        // Read ALL credentials from env vars — nothing hardcoded
+        const baseUrl = env.ZAI_BASE_URL
+        const apiKey = env.ZAI_API_KEY
+        const chatId = env.ZAI_CHAT_ID
+        const userId = env.ZAI_USER_ID
+        const token  = env.ZAI_TOKEN
+
+        // Fail fast if any env var is missing
+        if (!baseUrl || !apiKey || !chatId || !userId || !token) {
+            const missing = [
+                !baseUrl && 'ZAI_BASE_URL',
+                !apiKey && 'ZAI_API_KEY',
+                !chatId && 'ZAI_CHAT_ID',
+                !userId && 'ZAI_USER_ID',
+                !token && 'ZAI_TOKEN',
+            ].filter(Boolean).join(', ')
+            return new Response(JSON.stringify({
+                error: `Missing env vars: ${missing}. Set them in Cloudflare dashboard → Workers → agrieasy-ocr → Settings → Variables.`,
+            }), {
+                status: 503,
                 headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
             })
         }
@@ -64,15 +83,15 @@ export default {
                 ],
             }]
 
-            const zaiRes = await fetch(`${ZAI_CONFIG.baseUrl}/chat/completions/vision`, {
+            const zaiRes = await fetch(`${baseUrl}/chat/completions/vision`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${ZAI_CONFIG.apiKey}`,
+                    'Authorization': `Bearer ${apiKey}`,
                     'X-Z-AI-From': 'Z',
-                    'X-Chat-Id': ZAI_CONFIG.chatId,
-                    'X-User-Id': ZAI_CONFIG.userId,
-                    'X-Token': ZAI_CONFIG.token,
+                    'X-Chat-Id': chatId,
+                    'X-User-Id': userId,
+                    'X-Token': token,
                 },
                 body: JSON.stringify({
                     model: 'glm-4.6v',

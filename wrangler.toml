@@ -22,3 +22,17 @@ compatibility_date = "2024-09-23"
 
 # Workers Builds auto-deploys on every push to the production branch.
 # No build command needed — the worker is plain JS, no bundler required.
+
+# ── Environment Variables ──────────────────────────────────────
+# These are NOT set here — set them as Secrets in the Cloudflare dashboard:
+#   dash.cloudflare.com → Workers & Pages → agrieasy-ocr → Settings → Variables
+#
+# Required variables (mark all as "Secret" — encrypted, not visible in logs):
+#   ZAI_BASE_URL   — e.g. https://internal-api.z.ai/v1
+#   ZAI_API_KEY    — API key
+#   ZAI_CHAT_ID    — Chat session ID
+#   ZAI_USER_ID    — User ID
+#   ZAI_TOKEN      — JWT auth token
+#
+# The worker reads these via the `env` parameter in the fetch handler.
+# If any are missing, the worker returns 503 with a helpful error message.
