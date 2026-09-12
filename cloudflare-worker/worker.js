@@ -29,22 +29,29 @@
  *   - Returns CORS headers (browser allows the response)
  */
 
-const CORS_HEADERS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+const ALLOWED_ORIGINS = ['https://agrieasy.site', 'https://www.agrieasy.site', 'http://localhost:3000']
+
+function corsHeaders(request) {
+    const origin = request.headers.get('Origin') || ''
+    const allowed = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
+    return {
+        'Access-Control-Allow-Origin': allowed,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, X-Worker-Key',
+        'Vary': 'Origin',
+    }
 }
 
 export default {
     async fetch(request, env) {
         if (request.method === 'OPTIONS') {
-            return new Response(null, { headers: CORS_HEADERS })
+            return new Response(null, { headers: corsHeaders(request) })
         }
 
         if (request.method !== 'POST') {
             return new Response(JSON.stringify({ error: 'Use POST' }), {
                 status: 405,
-                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                headers: { 'Content-Type': 'application/json', ...corsHeaders(request) },
             })
         }
 
@@ -68,12 +75,29 @@ export default {
                 error: `Missing env vars: ${missing}. Set them in Cloudflare dashboard → Workers → agrieasy-ocr → Settings → Variables.`,
             }), {
                 status: 503,
-                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                headers: { 'Content-Type': 'application/json', ...corsHeaders(request) },
+            })
+        }
+
+        // CRIT-2 FIX: Require X-Worker-Key header for authentication
+        const workerKey = env.WORKER_SECRET
+        if (!workerKey || request.headers.get('X-Worker-Key') !== workerKey) {
+            return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json', ...corsHeaders(request) },
             })
         }
 
         try {
             const body = await request.json()
+
+            // CRIT-2 FIX: Validate imageUrl to prevent SSRF
+            if (body.imageUrl && !body.imageUrl.startsWith('https://res.cloudinary.com/')) {
+                return new Response(JSON.stringify({ error: 'Invalid image URL' }), {
+                    status: 400,
+                    headers: { 'Content-Type': 'application/json', ...corsHeaders(request) },
+                })
+            }
 
             const messages = body.messages || [{
                 role: 'user',
@@ -103,14 +127,14 @@ export default {
             const data = await zaiRes.text()
             return new Response(data, {
                 status: zaiRes.status,
-                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                headers: { 'Content-Type': 'application/json', ...corsHeaders(request) },
             })
         } catch (err) {
             return new Response(JSON.stringify({
                 error: err.message || 'Worker error',
             }), {
                 status: 500,
-                headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+                headers: { 'Content-Type': 'application/json', ...corsHeaders(request) },
             })
         }
     },

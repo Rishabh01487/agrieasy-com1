@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return apiError(ErrorCodes.INTERNAL_ERROR, 'Server misconfigured: JWT_SECRET not set')
     }
 
-    const payload = { userId: user._id.toString(), email: user.email, role: user.role }
+    const payload = { userId: user._id.toString(), email: user.email, role: user.role, tokenVersion: user.tokenVersion || 0 }
     const token = jwt.sign(payload, secret, { expiresIn: '7d' })
 
     const successBody = apiSuccess({
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     successBody.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60,
       path: '/',
     })
@@ -54,7 +54,6 @@ export async function POST(request: NextRequest) {
     return successBody
   } catch (error: unknown) {
     console.error('Login error:', error)
-    const message = error instanceof Error ? error.message : 'Login failed'
-    return apiError(ErrorCodes.INTERNAL_ERROR, message)
+    return apiError(ErrorCodes.INTERNAL_ERROR, 'An error occurred. Please try again.')
   }
 }

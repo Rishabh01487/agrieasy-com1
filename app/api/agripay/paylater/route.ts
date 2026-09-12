@@ -24,7 +24,7 @@ async function calculateInterest(loan: any) {
 
     const daysPastDue = Math.floor((now.getTime() - new Date(loan.dueDate).getTime()) / (1000 * 60 * 60 * 24))
     const rate = daysPastDue > 0 ? DEFAULT_INTEREST_RATE : INTEREST_RATE
-    const dailyRate = rate / 100
+    const dailyRate = rate / 365  // FIX MED-6: was /100 (=36% p.a.), now /365 (=9.9% p.a.)
     const interest = loan.amountDue * dailyRate * daysSinceLastCalc
     const newAmountDue = Math.round((loan.amountDue + interest) * 100) / 100
 
@@ -115,9 +115,21 @@ export async function POST(request: NextRequest) {
         })
 
         await Transaction.findByIdAndUpdate(transaction._id, { paylaterId: loan._id })
-        await Wallet.findByIdAndUpdate(wallet._id, {
-            $inc: { balance: amount, paylaterUsed: amount },
-        })
+        // CRIT-4 FIX: Atomic update with $expr guard — prevents TOCTOU race
+        const updated = await Wallet.findOneAndUpdate(
+            {
+                _id: wallet._id,
+                paylaterEligible: true,
+                $expr: { $lte: [{ $add: ['$paylaterUsed', amount] }, '$paylaterLimit'] },
+            },
+            { $inc: { balance: amount, paylaterUsed: amount } },
+            { new: true }
+        )
+        if (!updated) {
+            await PayLater.findByIdAndDelete(loan._id)
+            await Transaction.findByIdAndDelete(transaction._id)
+            return NextResponse.json({ error: 'Insufficient PayLater credit limit. Try a smaller amount.' }, { status: 400 })
+        }
 
         const updatedWallet = await Wallet.findById(wallet._id)
 

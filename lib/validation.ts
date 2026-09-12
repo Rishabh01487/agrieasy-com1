@@ -57,7 +57,7 @@ export const upiIdSchema = z
   .string()
   .regex(/^[\w.\-]+@[\w]+$/, 'Invalid UPI ID format (e.g. user@paytm)')
 
-export const roleSchema = z.enum(['farmer', 'buyer', 'transporter', 'admin'])
+export const roleSchema = z.enum(['farmer', 'buyer', 'transporter'])
 
 export const positiveAmountSchema = z
   .number()
@@ -93,6 +93,9 @@ export const registerSchema = z.object({
   // Farmer/Transporter-specific
   aadhaarNumber: z.string().regex(/^\d{12}$/, 'Aadhaar must be 12 digits').optional().or(z.literal('')),
   drivingLicense: z.string().min(1).optional(),
+  // Transporter-specific (extra fields that were previously relying on .passthrough())
+  transporterCompanyName: z.string().optional(),
+  transporterGstin: z.string().optional(),
   // Address — accept either a plain string (from the autocomplete form) OR a
   // structured object {state, district, pinCode, fullAddress}.
   // NOTE: For Google users, the register page allows empty address (they can
@@ -109,7 +112,7 @@ export const registerSchema = z.object({
       fullAddress: sanitizedString(z.string().min(5, 'Address is too short').max(300)),
     }),
   ]).optional(),
-}).passthrough()  // Allow extra fields from the form (aadhar, companyName, etc.) — Zod v4 defaults to strict reject
+})  // No .passthrough() — extra fields are dropped (safer)
 
 // ── Buyer vehicle schema ───────────────────────────────────────────
 // Buyer-owned vehicles offered to farmers for transporting produce.

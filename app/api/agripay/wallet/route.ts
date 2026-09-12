@@ -18,7 +18,19 @@ export async function GET(request: NextRequest) {
             const agripayId = `${user.phone}@agripay`
             wallet = await Wallet.create({ userId: auth.user.userId, balance: 0, agripayId })
         }
-        return NextResponse.json({ wallet })
+        const safeWallet = {
+            balance: wallet.balance,
+            agripayId: wallet.agripayId,
+            isKYC: wallet.isKYC,
+            bankVerified: wallet.bankVerified,
+            bankName: wallet.bankVerified ? wallet.bankName : undefined,
+            paylaterEligible: wallet.paylaterEligible,
+            paylaterLimit: wallet.paylaterLimit,
+            paylaterUsed: wallet.paylaterUsed,
+            dailyLimit: wallet.dailyLimit,
+            monthlyLimit: wallet.monthlyLimit,
+        }
+        return NextResponse.json({ wallet: safeWallet })
     } catch (error) {
         console.error('Get wallet error:', error)
         return NextResponse.json({ error: 'Failed to get wallet' }, { status: 500 })

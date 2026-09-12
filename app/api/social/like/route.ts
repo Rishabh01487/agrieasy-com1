@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()
 
-        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 60, message: 'Slow down!' })
+        const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 30, message: 'Slow down!' })
         if (rl) return rl
 
         await dbConnect()

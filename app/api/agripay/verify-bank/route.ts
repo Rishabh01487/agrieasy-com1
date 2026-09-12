@@ -41,6 +41,12 @@ export async function POST(request: NextRequest) {
         wallet.accountNumber = accountNumber
         wallet.ifscCode = ifscCode.toUpperCase()
         if (upiId) wallet.upiId = upiId
+        // HIGH-4 FIX: Validate IFSC code format before auto-verifying
+        const ifsc = ifscCode.toUpperCase().trim()
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+            return NextResponse.json({ error: 'Invalid IFSC code format' }, { status: 400 })
+        }
+        wallet.ifscCode = ifsc
         wallet.bankVerified = true
         wallet.bankVerifiedAt = new Date()
         wallet.isKYC = true

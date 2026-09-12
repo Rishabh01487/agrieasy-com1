@@ -24,6 +24,7 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, unique: true, required: true },
   phone: { type: String, unique: true, required: true },
   password: { type: String, required: true },
+  tokenVersion: { type: Number, default: 0 },  // HIGH-2: for JWT revocation
   role: { type: String, enum: ['farmer', 'buyer', 'transporter', 'driver'], required: true },
   address: { type: String, default: '' },
 

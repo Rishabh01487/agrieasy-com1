@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
             toUserId: toUserId || undefined,  // may be null if recipient not registered
             amount,
             type: 'send',
-            status: 'success',
+            status: 'pending', // HIGH-5 FIX: was 'success' without verification
             description: `Sent ₹${amount} via UPI to ${upiId}${upiRefId ? ` (Ref: ${upiRefId})` : ''}`,
             category: 'transfer',
             paymentMethod: 'upi',
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
                 toUserId,
                 amount,
                 type: 'receive',
-                status: 'success',
+                status: 'pending', // HIGH-5 FIX: was 'success' without verification
                 description: `Received ₹${amount} via UPI${upiRefId ? ` (Ref: ${upiRefId})` : ''}`,
                 category: 'transfer',
                 paymentMethod: 'upi',

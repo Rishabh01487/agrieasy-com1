@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     const data = v.data
 
     const user = await User.findOne({ phone: data.phone })
-    if (!user) return notFound('User')
+    if (!user) return apiSuccess({ message: 'If an account exists, an OTP has been sent.' })
 
     const otp = generateOtp()
     await storeOtp(data.phone, otp)

@@ -23,7 +23,7 @@ const WalletSchema = new mongoose.Schema({
     balance: { type: Number, default: 0, min: 0 },
     isKYC: { type: Boolean, default: false },
     agripayId: { type: String, unique: true, sparse: true },
-    pin: { type: String },
+    pin: { type: String, select: false },  // LOW-4: never returned in queries
     dailyLimit: { type: Number, default: 10000 },
     monthlyLimit: { type: Number, default: 100000 },
     bankName: encryptedString,

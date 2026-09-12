@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     const existingUser = await User.findOne({ $or: [{ email: data.email }, { phone: data.phone }] })
     if (existingUser) {
-      return badRequest('User already exists with this email or phone')
+      return badRequest('Registration failed. Please try with different details.')
     }
 
     const hashedPassword = await bcrypt.hash(data.password, 10)
