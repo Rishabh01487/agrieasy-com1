@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriEasy — Nav Bar Demo (Live)</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #FAF7EE;
+  color: #31372B;
+  overflow-x: hidden;
+}
+
+/* ─── Switcher buttons ─────────────────────────────── */
+.switcher {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  background: #fff;
+  padding: 8px;
+  border-radius: 100px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  z-index: 9999;
+}
+.switcher button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 100px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.switcher button.active {
+  background: #31372B;
+  color: #fff;
+}
+.switcher button:not(.active) {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* ─── Nav Bar Option 1: Clean Minimal ─────────────── */
+.nav-clean {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(49, 55, 43, 0.08);
+  box-shadow: 0 1px 8px rgba(49, 55, 43, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.nav-clean-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.nav-clean-logo img {
+  width: 36px; height: 36px; border-radius: 9px;
+}
+.nav-clean-logo span {
+  font-weight: 800; font-size: 1.15rem; color: #31372B;
+}
+.nav-clean-links {
+  display: flex; gap: 4px; align-items: center;
+}
+.nav-clean-link {
+  padding: 8px 14px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #5B6B7D;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.nav-clean-link:hover {
+  background: #F5F7FA;
+  color: #31372B;
+}
+.nav-clean-cta {
+  padding: 9px 22px;
+  background: #31372B;
+  color: #fff !important;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background 0.2s;
+  margin-left: 8px;
+}
+.nav-clean-cta:hover { background: #4A5240; }
+
+/* ─── Nav Bar Option 2: Glass Pill ─────────────────── */
+.nav-glass-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 10px 16px;
+}
+.nav-glass {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  max-width: 720px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(49, 55, 43, 0.12);
+  border-radius: 100px;
+  box-shadow: 0 4px 24px rgba(49, 55, 43, 0.08);
+}
+.nav-glass-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  padding-left: 8px;
+}
+.nav-glass-logo img {
+  width: 30px; height: 30px; border-radius: 8px;
+}
+.nav-glass-logo span {
+  font-weight: 800; font-size: 1.05rem; color: #31372B;
+}
+.nav-glass-links {
+  display: flex; gap: 2px;
+}
+.nav-glass-link {
+  padding: 7px 14px;
+  border-radius: 100px;
+  text-decoration: none;
+  color: #5B6B7D;
+  font-size: 0.82rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.nav-glass-link:hover {
+  background: #31372B;
+  color: #fff;
+}
+.nav-glass-cta {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #31372B, #4A5240);
+  color: #fff !important;
+  border-radius: 100px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  margin-right: 4px;
+}
+
+/* ─── Nav Bar Option 3: Bold Dark ──────────────────── */
+.nav-dark {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #31372B 0%, #262B20 100%);
+  box-shadow: 0 4px 20px rgba(49, 55, 43, 0.2);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.nav-dark-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+.nav-dark-logo img {
+  width: 36px; height: 36px; border-radius: 9px;
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+.nav-dark-logo span {
+  font-weight: 800; font-size: 1.2rem; color: #fff;
+}
+.nav-dark-links {
+  display: flex; gap: 4px; align-items: center;
+}
+.nav-dark-link {
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.nav-dark-link:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+.nav-dark-cta {
+  padding: 9px 24px;
+  background: #fff;
+  color: #31372B !important;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-decoration: none;
+  margin-left: 8px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.nav-dark-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Mobile hamburger ─── */
+.mobile-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #31372B;
+}
+.nav-dark .mobile-toggle { color: #fff; }
+.nav-glass .mobile-toggle { color: #31372B; }
+
+@media (max-width: 768px) {
+  .nav-clean-links, .nav-glass-links, .nav-dark-links { display: none; }
+  .mobile-toggle { display: block; }
+  .nav-clean-links.mobile-open, .nav-glass-links.mobile-open, .nav-dark-links.mobile-open {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: inherit;
+    padding: 16px;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  }
+  .nav-clean-links.mobile-open { background: rgba(255,255,255,0.98); }
+  .nav-glass-links.mobile-open { background: rgba(255,255,255,0.95); border-radius: 16px; }
+  .nav-dark-links.mobile-open { background: #31372B; }
+}
+
+/* ─── Home page content (simulated) ────────────────── */
+.home-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 24px 120px;
+  min-height: 100vh;
+}
+.home-logo {
+  width: 88px; height: 88px; border-radius: 24px;
+  background: linear-gradient(135deg, #ffffff, #FAF7EE);
+  border: 2px solid #31372B;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 12px 40px rgba(49,55,43,0.18);
+  margin-bottom: 16px;
+}
+.home-logo img { width: 52px; height: 52px; border-radius: 13px; }
+.home-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(49,55,43,0.18);
+  border-radius: 100px; padding: 6px 18px; margin-bottom: 20px;
+}
+.home-badge span:first-child {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #4A5240; display: inline-block;
+  animation: pulse 2s ease-in-out infinite;
+}
+.home-badge span:last-child {
+  color: #31372B; font-size: 0.7rem; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase;
+}
+.home-title {
+  font-size: clamp(3rem, 10vw, 5.5rem);
+  font-weight: 900; line-height: 0.95;
+  letter-spacing: -0.04em; margin: 0 0 18px;
+  text-align: center;
+}
+.home-title .agri {
+  background: linear-gradient(110deg, #31372B 0%, #31372B 35%, #4A5240 50%, #31372B 65%, #31372B 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+}
+.home-title .easy {
+  font-family: 'Dancing Script', cursive;
+  background: linear-gradient(120deg, #31372B 0%, #4A5240 30%, #4A5240 70%, #31372B 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  font-weight: 700; font-style: italic;
+  font-size: 1.18em; transform: rotate(-2deg);
+  display: inline-block; margin-left: 0.04em;
+}
+.home-tagline {
+  color: #31372B; font-size: clamp(1rem, 2.2vw, 1.2rem);
+  margin: 0 0 4px; font-weight: 600; text-align: center;
+}
+.home-sub {
+  color: #6B6E5A; font-size: 0.82rem; margin: 0 0 6px;
+  font-weight: 600; letter-spacing: 0.15em;
+  text-transform: uppercase; text-align: center;
+}
+.home-desc {
+  color: #6B6E5A; font-size: 0.8rem; margin: 0 0 20px;
+  text-align: center;
+}
+.home-pills {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 6px; margin-bottom: 28px;
+}
+.home-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 12px; border-radius: 100px;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(49,55,43,0.15);
+  color: #31372B; font-size: 0.72rem; font-weight: 600;
+}
+.home-pill span { color: #4A5240; }
+.home-roles {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 10px; max-width: 560px; width: 100%; margin-bottom: 28px;
+}
+.home-role {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(49,55,43,0.15);
+  border-radius: 16px; padding: 20px 10px;
+  text-align: center; text-decoration: none;
+  color: inherit;
+  transition: transform 0.3s;
+}
+.home-role:hover { transform: translateY(-4px); }
+.home-role-icon {
+  width: 52px; height: 52px; border-radius: 14px;
+  margin: 0 auto 10px;
+  background: linear-gradient(135deg, #31372B12, #31372B06);
+  border: 1.5px solid #31372B30;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+}
+.home-role-name {
+  font-weight: 800; font-size: 0.92rem; color: #31372B;
+}
+.home-role-sub {
+  color: #6B6E5A; font-size: 0.7rem; margin-top: 3px;
+}
+.home-cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 13px 28px;
+  background: linear-gradient(135deg, #31372B 0%, #262B20 50%, #1F2419 100%);
+  border: 1px solid rgba(49,55,43,0.3);
+  border-radius: 100px;
+  text-decoration: none; color: #fff;
+  font-size: 0.9rem; font-weight: 600;
+  box-shadow: 0 8px 28px rgba(49,55,43,0.35);
+  margin-top: 8px;
+}
+
+/* ─── Show/hide nav bars ─── */
+.nav-bar { display: none; }
+.nav-bar.active { display: block; }
+
+@keyframes pulse {
+  0%,100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ NAV BAR OPTION 1: Clean Minimal ════════════════ -->
+<div class="nav-bar nav-clean-bar active" id="nav1">
+  <nav class="nav-clean">
+    <a href="#" class="nav-clean-logo">
+      <img src="https://agrieasy.site/icons/icon-192.png" alt="AgriEasy" />
+      <span>AgriEasy</span>
+    </a>
+    <div class="nav-clean-links" id="links1">
+      <a href="#" class="nav-clean-link">Home</a>
+      <a href="#" class="nav-clean-link">Features</a>
+      <a href="#" class="nav-clean-link">Bill Calculator</a>
+      <a href="#" class="nav-clean-link">AgriSocial</a>
+      <a href="#" class="nav-clean-link">About</a>
+      <a href="#" class="nav-clean-cta">Sign In</a>
+    </div>
+    <button class="mobile-toggle" onclick="toggleMenu('links1')">☰</button>
+  </nav>
+</div>
+
+<!-- ═══ NAV BAR OPTION 2: Glass Pill ═══════════════════ -->
+<div class="nav-bar nav-glass-bar" id="nav2" style="display:none;">
+  <div class="nav-glass-wrapper">
+    <nav class="nav-glass">
+      <a href="#" class="nav-glass-logo">
+        <img src="https://agrieasy.site/icons/icon-192.png" alt="AgriEasy" />
+        <span>AgriEasy</span>
+      </a>
+      <div class="nav-glass-links" id="links2">
+        <a href="#" class="nav-glass-link">Home</a>
+        <a href="#" class="nav-glass-link">Features</a>
+        <a href="#" class="nav-glass-link">Bill Calc</a>
+        <a href="#" class="nav-glass-link">Social</a>
+      </div>
+      <a href="#" class="nav-glass-cta">Sign In →</a>
+      <button class="mobile-toggle" onclick="toggleMenu('links2')">☰</button>
+    </nav>
+  </div>
+</div>
+
+<!-- ═══ NAV BAR OPTION 3: Bold Dark ════════════════════ -->
+<div class="nav-bar nav-dark-bar" id="nav3" style="display:none;">
+  <nav class="nav-dark">
+    <a href="#" class="nav-dark-logo">
+      <img src="https://agrieasy.site/icons/icon-192.png" alt="AgriEasy" />
+      <span>AgriEasy</span>
+    </a>
+    <div class="nav-dark-links" id="links3">
+      <a href="#" class="nav-dark-link">Home</a>
+      <a href="#" class="nav-dark-link">Features</a>
+      <a href="#" class="nav-dark-link">Bill Calculator</a>
+      <a href="#" class="nav-dark-link">AgriSocial</a>
+      <a href="#" class="nav-dark-link">About</a>
+      <a href="#" class="nav-dark-cta">Sign In</a>
+    </div>
+    <button class="mobile-toggle" onclick="toggleMenu('links3')">☰</button>
+  </nav>
+</div>
+
+<!-- ═══ HOME PAGE CONTENT (simulated, without "Zero middlemen" + "Jai Jawan Jai Kisan") ═══ -->
+<div class="home-content">
+  <div class="home-logo">
+    <img src="https://agrieasy.site/agrieasy-logo-main-5.png" alt="AgriEasy" />
+  </div>
+  <div class="home-badge">
+    <span></span>
+    <span>India's Agricultural Marketplace</span>
+  </div>
+  <h1 class="home-title">
+    <span class="agri">Agri</span><span class="easy">Easy</span>
+  </h1>
+  <p class="home-tagline">Connecting farmers directly with buyers</p>
+  <p class="home-sub">Sow • Grow • Thrive</p>
+  <p class="home-desc">End-to-end agricultural trade · Social network · Wallet · Logistics</p>
+
+  <!-- Feature pills (Zero middlemen REMOVED) -->
+  <div class="home-pills">
+    <span class="home-pill"><span>✓</span> Instant UPI payments</span>
+    <span class="home-pill"><span>✓</span> Real-time tracking</span>
+    <span class="home-pill"><span>✓</span> Live GPS tracking</span>
+  </div>
+
+  <!-- Role cards -->
+  <div class="home-roles">
+    <a href="#" class="home-role">
+      <div class="home-role-icon">🌾</div>
+      <p class="home-role-name">Farmer/Vyapari</p>
+      <p class="home-role-sub">Sell your produce</p>
+    </a>
+    <a href="#" class="home-role">
+      <div class="home-role-icon">🛒</div>
+      <p class="home-role-name">Buyer</p>
+      <p class="home-role-sub">Source fresh crops</p>
+    </a>
+    <a href="#" class="home-role">
+      <div class="home-role-icon">🚛</div>
+      <p class="home-role-name">Transporter</p>
+      <p class="home-role-sub">Deliver goods</p>
+    </a>
+  </div>
+
+  <a href="#" class="home-cta">New here? Create an account →</a>
+</div>
+
+<!-- ═══ SWITCHER ═══════════════════════════════════════ -->
+<div class="switcher">
+  <button class="active" onclick="switchNav(1)">Clean Minimal</button>
+  <button onclick="switchNav(2)">Glass Pill</button>
+  <button onclick="switchNav(3)">Bold Dark</button>
+</div>
+
+<script>
+function switchNav(option) {
+  // Hide all nav bars
+  document.querySelectorAll('.nav-bar').forEach(el => el.style.display = 'none');
+  // Show selected
+  document.getElementById('nav' + option).style.display = 'block';
+  // Update switcher buttons
+  document.querySelectorAll('.switcher button').forEach((btn, i) => {
+    btn.classList.toggle('active', i === option - 1);
+  });
+}
+
+function toggleMenu(linksId) {
+  const links = document.getElementById(linksId);
+  links.classList.toggle('mobile-open');
+}
+</script>
+
+</body>
+</html>
