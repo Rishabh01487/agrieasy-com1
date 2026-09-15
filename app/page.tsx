@@ -28,7 +28,7 @@ const FEATURE_CARDS: Card[] = [
 // disable navigation. See app/components/FeatureCards.tsx (client
 // component) for the COMING_SOON set + onClick handling.
 
-const FEATURES = ['Zero middlemen', 'Instant UPI payments', 'Real-time tracking', 'Live GPS tracking']
+const FEATURES = ['Instant UPI payments', 'Real-time tracking', 'Live GPS tracking']
 
 export default function Home() {
   return (
@@ -204,27 +204,6 @@ export default function Home() {
         {/* Feature cards — secondary */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8, marginBottom: 28, maxWidth: 560, width: '100%' }}>
           <FeatureCards cards={FEATURE_CARDS} />
-        </div>
-
-        {/* Quote */}
-        <div className="fade-up" style={{
-          margin: '0 auto 22px', padding: '16px 28px', maxWidth: 440,
-          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(49,55,43,0.10)',
-          borderRadius: 14, textAlign: 'center', animationDelay: '0.45s',
-        }}>
-          <p style={{
-            fontSize: 'clamp(0.95rem, 2.5vw, 1.2rem)', fontWeight: 800, letterSpacing: '0.1em',
-            margin: 0, textTransform: 'uppercase',
-            background: 'linear-gradient(90deg, #4A5240, #31372B, #31372B, #31372B, #4A5240)',
-            backgroundSize: '200% auto', WebkitBackgroundClip: 'text', backgroundClip: 'text',
-            WebkitTextFillColor: 'transparent', color: 'transparent',
-            animation: 'shimmer 5s linear infinite',
-          }}>
-            &ldquo;Jai Jawan, Jai Kisan&rdquo;
-          </p>
-          <p style={{ color: '#6B6E5A', fontSize: '0.72rem', margin: '6px 0 0' }}>
-            — Lal Bahadur Shastri, 2nd Prime Minister of India
-          </p>
         </div>
 
         {/* CTA */}
