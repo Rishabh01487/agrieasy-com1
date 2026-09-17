@@ -1,5 +1,6 @@
 'use client'
 
+import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -18,7 +19,7 @@ interface Loan {
     interestRateDefault: number
 }
 
-function PayLaterPage() {
+function PayLaterPageOriginal() {
     const [wallet, setWallet] = useState<any>(null)
     const [activeLoans, setActiveLoans] = useState<Loan[]>([])
     const [closedLoans, setClosedLoans] = useState<Loan[]>([])
@@ -306,4 +307,4 @@ function PayLaterPage() {
 
 // EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
 // To re-enable this page later: delete this export and rename _original back to the default export.
-export default PayLaterPage
+export default EasyPayComingSoonRedirect
