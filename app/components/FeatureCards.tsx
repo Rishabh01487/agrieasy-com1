@@ -10,7 +10,7 @@ interface FeatureCard {
   color: string
 }
 
-const COMING_SOON = new Set(['EasyPay'])
+const COMING_SOON = new Set<string>()  // EasyPay is now LIVE
 
 /**
  * Renders the home-page secondary feature cards as a CLIENT component so
