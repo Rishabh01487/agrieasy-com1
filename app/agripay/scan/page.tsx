@@ -1,13 +1,12 @@
 'use client'
 
-import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { AGRI, SHARED, navStyle, inputStyle } from '@/lib/styles'
 
-function ScanToPayOriginal() {
+function ScanToPay() {
     const [agripayId, setAgripayId] = useState('')
     const [userName, setUserName] = useState('')
     const [loading, setLoading] = useState(true)
@@ -250,4 +249,4 @@ function ScanToPayOriginal() {
 
 // EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
 // To re-enable this page later: delete this export and rename _original back to the default export.
-export default EasyPayComingSoonRedirect
+export default ScanToPay

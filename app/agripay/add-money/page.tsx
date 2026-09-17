@@ -1,6 +1,5 @@
 'use client'
 
-import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -10,7 +9,7 @@ import { AGRI, SHARED, navStyle, labelStyle } from '@/lib/styles'
 
 const PRESETS = [100, 200, 500, 1000, 2000, 5000]
 
-function AddMoneyOriginal() {
+function AddMoney() {
     const router = useRouter()
     const [amount, setAmount] = useState('')
     const [loading, setLoading] = useState(false)
@@ -173,4 +172,4 @@ function AddMoneyOriginal() {
 
 // EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
 // To re-enable this page later: delete this export and rename _original back to the default export.
-export default EasyPayComingSoonRedirect
+export default AddMoney
