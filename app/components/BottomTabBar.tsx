@@ -40,13 +40,13 @@ const TABS: Record<string, TabItem[]> = {
 
 // Tabs that are not yet live — show "SOON" badge + Coming Soon notice
 // when tapped, instead of navigating to the underlying route.
-const COMING_SOON_HREFS = new Set(['/agripay'])
+// EasyPay wallet is now LIVE — removed from this set.
+const COMING_SOON_HREFS = new Set<string>()
 
 const HIDE_ON_PREFIXES = [
   '/auth/',
   '/admin',
   '/agrisocial',
-  '/agripay',
   '/tracking',
   '/ledger',
 ]
