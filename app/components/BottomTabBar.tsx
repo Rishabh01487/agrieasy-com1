@@ -20,21 +20,18 @@ const TABS: Record<string, TabItem[]> = {
     { icon: 'search', label: 'Buyers', href: '/farmer/search-buyers', match: ['/farmer/search-buyers', '/farmer/buyer/'] },
     { icon: 'calendar', label: 'Bookings', href: '/farmer/my-bookings', match: ['/farmer/my-bookings', '/farmer/book-vehicle', '/farmer/tracking'] },
     { icon: 'location', label: 'Location', href: '/farmer/setup-location', match: ['/farmer/setup-location'] },
-    { icon: 'wallet', label: 'Wallet', href: '/agripay', match: ['/agripay'] },
   ],
   buyer: [
     { icon: 'home', label: 'Home', href: '/buyer/dashboard', match: ['/buyer/dashboard'] },
     { icon: 'clipboard', label: 'Commodities', href: '/buyer/create-listing', match: ['/buyer/create-listing', '/buyer/listing/'] },
     { icon: 'calendar', label: 'Bookings', href: '/buyer/bookings', match: ['/buyer/bookings'] },
     { icon: 'truck', label: 'Vehicles', href: '/buyer/my-vehicles', match: ['/buyer/my-vehicles', '/buyer/profile'] },
-    { icon: 'wallet', label: 'Wallet', href: '/agripay', match: ['/agripay'] },
   ],
   transporter: [
     { icon: 'home', label: 'Home', href: '/transporter/dashboard', match: ['/transporter/dashboard'] },
     { icon: 'truck', label: 'Fleet', href: '/transporter/my-vehicles', match: ['/transporter/my-vehicles', '/transporter/add-vehicle'] },
     { icon: 'calendar', label: 'Bookings', href: '/transporter/bookings', match: ['/transporter/bookings', '/transporter/tracking'] },
     { icon: 'social', label: 'Social', href: '/agrisocial', match: ['/agrisocial'] },
-    { icon: 'wallet', label: 'Wallet', href: '/agripay', match: ['/agripay'] },
   ],
 }
 
@@ -47,7 +44,6 @@ const HIDE_ON_PREFIXES = [
   '/auth/',
   '/admin',
   '/agrisocial',
-  '/agripay',
   '/tracking',
   '/ledger',
 ]
