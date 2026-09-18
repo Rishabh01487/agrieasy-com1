@@ -37,7 +37,6 @@ const ROLE_CARDS: RoleCard[] = [
     sub: 'Sell your produce',
     badge: 'POPULAR',
     badgeColor: '#31372B',
-    pills: ['Mandi Calculator', 'KisaanPay', 'Agricredit'],
   },
   {
     href: '/auth/login?role=buyer',
@@ -50,18 +49,17 @@ const ROLE_CARDS: RoleCard[] = [
     sub: 'Logistics partner',
     badge: 'EARN',
     badgeColor: '#4A5240',
-    pills: ['Flexible'],
   },
 ]
 
 const FEATURE_CARDS = [
   { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#31372B' },
-  { href: '/agripay', title: 'EasyPay', sub: 'Pay & transfer', color: '#E98074' },
+  { href: '/agripay', title: 'EasyPay', sub: 'Coming soon', color: '#E98074' },
   { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
   { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
 ]
 
-const COMING_SOON = new Set<string>()
+const COMING_SOON = new Set<string>(['EasyPay'])
 
 let audioCtx: AudioContext | null = null
 function getCtx() {
@@ -91,16 +89,7 @@ const HARVEST_STEPS = [
 void HARVEST_STEPS  // kept for reference; the step card has been removed per user request
 
 export default function NewHomePage() {
-  const [seedsCount, setSeedsCount] = useState(12480)
   const [currentTime, setCurrentTime] = useState('')
-
-  // Animate the "SEEDS IN MOTION" counter
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSeedsCount(prev => prev + Math.floor(Math.random() * 3))
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
 
   // Live clock for the "route pulse" indicator (top-right)
   useEffect(() => {
@@ -131,12 +120,12 @@ export default function NewHomePage() {
       {/* ─── Decorative background elements ─── */}
 
       {/* Cloud shapes (upper corners) */}
-      <div aria-hidden style={{
+      <div aria-hidden className="cloud-shape cloud-shape-1" style={{
         position: 'absolute', top: '-60px', left: '-40px', width: 300, height: 200,
         background: 'rgba(255,255,255,0.5)', borderRadius: '50%',
         filter: 'blur(40px)', pointerEvents: 'none', zIndex: 0,
       }} />
-      <div aria-hidden style={{
+      <div aria-hidden className="cloud-shape cloud-shape-2" style={{
         position: 'absolute', top: '-40px', right: '-60px', width: 350, height: 220,
         background: 'rgba(255,255,255,0.4)', borderRadius: '50%',
         filter: 'blur(50px)', pointerEvents: 'none', zIndex: 0,
@@ -151,13 +140,13 @@ export default function NewHomePage() {
         <path d="M 0 140 Q 300 60, 600 120 T 1200 100" stroke="#4A5240" strokeWidth="1.5" fill="none" strokeDasharray="3 6" />
       </svg>
 
-      {/* Scattered dots */}
-      <div aria-hidden style={{ position: 'absolute', top: '15%', left: '10%', width: 6, height: 6, borderRadius: '50%', background: '#E07A3F', opacity: 0.4, zIndex: 0 }} />
-      <div aria-hidden style={{ position: 'absolute', top: '25%', right: '15%', width: 4, height: 4, borderRadius: '50%', background: '#4A5240', opacity: 0.3, zIndex: 0 }} />
-      <div aria-hidden style={{ position: 'absolute', top: '45%', left: '8%', width: 5, height: 5, borderRadius: '50%', background: '#31372B', opacity: 0.2, zIndex: 0 }} />
+      {/* Scattered dots — animated pulse */}
+      <div aria-hidden className="scatter-dot scatter-dot-1" style={{ position: 'absolute', top: '15%', left: '10%', width: 6, height: 6, borderRadius: '50%', background: '#E07A3F', opacity: 0.4, zIndex: 0 }} />
+      <div aria-hidden className="scatter-dot scatter-dot-2" style={{ position: 'absolute', top: '25%', right: '15%', width: 4, height: 4, borderRadius: '50%', background: '#4A5240', opacity: 0.3, zIndex: 0 }} />
+      <div aria-hidden className="scatter-dot scatter-dot-3" style={{ position: 'absolute', top: '45%', left: '8%', width: 5, height: 5, borderRadius: '50%', background: '#31372B', opacity: 0.2, zIndex: 0 }} />
 
-      {/* Green curved hill at bottom */}
-      <svg aria-hidden style={{
+      {/* Green curved hill at bottom — gentle breathing animation */}
+      <svg aria-hidden className="green-hill" style={{
         position: 'absolute', bottom: 0, left: 0, width: '100%', height: 120,
         pointerEvents: 'none', zIndex: 0,
       }} viewBox="0 0 1200 120" preserveAspectRatio="none">
@@ -277,21 +266,14 @@ export default function NewHomePage() {
       }}>
         {/* Left: Branding */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ width: 8, height: 8, background: '#E07A3F', transform: 'rotate(45deg)', display: 'inline-block' }} />
+          <span className="brand-dot" style={{ width: 8, height: 8, background: '#E07A3F', transform: 'rotate(45deg)', display: 'inline-block' }} />
           <span style={{ fontWeight: 800, fontSize: 'clamp(0.65rem, 3vw, 0.8rem)', letterSpacing: '0.05em', color: '#2D2D2D' }}>AGRIEASY</span>
           <span style={{ color: '#6B6B6B', fontSize: '0.7rem', fontWeight: 600 }}>|</span>
           <span className="hide-mobile" style={{ color: '#6B6B6B', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>LIVE AGRICULTURAL NETWORK</span>
         </div>
 
-        {/* Right: Live metric */}
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 800, fontSize: '1.1rem', color: '#2D2D2D', lineHeight: 1 }}>
-            {seedsCount.toLocaleString('en-IN')}
-          </div>
-          <div style={{ fontSize: '0.55rem', color: '#6B6B6B', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
-            SEEDS IN MOTION
-          </div>
-        </div>
+        {/* Right: (intentionally empty — counter removed per user request) */}
+        <div />
       </nav>
 
       {/* ─── Main Content ─── */}
@@ -397,79 +379,65 @@ export default function NewHomePage() {
         </div>
 
         {/* ─── Floating ₹ tags (desktop only, hidden on mobile) ─── */}
-        <div aria-hidden style={{
+        <div aria-hidden className="rupee-tag rupee-float" style={{
           position: 'absolute', top: '180px', left: '8%',
           background: '#C5D5C5', borderRadius: 8, padding: '8px 16px',
           transform: 'rotate(-5deg)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          className: 'rupee-tag',
-        } as any}>
+        }}>
           <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#2D4A3E' }}>₹ 500</span>
         </div>
-        <div aria-hidden style={{
+        <div aria-hidden className="rupee-tag rupee-float-delay" style={{
           position: 'absolute', top: '160px', right: '8%',
           background: '#C5D5C5', borderRadius: 8, padding: '8px 16px',
           transform: 'rotate(5deg)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          className: 'rupee-tag',
-        } as any}>
+        }}>
           <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#2D4A3E' }}>₹ 600</span>
         </div>
 
         {/* ─── Role Cards ─── */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-          gap: 12, maxWidth: 600, width: '100%', marginBottom: 20,
+          gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+          gap: 8, maxWidth: 560, width: '100%', marginBottom: 10,
         }}>
           {ROLE_CARDS.map((card, i) => (
             <Link key={card.title} href={card.href} onClick={playClick}
+              className="home-card-sm"
               style={{
-                background: '#fff', borderRadius: 16, padding: '20px 14px',
+                background: '#fff', borderRadius: 12, padding: '14px 8px',
                 textAlign: 'center', textDecoration: 'none', color: 'inherit',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.06)',
-                border: '1px solid rgba(0,0,0,0.04)',
+                border: '1px solid rgba(49,55,43,0.08)',
                 transition: 'transform 0.25s, box-shadow 0.25s',
                 position: 'relative', display: 'flex', flexDirection: 'column',
                 alignItems: 'center', gap: 4,
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 8px 28px rgba(0,0,0,0.1)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)' }}
               onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.06)' }}
             >
               {/* Badge */}
               {card.badge && (
                 <span style={{
-                  position: 'absolute', top: 8, right: 8,
+                  position: 'absolute', top: -7, right: -3,
                   background: card.badgeColor || '#31372B', color: '#fff',
-                  fontSize: '0.55rem', fontWeight: 800, padding: '2px 8px',
+                  fontSize: '0.55rem', fontWeight: 800, padding: '2px 6px',
                   borderRadius: 100, letterSpacing: '0.05em',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
                 }}>{card.badge}</span>
               )}
 
               {/* Icon */}
               <div style={{
-                width: 44, height: 44, borderRadius: 12,
+                width: 36, height: 36, borderRadius: 10, marginBottom: 6,
                 background: 'rgba(49,55,43,0.06)', border: '1px solid rgba(49,55,43,0.12)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                marginBottom: 6,
               }}>
-                <CardIcon name={card.title.split('/')[0]} size={28} color="#31372B" />
+                <CardIcon name={card.title.split('/')[0]} size={24} color="#31372B" />
               </div>
 
               {/* Title */}
-              <p style={{ fontWeight: 800, fontSize: '0.88rem', margin: 0, color: '#2D2D2D' }}>{card.title}</p>
-              <p style={{ fontSize: '0.72rem', color: '#6B6B6B', margin: '2px 0 0' }}>{card.sub}</p>
-
-              {/* Sub-pills */}
-              {card.pills && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center', marginTop: 6 }}>
-                  {card.pills.map(p => (
-                    <span key={p} style={{
-                      padding: '3px 8px', borderRadius: 100,
-                      background: 'rgba(49,55,43,0.04)', color: '#6B6B6B',
-                      fontSize: '0.62rem', fontWeight: 600,
-                    }}>{p}</span>
-                  ))}
-                </div>
-              )}
+              <p style={{ fontWeight: 700, fontSize: '0.76rem', margin: 0, color: '#2D2D2D' }}>{card.title}</p>
+              <p style={{ fontSize: '0.62rem', color: '#6B6B6B', margin: '2px 0 0' }}>{card.sub}</p>
             </Link>
           ))}
         </div>
@@ -623,17 +591,103 @@ export default function NewHomePage() {
           animation-delay: 0.6s;
         }
 
-        /* ── Cloud drift (existing background clouds already have this class) ── */
+        /* ── Cloud drift — the two big blurry blobs in upper corners ── */
         @keyframes cloudDrift {
-          0%   { transform: translateX(0); }
-          50%  { transform: translateX(40px); }
-          100% { transform: translateX(0); }
+          0%   { transform: translate(0, 0); }
+          50%  { transform: translate(30px, 8px); }
+          100% { transform: translate(0, 0); }
+        }
+        .cloud-shape-1 {
+          animation: cloudDrift 18s ease-in-out infinite;
+        }
+        .cloud-shape-2 {
+          animation: cloudDrift 22s ease-in-out infinite reverse;
         }
 
-        /* ── Field breathe (green hill at bottom) ── */
+        /* ── Green hill gentle breathing ── */
         @keyframes fieldBreathe {
           0%, 100% { transform: scale(1); opacity: 0.5; }
-          50%      { transform: scale(1.04); opacity: 0.55; }
+          50%      { transform: scale(1.03); opacity: 0.55; }
+        }
+        .green-hill {
+          animation: fieldBreathe 8s ease-in-out infinite;
+          transform-origin: bottom center;
+        }
+
+        /* ── Scattered dots pulse ── */
+        @keyframes scatterPulse {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50%      { transform: scale(1.6); opacity: 0.8; }
+        }
+        .scatter-dot-1 { animation: scatterPulse 3s ease-in-out infinite; }
+        .scatter-dot-2 { animation: scatterPulse 3.5s ease-in-out infinite 0.5s; }
+        .scatter-dot-3 { animation: scatterPulse 4s ease-in-out infinite 1s; }
+
+        /* ── ₹ tags floating up and down ── */
+        @keyframes rupeeFloat {
+          0%, 100% { transform: rotate(-5deg) translateY(0); }
+          50%      { transform: rotate(-5deg) translateY(-8px); }
+        }
+        @keyframes rupeeFloatDelay {
+          0%, 100% { transform: rotate(5deg) translateY(0); }
+          50%      { transform: rotate(5deg) translateY(-8px); }
+        }
+        .rupee-float {
+          animation: rupeeFloat 4s ease-in-out infinite;
+        }
+        .rupee-float-delay {
+          animation: rupeeFloatDelay 4s ease-in-out infinite 1s;
+        }
+
+        /* ── Agricultural photos gentle floating ── */
+        @keyframes photoFloatA {
+          0%, 100% { transform: translateX(2vw) translateY(-0.5vh) scale(0.94); }
+          50%      { transform: translateX(2vw) translateY(-1.5vh) scale(0.94); }
+        }
+        @keyframes photoFloatB {
+          0%, 100% { transform: translateY(0); }
+          50%      { transform: translateY(-6px); }
+        }
+        @keyframes photoFloatC {
+          0%, 100% { transform: translateX(-1vw) scale(0.95); }
+          50%      { transform: translateX(-1vw) translateY(-6px) scale(0.95); }
+        }
+        .agri-photo-farmer {
+          animation: photoFloatA 6s ease-in-out infinite;
+        }
+        .agri-photo-crew {
+          animation: photoFloatB 7s ease-in-out infinite;
+        }
+        .agri-photo-buyer {
+          animation: photoFloatC 6.5s ease-in-out infinite;
+        }
+
+        /* ── Fade-in on mount (subtle entrance for the whole page) ── */
+        @keyframes pageFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        main {
+          animation: pageFadeIn 0.6s ease-out;
+        }
+
+        /* ── Respect reduced-motion preference ── */
+        @media (prefers-reduced-motion: reduce) {
+          .cloud-shape-1, .cloud-shape-2, .green-hill, .scatter-dot-1,
+          .scatter-dot-2, .scatter-dot-3, .rupee-float, .rupee-float-delay,
+          .agri-photo-farmer, .agri-photo-crew, .agri-photo-buyer,
+          .route-line, .route-dot, .brand-dot, main {
+            animation: none !important;
+          }
+        }
+
+        /* ── Brand dot (orange diamond) pulse ── */
+        @keyframes brandDotPulse {
+          0%, 100% { opacity: 1; transform: rotate(45deg) scale(1); }
+          50%      { opacity: 0.6; transform: rotate(45deg) scale(1.25); }
+        }
+        .brand-dot {
+          animation: brandDotPulse 2.5s ease-in-out infinite;
         }
       `}</style>
     </div>

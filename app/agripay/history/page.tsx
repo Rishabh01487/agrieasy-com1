@@ -1,5 +1,6 @@
 'use client'
 
+import EasyPayComingSoonRedirect from '@/lib/easypay-coming-soon-redirect'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -157,4 +158,4 @@ function TransactionHistoryOriginal() {
 
 // EasyPay feature is Coming Soon — show the landing page instead of the wallet flow.
 // To re-enable this page later: delete this export and rename _original back to the default export.
-export default TransactionHistoryOriginal
+export default EasyPayComingSoonRedirect
