@@ -82,9 +82,16 @@ function playClick() {
   osc.start(now); osc.stop(now + 0.08)
 }
 
+const HARVEST_STEPS = [
+  { num: '01', name: 'SOW',    headline: 'From first seed',     sub: 'A signed contract for every farmer',  status: 'SEEDING' },
+  { num: '02', name: 'GROW',   headline: 'A route with a name', sub: 'Live GPS tracking on every crate',    status: 'IN TRANSIT' },
+  { num: '03', name: 'THRIVE', headline: 'A fairer weigh-in',   sub: 'Buyer and farmer meet at the same scale', status: 'AT WEIGH-IN' },
+  { num: '04', name: 'PAY',    headline: 'Money moves home',    sub: 'EasyPay settles today. PayLater keeps the cycle going.', status: 'SETTLED' },
+]
+
 export default function NewHomePage() {
   const [seedsCount, setSeedsCount] = useState(12480)
-  const [currentTime, setCurrentTime] = useState('')
+  const [stepIdx, setStepIdx] = useState(0)
 
   // Animate the "SEEDS IN MOTION" counter
   useEffect(() => {
@@ -94,17 +101,12 @@ export default function NewHomePage() {
     return () => clearInterval(interval)
   }, [])
 
-  // Live clock
+  // Cycle the Harvest Flow step card every 3.5s — matches the reference video
   useEffect(() => {
-    const update = () => {
-      const now = new Date()
-      const h = String(now.getHours()).padStart(2, '0')
-      const m = String(now.getMinutes()).padStart(2, '0')
-      setCurrentTime(`${h}:${m}`)
-    }
-    update()
-    const interval = setInterval(update, 60000)
-    return () => clearInterval(interval)
+    const t = setInterval(() => {
+      setStepIdx(i => (i + 1) % HARVEST_STEPS.length)
+    }, 3500)
+    return () => clearInterval(t)
   }, [])
 
 
@@ -118,7 +120,7 @@ export default function NewHomePage() {
       fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif",
       color: '#2D2D2D',
       position: 'relative',
-      overflow: 'hidden',
+      overflowX: 'hidden',
     }}>
       {/* ─── Decorative background elements ─── */}
 
@@ -431,10 +433,160 @@ export default function NewHomePage() {
         </p>
       </main>
 
+      {/* ─── Harvest Flow step card (bottom-left, animated) ───
+          Cycles through 01/SOW → 02/GROW → 03/THRIVE → 04/PAY every 3.5s.
+          Matches the reference video. Fixed to viewport so it stays visible
+          on both mobile and desktop without clipping. */}
+      <div className="harvest-flow-card" style={{
+        position: 'fixed',
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
+        left: 'max(16px, env(safe-area-inset-left))',
+        zIndex: 50,
+        background: 'rgba(255,255,255,0.92)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        border: '1.5px solid rgba(49,55,43,0.18)',
+        borderRadius: 16,
+        padding: '14px 16px',
+        maxWidth: 260,
+        boxShadow: '0 8px 28px rgba(49,55,43,0.12)',
+        fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif",
+      }}>
+        {/* Step number + name row */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+          <span key={`num-${stepIdx}`} className="harvest-fade" style={{
+            fontSize: '0.9rem', fontWeight: 900, color: '#31372B',
+            letterSpacing: '0.06em',
+          }}>{HARVEST_STEPS[stepIdx].num}</span>
+          <span style={{ color: '#6B6B6B', fontSize: '0.7rem', fontWeight: 600 }}>/</span>
+          <span key={`name-${stepIdx}`} className="harvest-fade" style={{
+            fontSize: '0.78rem', fontWeight: 800, color: '#31372B',
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+          }}>{HARVEST_STEPS[stepIdx].name}</span>
+        </div>
+
+        {/* Headline + sub-text */}
+        <p key={`head-${stepIdx}`} className="harvest-fade" style={{
+          margin: '0 0 4px', color: '#2D2D2D',
+          fontSize: '0.92rem', fontWeight: 700, lineHeight: 1.25,
+        }}>{HARVEST_STEPS[stepIdx].headline}</p>
+        <p key={`sub-${stepIdx}`} className="harvest-fade" style={{
+          margin: '0 0 10px', color: '#6B6B6B',
+          fontSize: '0.7rem', fontWeight: 500, lineHeight: 1.4,
+        }}>{HARVEST_STEPS[stepIdx].sub}</p>
+
+        {/* Status pill with pulsing green dot */}
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: 6,
+          background: 'rgba(49,55,43,0.06)',
+          border: '1px solid rgba(49,55,43,0.12)',
+          borderRadius: 100, padding: '3px 10px',
+        }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: '#4A8B3A', display: 'inline-block',
+            animation: 'harvestPulse 2s ease-in-out infinite',
+          }} />
+          <span style={{
+            color: '#31372B', fontSize: '0.58rem', fontWeight: 700,
+            letterSpacing: '0.08em', textTransform: 'uppercase',
+            whiteSpace: 'nowrap',
+          }}>
+            LIVE AGRICULTURAL ROUTE / {HARVEST_STEPS[stepIdx].status}
+          </span>
+        </div>
+
+        {/* Step progress dots */}
+        <div style={{ display: 'flex', gap: 4, marginTop: 10 }}>
+          {HARVEST_STEPS.map((_, i) => (
+            <span key={i} style={{
+              flex: 1, height: 3, borderRadius: 2,
+              background: i === stepIdx ? '#31372B' : 'rgba(49,55,43,0.15)',
+              transition: 'background 0.4s ease',
+            }} />
+          ))}
+        </div>
+      </div>
+
+      {/* ─── Loading queue indicator (bottom-right, desktop only) ─── */}
+      <div className="loading-queue" style={{
+        position: 'fixed',
+        bottom: 'max(16px, env(safe-area-inset-bottom))',
+        right: 'max(16px, env(safe-area-inset-right))',
+        zIndex: 50,
+        color: '#6B6B6B',
+        fontSize: '0.62rem', fontWeight: 700,
+        letterSpacing: '0.12em', textTransform: 'uppercase',
+        fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif",
+        background: 'rgba(255,255,255,0.7)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        border: '1px solid rgba(49,55,43,0.1)',
+        borderRadius: 100, padding: '5px 12px',
+      }}>
+        <span style={{ color: '#31372B' }}>LOADING QUEUE</span>
+        <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>
+        <span>0{stepIdx + 1}</span>
+      </div>
+
       {/* Responsive: show ₹ tags on desktop only */}
       <style>{`
         .rupee-tag { display: none; } .hide-mobile { display: inline; } @media (max-width: 480px) { .hide-mobile { display: none; } }
         @media (min-width: 768px) { .rupee-tag { display: block; } }
+
+        /* Harvest Flow card — keyframe for the fade between steps */
+        @keyframes harvestFade {
+          0%   { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .harvest-fade {
+          animation: harvestFade 0.45s ease-out;
+        }
+        @keyframes harvestPulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50%      { transform: scale(1.5); opacity: 0.5; }
+        }
+
+        /* Desktop: full card visible */
+        .harvest-flow-card {
+          max-width: 260px;
+        }
+        .loading-queue {
+          display: block;
+        }
+
+        /* Tablet: slightly smaller card */
+        @media (max-width: 768px) {
+          .harvest-flow-card {
+            max-width: 220px;
+            padding: 12px 14px;
+          }
+        }
+
+        /* Mobile: card sits at bottom-left. On the home page (logged out)
+           there's no bottom tab bar, so we don't need the 76px offset.
+           The CookieConsent banner (if visible) overlays on top initially;
+           once dismissed, the card is fully visible. */
+        @media (max-width: 640px) {
+          .harvest-flow-card {
+            max-width: calc(100vw - 32px);
+            bottom: 16px !important;
+            left: 16px !important;
+            right: 16px !important;
+            padding: 10px 12px;
+          }
+          .loading-queue {
+            display: none;
+          }
+        }
+
+        /* Small phones: trim sub-text so the card stays compact */
+        @media (max-width: 380px) {
+          .harvest-flow-card p:nth-of-type(2) {
+            font-size: 0.65rem !important;
+            margin-bottom: 6px !important;
+          }
+        }
       `}</style>
     </div>
   )
