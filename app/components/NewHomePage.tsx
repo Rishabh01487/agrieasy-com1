@@ -210,14 +210,33 @@ export default function NewHomePage() {
           + INDIA'S AGRICULTURAL MARKETPLACE +
         </p>
 
-        {/* Main Title — Serif */}
+        {/* Main Title — Mixed font: "Agri" bold Poppins + "Easy" Dancing Script italic */}
         <h1 style={{
-          fontFamily: "var(--font-playfair), 'Playfair Display', Georgia, serif",
           fontSize: 'clamp(2.5rem, 8vw, 4.5rem)',
           fontWeight: 900, lineHeight: 1, letterSpacing: '-0.03em',
           margin: '0 0 12px', textAlign: 'center', color: '#2D2D2D',
+          display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '0.05em',
         }}>
-          Agri <span style={{ fontWeight: 500, fontStyle: 'italic' }}>Easy</span>
+          <span style={{
+            background: 'linear-gradient(110deg, #31372B 0%, #31372B 35%, #4A5240 50%, #31372B 65%, #31372B 100%)',
+            backgroundSize: '200% auto',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', color: 'transparent',
+            fontWeight: 900,
+            display: 'inline-block',
+          }}>Agri</span>
+          <span style={{
+            fontFamily: "var(--font-dancing), 'Dancing Script', cursive",
+            background: 'linear-gradient(120deg, #31372B 0%, #4A5240 30%, #4A5240 70%, #31372B 100%)',
+            backgroundSize: '200% auto',
+            WebkitBackgroundClip: 'text', backgroundClip: 'text',
+            WebkitTextFillColor: 'transparent', color: 'transparent',
+            fontWeight: 700, fontStyle: 'italic',
+            fontSize: '1.18em',
+            transform: 'translateY(-0.04em) rotate(-2deg)',
+            display: 'inline-block',
+            animation: 'gradientFlow 6s ease-in-out infinite',
+          }}>Easy</span>
         </h1>
 
         {/* Tagline */}
@@ -414,11 +433,38 @@ export default function NewHomePage() {
         </p>
       </main>
 
-      {/* ─── Responsive styles ─── */}
+      {/* ─── Responsive styles + animations ─── */}
       <style>{`
         @media (min-width: 768px) {
           div[aria-hidden]:nth-of-type(3) { display: block !important; }
           div[aria-hidden]:nth-of-type(4) { display: block !important; }
+        }
+        @keyframes gradientFlow {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        @keyframes pulse {
+          0%, 100% { transform: scale(1); opacity: 1; }
+          50% { transform: scale(1.4); opacity: 0.6; }
+        }
+        @keyframes float1 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(-30px, 25px) scale(1.1); }
+        }
+        @keyframes float2 {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          50% { transform: translate(25px, -20px) scale(1.05); }
+        }
+        @keyframes leafSway {
+          0%, 100% { transform: translateX(-50%) rotate(0deg); }
+          50% { transform: translateX(-50%) rotate(8deg); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          * { animation: none !important; transition: none !important; }
         }
       `}</style>
     </div>
