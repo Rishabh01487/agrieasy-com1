@@ -55,10 +55,10 @@ const ROLE_CARDS: RoleCard[] = [
 ]
 
 const FEATURE_CARDS = [
-  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#31372B' },
-  { href: '/agripay', title: 'EasyPay', sub: 'Coming soon', color: '#E98074' },
-  { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
-  { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
+  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Estimate fair price', color: '#31372B' },
+  { href: '/agripay', title: 'EasyPay', sub: 'Pay & transfer', color: '#E98074' },
+  { href: '/agrisocial', title: 'AgriSocial', sub: 'Trade & talk', color: '#3D52A0' },
+  { href: '/ledger', title: 'Ledger', sub: 'Track & earnings', color: '#262B20' },
 ]
 
 const COMING_SOON = new Set<string>() // EasyPay is now LIVE
