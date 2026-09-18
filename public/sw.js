@@ -6,7 +6,7 @@
  * for static assets.
  */
 
-const CACHE_VERSION = 'agrieasy-v28'
+const CACHE_VERSION = 'agrieasy-v29'
 const APP_SHELL = [
   '/',
   '/auth/login',
