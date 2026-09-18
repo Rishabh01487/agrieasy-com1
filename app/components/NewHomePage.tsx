@@ -449,21 +449,21 @@ export default function NewHomePage() {
         }}>
           {FEATURE_CARDS.map((c, i) => {
             const isComingSoon = COMING_SOON.has(c.title)
+            // Coming Soon cards still navigate to their route (which shows
+            // a Coming Soon landing page there) — they just get a SOON badge
+            // + slightly reduced opacity to signal the feature isn't live yet.
             return (
-              <Link key={c.title} href={isComingSoon ? '#' : c.href}
-                onClick={(e) => {
-                  if (isComingSoon) { e.preventDefault(); return }
-                  playClick()
-                }}
+              <Link key={c.title} href={c.href}
+                onClick={() => { playClick() }}
                 style={{
                   background: 'rgba(255,255,255,0.7)', borderRadius: 12,
                   padding: '14px 8px', textAlign: 'center', textDecoration: 'none',
                   color: 'inherit', border: '1px solid rgba(49,55,43,0.08)',
                   transition: 'transform 0.2s', position: 'relative',
-                  cursor: isComingSoon ? 'not-allowed' : 'pointer',
-                  opacity: isComingSoon ? 0.7 : 1,
+                  cursor: 'pointer',
+                  opacity: isComingSoon ? 0.85 : 1,
                 }}
-                onMouseEnter={(e) => { if (!isComingSoon) e.currentTarget.style.transform = 'translateY(-2px)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)' }}
                 onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)' }}
               >
                 {c.title === 'Bill Calculator' && (
