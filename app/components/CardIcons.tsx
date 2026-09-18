@@ -47,3 +47,18 @@ export function CardIcon({ name, size = 32, color = '#31372B' }: { name: string;
         default: return <FarmerIcon size={size} color={color} />
     }
 }
+
+// ── Tab bar icon registry ──
+export function TabIcon({ name, size = 24, color = '#31372B' }: { name: string; size?: number; color?: string }) {
+    switch (name) {
+        case 'home': return <img src="/logo-home.png" alt="Home" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover' }} />
+        case 'search': return <span style={{ fontSize: size, color }}>🔍</span>
+        case 'calendar': return <img src="/logo-bookings.png" alt="Bookings" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover' }} />
+        case 'location': return <span style={{ fontSize: size, color }}>📍</span>
+        case 'clipboard': return <img src="/logo-commodities.png" alt="Commodities" width={size} height={size} style={{ borderRadius: size * 0.15, objectFit: 'cover' }} />
+        case 'truck': return <TransporterIcon size={size} color={color} />
+        case 'wallet': return <WalletIcon size={size} color={color} />
+        case 'social': return <SocialIcon size={size} color={color} />
+        default: return <span style={{ fontSize: size }}>🏠</span>
+    }
+}
