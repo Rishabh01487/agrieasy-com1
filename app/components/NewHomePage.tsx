@@ -55,13 +55,13 @@ const ROLE_CARDS: RoleCard[] = [
 ]
 
 const FEATURE_CARDS = [
-  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Estimate fair price', color: '#31372B' },
-  { href: '/agripay', title: 'EasyPay', sub: 'Pay & transfer', color: '#E98074' },
-  { href: '/agrisocial', title: 'AgriSocial', sub: 'Trade & talk', color: '#3D52A0' },
-  { href: '/ledger', title: 'Ledger', sub: 'Track & earnings', color: '#262B20' },
+  { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#31372B' },
+  { href: '/agripay', title: 'EasyPay', sub: 'Coming soon', color: '#E98074' },
+  { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
+  { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
 ]
 
-const COMING_SOON = new Set<string>() // EasyPay is now LIVE
+const COMING_SOON = new Set<string>(['EasyPay'])
 
 let audioCtx: AudioContext | null = null
 function getCtx() {
@@ -188,7 +188,7 @@ export default function NewHomePage() {
       <main style={{
         position: 'relative', zIndex: 5,
         maxWidth: 1200, margin: '0 auto',
-        padding: '16px 16px 80px',
+        padding: '16px 16px 220px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
         {/* Logo */}
@@ -436,20 +436,22 @@ export default function NewHomePage() {
       {/* ─── Harvest Flow step card (bottom-left, animated) ───
           Cycles through 01/SOW → 02/GROW → 03/THRIVE → 04/PAY every 3.5s.
           Matches the reference video. Fixed to viewport so it stays visible
-          on both mobile and desktop without clipping. */}
+          on both mobile and desktop without clipping.
+          z-index: 10001 — above PWA banner (9999) and cookie consent (9998)
+          so the animation is ALWAYS visible, even before those are dismissed. */}
       <div className="harvest-flow-card" style={{
         position: 'fixed',
         bottom: 'max(16px, env(safe-area-inset-bottom))',
         left: 'max(16px, env(safe-area-inset-left))',
-        zIndex: 50,
-        background: 'rgba(255,255,255,0.92)',
+        zIndex: 10001,
+        background: 'rgba(255,255,255,0.95)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        border: '1.5px solid rgba(49,55,43,0.18)',
+        border: '1.5px solid rgba(49,55,43,0.22)',
         borderRadius: 16,
         padding: '14px 16px',
         maxWidth: 260,
-        boxShadow: '0 8px 28px rgba(49,55,43,0.12)',
+        boxShadow: '0 12px 36px rgba(49,55,43,0.18)',
         fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif",
       }}>
         {/* Step number + name row */}
@@ -513,15 +515,15 @@ export default function NewHomePage() {
         position: 'fixed',
         bottom: 'max(16px, env(safe-area-inset-bottom))',
         right: 'max(16px, env(safe-area-inset-right))',
-        zIndex: 50,
+        zIndex: 10001,
         color: '#6B6B6B',
         fontSize: '0.62rem', fontWeight: 700,
         letterSpacing: '0.12em', textTransform: 'uppercase',
         fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif",
-        background: 'rgba(255,255,255,0.7)',
+        background: 'rgba(255,255,255,0.85)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        border: '1px solid rgba(49,55,43,0.1)',
+        border: '1px solid rgba(49,55,43,0.14)',
         borderRadius: 100, padding: '5px 12px',
       }}>
         <span style={{ color: '#31372B' }}>LOADING QUEUE</span>
@@ -563,28 +565,42 @@ export default function NewHomePage() {
           }
         }
 
-        /* Mobile: card sits at bottom-left. On the home page (logged out)
-           there's no bottom tab bar, so we don't need the 76px offset.
-           The CookieConsent banner (if visible) overlays on top initially;
-           once dismissed, the card is fully visible. */
+        /* Mobile: card sits at bottom-left, compact size, above PWA banner
+           and cookie consent (z-index: 10001 in inline style).
+           Card is smaller on mobile so it doesn't dominate the screen. */
         @media (max-width: 640px) {
           .harvest-flow-card {
-            max-width: calc(100vw - 32px);
+            max-width: calc(100vw - 32px) !important;
             bottom: 16px !important;
             left: 16px !important;
             right: 16px !important;
-            padding: 10px 12px;
+            padding: 10px 12px !important;
+            border-radius: 14px !important;
           }
           .loading-queue {
             display: none;
           }
-        }
-
-        /* Small phones: trim sub-text so the card stays compact */
-        @media (max-width: 380px) {
+          /* Make the text slightly smaller on mobile so the card stays compact */
+          .harvest-flow-card p:first-of-type {
+            font-size: 0.85rem !important;
+          }
           .harvest-flow-card p:nth-of-type(2) {
             font-size: 0.65rem !important;
             margin-bottom: 6px !important;
+          }
+        }
+
+        /* Small phones: even more compact */
+        @media (max-width: 380px) {
+          .harvest-flow-card {
+            padding: 8px 10px !important;
+          }
+          .harvest-flow-card p:first-of-type {
+            font-size: 0.8rem !important;
+          }
+          .harvest-flow-card p:nth-of-type(2) {
+            font-size: 0.6rem !important;
+            margin-bottom: 4px !important;
           }
         }
       `}</style>
