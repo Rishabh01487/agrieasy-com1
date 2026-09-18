@@ -56,12 +56,12 @@ const ROLE_CARDS: RoleCard[] = [
 
 const FEATURE_CARDS = [
   { href: '/ledger/bill-calculator', title: 'Bill Calculator', sub: 'Snap bill → get total', color: '#31372B' },
-  { href: '/agripay', title: 'EasyPay', sub: 'Coming soon', color: '#E98074' },
+  { href: '/agripay', title: 'EasyPay', sub: 'Pay & transfer', color: '#E98074' },
   { href: '/agrisocial', title: 'AgriSocial', sub: 'Feed & reels', color: '#3D52A0' },
   { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
 ]
 
-const COMING_SOON = new Set<string>(['EasyPay'])
+const COMING_SOON = new Set<string>()
 
 let audioCtx: AudioContext | null = null
 function getCtx() {
@@ -92,6 +92,7 @@ const HARVEST_STEPS = [
 export default function NewHomePage() {
   const [seedsCount, setSeedsCount] = useState(12480)
   const [stepIdx, setStepIdx] = useState(0)
+  const [currentTime, setCurrentTime] = useState('')
 
   // Animate the "SEEDS IN MOTION" counter
   useEffect(() => {
@@ -107,6 +108,19 @@ export default function NewHomePage() {
       setStepIdx(i => (i + 1) % HARVEST_STEPS.length)
     }, 3500)
     return () => clearInterval(t)
+  }, [])
+
+  // Live clock for the "route pulse" indicator (top-right)
+  useEffect(() => {
+    const update = () => {
+      const now = new Date()
+      const h = String(now.getHours()).padStart(2, '0')
+      const m = String(now.getMinutes()).padStart(2, '0')
+      setCurrentTime(`${h}:${m}`)
+    }
+    update()
+    const interval = setInterval(update, 30000)
+    return () => clearInterval(interval)
   }, [])
 
 
@@ -157,6 +171,110 @@ export default function NewHomePage() {
       }} viewBox="0 0 1200 120" preserveAspectRatio="none">
         <path d="M 0 60 Q 300 20, 600 40 T 1200 30 L 1200 120 L 0 120 Z" fill="#C5D5C5" opacity="0.5" />
         <path d="M 0 80 Q 300 50, 600 60 T 1200 50 L 1200 120 L 0 120 Z" fill="#B8CDB8" opacity="0.4" />
+      </svg>
+
+      {/* ─── Agricultural photographs (matches Replit reference) ───
+          These are positioned absolutely at the bottom of the page and give
+          the home page the "Harvest Flow" feel from the reference video.
+          Hidden on mobile (small screens) to avoid clutter — the step card
+          is the primary animation there. */}
+
+      {/* Farmer in field — bottom-left */}
+      <img
+        src="/agrieasy-motion/agrieasy_farmer_field.png"
+        alt="Farmer in field"
+        className="agri-photo agri-photo-farmer"
+        style={{
+          position: 'absolute', bottom: '4%', left: '3%',
+          width: '18vw', maxWidth: 255, minWidth: 125,
+          objectFit: 'contain', pointerEvents: 'none', zIndex: 3,
+          filter: 'drop-shadow(0 18px 16px rgba(46,55,33,0.18))',
+          transform: 'translateX(2vw) translateY(-0.5vh) scale(0.94)',
+          opacity: 0.85,
+        }}
+      />
+
+      {/* Loading crew with truck — bottom-right-center */}
+      <img
+        src="/agrieasy-motion/agrieasy_loading_crew.png"
+        alt="Loading crew"
+        className="agri-photo agri-photo-crew"
+        style={{
+          position: 'absolute', bottom: '4%', right: '17%',
+          width: '22vw', maxWidth: 330, minWidth: 170,
+          objectFit: 'contain', pointerEvents: 'none', zIndex: 3,
+          filter: 'drop-shadow(0 18px 16px rgba(46,55,33,0.18))',
+        }}
+      />
+
+      {/* Buyer at scale — bottom-far-right */}
+      <img
+        src="/agrieasy-motion/agrieasy_buyer_scale.png"
+        alt="Buyer at scale"
+        className="agri-photo agri-photo-buyer"
+        style={{
+          position: 'absolute', bottom: '11%', right: '3%',
+          width: '16vw', maxWidth: 235, minWidth: 120,
+          objectFit: 'contain', pointerEvents: 'none', zIndex: 3,
+          filter: 'drop-shadow(0 18px 16px rgba(46,55,33,0.18))',
+          transform: 'translateX(-1vw) scale(0.95)',
+          opacity: 0.88,
+        }}
+      />
+
+      {/* ─── Route pulse clock (top-right, matches reference) ─── */}
+      <div className="route-pulse-clock" style={{
+        position: 'absolute', top: '5%', right: '3%',
+        zIndex: 5, textAlign: 'right', pointerEvents: 'none',
+        fontFamily: "var(--font-poppins), 'Poppins', system-ui, sans-serif",
+      }}>
+        <p style={{
+          margin: 0, fontSize: 'clamp(1rem, 1.8vw, 1.5rem)',
+          fontWeight: 700, color: '#273b2c', lineHeight: 1,
+          fontVariantNumeric: 'tabular-nums',
+        }}>{currentTime || '06:42'}</p>
+        <p style={{
+          margin: '4px 0 0', fontSize: '0.62rem', fontWeight: 700,
+          letterSpacing: '0.22em', textTransform: 'uppercase',
+          color: 'rgba(39,59,44,0.55)',
+        }}>route pulse</p>
+      </div>
+
+      {/* ─── Dotted route line connecting farmer → crew → buyer ─── */}
+      <svg
+        aria-hidden
+        className="route-line-svg"
+        style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          pointerEvents: 'none', zIndex: 2,
+        }}
+        viewBox="0 0 1600 900"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M 100 744 C 260 625 355 705 470 575 S 710 480 845 560 S 1060 580 1240 432 S 1390 330 1530 255"
+          fill="none"
+          stroke="rgba(39,59,44,0.22)"
+          strokeWidth="3"
+          strokeDasharray="2 14"
+          strokeLinecap="round"
+          className="route-line"
+        />
+        <path
+          d="M 130 774 C 335 690 402 754 571 640 S 766 500 910 572 S 1125 598 1303 463"
+          fill="none"
+          stroke="#d17d48"
+          strokeWidth="4"
+          strokeLinecap="round"
+          opacity="0.52"
+          className="route-line"
+        />
+        {/* Route dots */}
+        <circle cx="100" cy="744" r="7" fill="#273b2c" opacity="0.55" className="route-dot" />
+        <circle cx="470" cy="575" r="7" fill="#273b2c" opacity="0.55" className="route-dot" />
+        <circle cx="845" cy="560" r="11" fill="#e3874d" opacity="1" className="route-dot" />
+        <circle cx="1240" cy="432" r="7" fill="#273b2c" opacity="0.55" className="route-dot" />
+        <circle cx="1530" cy="255" r="7" fill="#273b2c" opacity="0.55" className="route-dot" />
       </svg>
 
       {/* ─── Top Navigation Bar ─── */}
@@ -602,6 +720,75 @@ export default function NewHomePage() {
             font-size: 0.6rem !important;
             margin-bottom: 4px !important;
           }
+        }
+
+        /* ── Agricultural photos — responsive ── */
+        /* Desktop: full size, all 3 photos visible */
+        /* Tablet: smaller, still visible */
+        @media (max-width: 768px) {
+          .agri-photo-farmer {
+            width: 22vw !important;
+            max-width: 180px !important;
+            opacity: 0.7 !important;
+          }
+          .agri-photo-crew {
+            width: 26vw !important;
+            max-width: 240px !important;
+            right: 14% !important;
+          }
+          .agri-photo-buyer {
+            width: 20vw !important;
+            max-width: 180px !important;
+            opacity: 0.75 !important;
+          }
+          .route-pulse-clock p:first-child {
+            font-size: 1rem !important;
+          }
+        }
+
+        /* Mobile: hide the photos + route line + route pulse clock
+           (the step card is the primary animation on small screens;
+           photos would clutter the small viewport and overlap content) */
+        @media (max-width: 640px) {
+          .agri-photo,
+          .route-line-svg,
+          .route-pulse-clock {
+            display: none !important;
+          }
+        }
+
+        /* ── Route line animation (dashed line flowing) ── */
+        @keyframes routeFlow {
+          to { stroke-dashoffset: -32; }
+        }
+        .route-line {
+          animation: routeFlow 2.5s linear infinite;
+        }
+
+        /* ── Route dots pulse ── */
+        @keyframes routeDotPulse {
+          0%, 100% { opacity: 0.55; r: 7; }
+          50%      { opacity: 1; r: 9; }
+        }
+        .route-dot {
+          animation: routeDotPulse 2.5s ease-in-out infinite;
+          transform-origin: center;
+        }
+        .route-dot[fill="#e3874d"] {
+          animation-delay: 0.6s;
+        }
+
+        /* ── Cloud drift (existing background clouds already have this class) ── */
+        @keyframes cloudDrift {
+          0%   { transform: translateX(0); }
+          50%  { transform: translateX(40px); }
+          100% { transform: translateX(0); }
+        }
+
+        /* ── Field breathe (green hill at bottom) ── */
+        @keyframes fieldBreathe {
+          0%, 100% { transform: scale(1); opacity: 0.5; }
+          50%      { transform: scale(1.04); opacity: 0.55; }
         }
       `}</style>
     </div>
