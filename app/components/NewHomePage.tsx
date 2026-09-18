@@ -61,7 +61,7 @@ const FEATURE_CARDS = [
   { href: '/ledger', title: 'Ledger', sub: 'Bills & earnings', color: '#262B20' },
 ]
 
-const COMING_SOON = new Set(['EasyPay'])
+const COMING_SOON = new Set<string>() // EasyPay is now LIVE
 
 let audioCtx: AudioContext | null = null
 function getCtx() {
@@ -161,14 +161,14 @@ export default function NewHomePage() {
       <nav style={{
         position: 'relative', zIndex: 10,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        padding: '16px 24px', maxWidth: 1400, margin: '0 auto',
+        padding: '12px 16px', maxWidth: 1400, margin: '0 auto', flexWrap: 'wrap', gap: 8,
       }}>
         {/* Left: Branding */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ width: 8, height: 8, background: '#E07A3F', transform: 'rotate(45deg)', display: 'inline-block' }} />
-          <span style={{ fontWeight: 800, fontSize: '0.8rem', letterSpacing: '0.05em', color: '#2D2D2D' }}>AGRIEASY</span>
+          <span style={{ fontWeight: 800, fontSize: 'clamp(0.65rem, 3vw, 0.8rem)', letterSpacing: '0.05em', color: '#2D2D2D' }}>AGRIEASY</span>
           <span style={{ color: '#6B6B6B', fontSize: '0.7rem', fontWeight: 600 }}>|</span>
-          <span style={{ color: '#6B6B6B', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>LIVE AGRICULTURAL NETWORK</span>
+          <span className="hide-mobile" style={{ color: '#6B6B6B', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase' }}>LIVE AGRICULTURAL NETWORK</span>
         </div>
 
         {/* Right: Live metric */}
@@ -186,7 +186,7 @@ export default function NewHomePage() {
       <main style={{
         position: 'relative', zIndex: 5,
         maxWidth: 1200, margin: '0 auto',
-        padding: '20px 24px 80px',
+        padding: '16px 16px 80px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
         {/* Logo */}
@@ -289,8 +289,7 @@ export default function NewHomePage() {
           position: 'absolute', top: '180px', left: '8%',
           background: '#C5D5C5', borderRadius: 8, padding: '8px 16px',
           transform: 'rotate(-5deg)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          display: 'none',
-          '@media (min-width: 768px)': { display: 'block' },
+          className: 'rupee-tag',
         } as any}>
           <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#2D4A3E' }}>₹ 500</span>
         </div>
@@ -298,8 +297,7 @@ export default function NewHomePage() {
           position: 'absolute', top: '160px', right: '8%',
           background: '#C5D5C5', borderRadius: 8, padding: '8px 16px',
           transform: 'rotate(5deg)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          display: 'none',
-          '@media (min-width: 768px)': { display: 'block' },
+          className: 'rupee-tag',
         } as any}>
           <span style={{ fontWeight: 800, fontSize: '1.2rem', color: '#2D4A3E' }}>₹ 600</span>
         </div>
@@ -307,7 +305,7 @@ export default function NewHomePage() {
         {/* ─── Role Cards ─── */}
         <div style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
           gap: 12, maxWidth: 600, width: '100%', marginBottom: 20,
         }}>
           {ROLE_CARDS.map((card, i) => (
@@ -433,39 +431,10 @@ export default function NewHomePage() {
         </p>
       </main>
 
-      {/* ─── Responsive styles + animations ─── */}
+      {/* Responsive: show ₹ tags on desktop only */}
       <style>{`
-        @media (min-width: 768px) {
-          div[aria-hidden]:nth-of-type(3) { display: block !important; }
-          div[aria-hidden]:nth-of-type(4) { display: block !important; }
-        }
-        @keyframes gradientFlow {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-        }
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.4); opacity: 0.6; }
-        }
-        @keyframes float1 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(-30px, 25px) scale(1.1); }
-        }
-        @keyframes float2 {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(25px, -20px) scale(1.05); }
-        }
-        @keyframes leafSway {
-          0%, 100% { transform: translateX(-50%) rotate(0deg); }
-          50% { transform: translateX(-50%) rotate(8deg); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          * { animation: none !important; transition: none !important; }
-        }
+        .rupee-tag { display: none; } .hide-mobile { display: inline; } @media (max-width: 480px) { .hide-mobile { display: none; } }
+        @media (min-width: 768px) { .rupee-tag { display: block; } }
       `}</style>
     </div>
   )
