@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgriVerse Dance Demo — Kisan Veer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background: linear-gradient(145deg, #0F172A 0%, #1E293B 100%);
+    min-height: 100vh; padding: 48px 24px; color: #E2E8F0;
+  }
+  h1 { text-align: center; font-size: 28px; margin-bottom: 8px; }
+  .subtitle { text-align: center; color: #94A3B8; font-size: 15px; margin-bottom: 40px; }
+
+  .demos {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 48px; max-width: 1200px; margin: 0 auto;
+  }
+  .demo-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px; padding: 32px;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .demo-label { font-size: 13px; font-weight: 700; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; }
+  .demo-desc { font-size: 12px; color: #64748B; text-align: center; }
+
+  /* ═══ The sprite sheet flipbook animation ═══ */
+  .dance-sprite {
+    background-image: url('/agriverse/sprite_kisan_veer.png');
+    background-repeat: no-repeat;
+    background-size: 800% 100%;  /* 8 frames wide */
+    background-position: 0% 0%;
+    border-radius: 50%;
+    border: 4px solid rgba(255,255,255,0.15);
+    box-shadow: 0 0 20px rgba(112,145,230,0.3);
+    animation: danceFlipbook 0.8s steps(8, end) infinite;
+  }
+
+  @keyframes danceFlipbook {
+    from { background-position: 0% 0%; }
+    to   { background-position: 100% 0%; }  /* 100% = shows the 8th frame */
+  }
+
+  /* Different sizes */
+  .size-200 { width: 200px; height: 200px; }
+  .size-120 { width: 120px; height: 120px; }
+  .size-80  { width: 80px;  height: 80px;  }
+
+  /* Different speeds */
+  .speed-fast   { animation-duration: 0.5s; }
+  .speed-normal { animation-duration: 0.8s; }
+  .speed-slow   { animation-duration: 1.5s; }
+
+  /* Also show the raw sprite sheet for reference */
+  .sprite-preview {
+    max-width: 100%; border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .controls {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    margin-top: 24px;
+  }
+  .controls button {
+    padding: 8px 16px; border-radius: 100px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.05); color: #E2E8F0;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  }
+  .controls button:hover { background: rgba(99,102,241,0.3); border-color: #6366F1; }
+  .controls button.active { background: #6366F1; border-color: #6366F1; }
+
+  .note {
+    max-width: 600px; margin: 40px auto 0;
+    background: rgba(99,102,241,0.1);
+    border-left: 4px solid #6366F1;
+    border-radius: 0 12px 12px 0;
+    padding: 16px 20px; font-size: 13px; color: #C7D2FE; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<h1>🌾 Kisan Veer — Dance Animation Demo</h1>
+<p class="subtitle">8-frame sprite sheet flipbook • The character's arms and body actually move</p>
+
+<div class="demos">
+  <!-- Large, normal speed -->
+  <div class="demo-card">
+    <div class="dance-sprite size-200 speed-normal"></div>
+    <div class="demo-label">200px • 0.8s loop</div>
+    <div class="demo-desc">Profile header size</div>
+  </div>
+
+  <!-- Medium, fast -->
+  <div class="demo-card">
+    <div class="dance-sprite size-120 speed-fast"></div>
+    <div class="demo-label">120px • 0.5s loop</div>
+    <div class="demo-desc">Feed thumbnail (energetic)</div>
+  </div>
+
+  <!-- Small, normal -->
+  <div class="demo-card">
+    <div class="dance-sprite size-80 speed-normal"></div>
+    <div class="demo-label">80px • 0.8s loop</div>
+    <div class="demo-desc">Picker grid size</div>
+  </div>
+
+  <!-- Large, slow -->
+  <div class="demo-card">
+    <div class="dance-sprite size-200 speed-slow"></div>
+    <div class="demo-label">200px • 1.5s loop</div>
+    <div class="demo-desc">Slow dance (relaxed)</div>
+  </div>
+</div>
+
+<div class="note">
+  <strong>How this works:</strong> The animation uses a sprite sheet containing 8 different
+  dance poses (arms down → right arm up → both arms up → left arm up → arms out → hop →
+  lowering → neutral). CSS <code>steps(8)</code> cycles through one frame at a time,
+  creating a flipbook effect. The character's <em>actual arms and body move</em> because
+  each frame is a separately-rendered pose — not just a CSS transform on a static image.
+</div>
+
+</body>
+</html>
