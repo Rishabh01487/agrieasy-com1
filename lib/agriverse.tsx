@@ -21,18 +21,31 @@ export interface AgriVerseAvatar {
 }
 
 export const AGRIVERSE_AVATARS: AgriVerseAvatar[] = [
+  // ─── Original 5 (the ones the user provided as references) ───
   { id: 'farmer_wheat',     name: 'Farmer Wheat',     src: '/agriverse/avatar_farmer_wheat.png',     tagline: 'The Wheat Whisperer' },
   { id: 'cow_keeper',       name: 'Cow Keeper',       src: '/agriverse/avatar_cow_keeper.png',       tagline: 'Guardian of the Herd' },
   { id: 'honey_bee',        name: 'Honey Bee',        src: '/agriverse/avatar_honey_bee.png',        tagline: 'Keeper of the Hive' },
   { id: 'organic_sprout',   name: 'Organic Sprout',   src: '/agriverse/avatar_organic_sprout.png',   tagline: 'The New Growth' },
   { id: 'tractor_driver',   name: 'Tractor Driver',   src: '/agriverse/avatar_tractor_driver.png',   tagline: 'The Field Cruiser' },
-  { id: 'rice_farmer',      name: 'Rice Farmer',      src: '/agriverse/avatar_rice_farmer.png',      tagline: 'Paddy Steward' },
-  { id: 'tea_gardener',     name: 'Tea Gardener',     src: '/agriverse/avatar_tea_gardener.png',     tagline: 'Plucker of Hills' },
-  { id: 'milkmaid',         name: 'Milkmaid',         src: '/agriverse/avatar_milkmaid.png',         tagline: 'Bringer of White Gold' },
-  { id: 'fish_farmer',      name: 'Fish Farmer',      src: '/agriverse/avatar_fish_farmer.png',      tagline: 'Pond Master' },
-  { id: 'goat_herder',      name: 'Goat Herder',      src: '/agriverse/avatar_goat_herder.png',      tagline: 'Hill Wanderer' },
-  { id: 'poultry_keeper',   name: 'Poultry Keeper',   src: '/agriverse/avatar_poultry_keeper.png',   tagline: 'Keeper of the Coop' },
-  { id: 'spice_merchant',   name: 'Spice Merchant',   src: '/agriverse/avatar_spice_merchant.png',   tagline: 'Master of Masala' },
+
+  // ─── Crop & livestock farmers ───
+  { id: 'rice_grower',         name: 'Rice Grower',         src: '/agriverse/avatar_rice_grower.png',         tagline: 'Paddy Steward' },
+  { id: 'sugarcane_grower',    name: 'Sugarcane Grower',    src: '/agriverse/avatar_sugarcane_grower.png',    tagline: 'The Sweet Reaper' },
+  { id: 'cotton_grower',       name: 'Cotton Grower',       src: '/agriverse/avatar_cotton_grower.png',       tagline: 'White Gold Weaver' },
+  { id: 'tomato_grower',       name: 'Tomato Grower',       src: '/agriverse/avatar_tomato_grower.png',       tagline: 'The Red Harvest' },
+  { id: 'millet_grower',       name: 'Millet Grower',       src: '/agriverse/avatar_millet_grower.png',       tagline: 'Coarse-Grain Keeper' },
+  { id: 'tea_gardener',        name: 'Tea Gardener',        src: '/agriverse/avatar_tea_gardener.png',        tagline: 'Plucker of Hills' },
+  { id: 'milkmaid',            name: 'Milkmaid',            src: '/agriverse/avatar_milkmaid.png',            tagline: 'Bringer of White Gold' },
+  { id: 'fish_farmer',         name: 'Fish Farmer',         src: '/agriverse/avatar_fish_farmer.png',         tagline: 'Pond Master' },
+  { id: 'goat_herder',         name: 'Goat Herder',         src: '/agriverse/avatar_goat_herder.png',         tagline: 'Hill Wanderer' },
+  { id: 'poultry_keeper',      name: 'Poultry Keeper',      src: '/agriverse/avatar_poultry_keeper.png',      tagline: 'Keeper of the Coop' },
+
+  // ─── Market & ecosystem entities ───
+  { id: 'onion_merchant',      name: 'Onion Merchant',      src: '/agriverse/avatar_onion_merchant.png',      tagline: 'Tearful Trader' },
+  { id: 'spice_merchant',      name: 'Spice Merchant',      src: '/agriverse/avatar_spice_merchant.png',      tagline: 'Master of Masala' },
+  { id: 'mandi_agent',         name: 'Mandi Agent',         src: '/agriverse/avatar_mandi_agent.png',         tagline: 'Auction Whisperer' },
+  { id: 'cold_storage_keeper', name: 'Cold Storage Keeper', src: '/agriverse/avatar_cold_storage_keeper.png', tagline: 'Frost Guardian' },
+  { id: 'seed_seller',         name: 'Seed Seller',         src: '/agriverse/avatar_seed_seller.png',         tagline: 'Sower of Beginnings' },
 ]
 
 /** Look up an avatar by id (returns undefined if not found). */
