@@ -589,66 +589,85 @@ button, nav a {
 }
 
 /* ══════════════════════════════════════════════════════════════════
-   AgriVerse Avatar Animations — Meta Muse-style idle motion
+   AgriVerse Avatar Animations — Meta Muse-style "dancing" idle motion
    ══════════════════════════════════════════════════════════════════
-   Three layered animations that make every AgriVerse avatar feel alive.
-   Uses the NEW independent `translate` and `scale` properties (not
-   `transform`) so they don't conflict with inline `transform` styles
-   on the <img> elements (e.g. the rupee-tag rotate, hover translateY).
+   Big, playful, visible animations — the avatar zooms in/out, sways
+   side to side, and bobs up and down, like a character dancing in place.
 
-   1. museFloat   — gentle vertical drift (±4px, 4s) — like hovering
-   2. museBreathe — subtle scale pulse (1.0 → 1.04, 5s) — like breathing
-   3. museGlow    — soft aura pulse (box-shadow, 4s) — only on large avatars
+   Uses independent `translate`, `rotate`, and `scale` properties so they
+   compose with any inline `transform` without conflict.
 
-   Applied globally to any img whose src contains "/agriverse/avatar_"
-   so the effect works everywhere: picker grid, profile header, feed,
-   DM, search, clips, followers list, edit modal preview.
+   1. museDance   — the main "dancing" loop: zoom + sway + bob together
+   2. museGlow    — soft aura pulse (box-shadow, 4s) — only on large avatars
+
+   Applied globally to any img whose src contains "/agriverse/avatar_".
    ══════════════════════════════════════════════════════════════════ */
 
-@keyframes museFloat {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: 0 -4px; }
-}
-
-@keyframes museBreathe {
-  0%, 100% { scale: 1; }
-  50%      { scale: 1.04; }
+@keyframes museDance {
+  0% {
+    translate: 0 0;
+    rotate: 0deg;
+    scale: 1;
+  }
+  20% {
+    translate: 3px -8px;          /* bob up + sway right */
+    rotate: 4deg;                 /* tilt right */
+    scale: 1.12;                  /* zoom in 12% */
+  }
+  40% {
+    translate: 0 -4px;            /* come back down a bit */
+    rotate: 0deg;                 /* straighten */
+    scale: 1.06;                  /* slight zoom out */
+  }
+  60% {
+    translate: -3px -8px;         /* bob up + sway left */
+    rotate: -4deg;                /* tilt left */
+    scale: 1.12;                  /* zoom in 12% */
+  }
+  80% {
+    translate: 0 -4px;            /* come back down */
+    rotate: 0deg;                 /* straighten */
+    scale: 1.06;                  /* slight zoom out */
+  }
+  100% {
+    translate: 0 0;
+    rotate: 0deg;
+    scale: 1;
+  }
 }
 
 @keyframes museGlow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(112,145,230,0); }
-  50%      { box-shadow: 0 0 16px 3px rgba(112,145,230,0.40); }
+  50%      { box-shadow: 0 0 20px 4px rgba(112,145,230,0.50); }
 }
 
-/* Base idle animation for ALL AgriVerse avatars (float + breathe).
-   Using `translate` and `scale` independent properties so they compose
-   with any inline `transform` (rotate, etc.) without overriding it. */
+/* Base dancing animation for ALL AgriVerse avatars.
+   Using `translate`, `rotate`, `scale` independent properties so they
+   compose with any inline `transform` (rotate, etc.) without overriding. */
 img[src*="/agriverse/avatar_"] {
   translate: 0 0;
+  rotate: 0deg;
   scale: 1;
-  animation:
-    museFloat 4s ease-in-out infinite,
-    museBreathe 5s ease-in-out infinite;
-  /* Promote to own layer for smoother animation */
-  will-change: translate, scale;
+  animation: museDance 2.5s ease-in-out infinite;
+  will-change: translate, rotate, scale;
+  transform-origin: center center;
 }
 
-/* Stagger the float/breathe so avatars shown together (picker grid,
-   followers list, feed) don't move in lockstep — each gets a different
-   phase offset via :nth-child on the parent's children. */
-img[src*="/agriverse/avatar_"]:nth-child(4n+1) { animation-delay: 0s, 0.4s; }
-img[src*="/agriverse/avatar_"]:nth-child(4n+2) { animation-delay: 0.3s, 0.8s; }
-img[src*="/agriverse/avatar_"]:nth-child(4n+3) { animation-delay: 0.6s, 1.2s; }
-img[src*="/agriverse/avatar_"]:nth-child(4n+4) { animation-delay: 0.9s, 1.6s; }
+/* Stagger the dance so avatars shown together (picker grid, followers
+   list, feed) don't move in lockstep — each gets a different phase
+   offset via :nth-child on the parent's children. */
+img[src*="/agriverse/avatar_"]:nth-child(4n+1) { animation-delay: 0s; }
+img[src*="/agriverse/avatar_"]:nth-child(4n+2) { animation-delay: 0.4s; }
+img[src*="/agriverse/avatar_"]:nth-child(4n+3) { animation-delay: 0.8s; }
+img[src*="/agriverse/avatar_"]:nth-child(4n+4) { animation-delay: 1.2s; }
 
 /* Larger avatars (profile header, edit modal preview) get the soft glow
-   too — only trigger the glow on elements that are at least 80px wide
-   via a helper class. */
+   too — only trigger the glow on elements with the .muse-avatar-glow
+   helper class. */
 .muse-avatar-glow {
   animation:
-    museFloat 4s ease-in-out infinite,
-    museBreathe 5s ease-in-out infinite,
-    museGlow 4s ease-in-out infinite !important;
+    museDance 2.5s ease-in-out infinite,
+    museGlow 2.5s ease-in-out infinite !important;
 }
 
 /* On hover in the picker, pause the idle animation so the user can
@@ -664,6 +683,7 @@ a:hover img[src*="/agriverse/avatar_"] {
   .muse-avatar-glow {
     animation: none !important;
     translate: 0 0 !important;
+    rotate: 0deg !important;
     scale: 1 !important;
   }
 }
