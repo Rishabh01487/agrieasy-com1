@@ -587,3 +587,71 @@ button, nav a {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.4); opacity: 0.6; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   AgriVerse Avatar Animations — Meta Muse-style idle motion
+   ══════════════════════════════════════════════════════════════════
+   Three layered animations that make every AgriVerse avatar feel alive:
+   1. museFloat   — gentle vertical drift (±2px, 4s) — like hovering
+   2. museBreathe — subtle scale pulse (1.0 → 1.015, 5s) — like breathing
+   3. museGlow    — soft aura pulse (box-shadow, 4s) — only on large avatars
+
+   Applied globally to any img whose src contains "/agriverse/avatar_"
+   so the effect works everywhere: picker grid, profile header, feed,
+   DM, search, clips, followers list, edit modal preview.
+   ══════════════════════════════════════════════════════════════════ */
+
+@keyframes museFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2px); }
+}
+
+@keyframes museBreathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+
+@keyframes museGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(112,145,230,0); }
+  50%      { box-shadow: 0 0 14px 2px rgba(112,145,230,0.30); }
+}
+
+/* Base idle animation for ALL AgriVerse avatars (float + breathe) */
+img[src*="/agriverse/avatar_"] {
+  animation:
+    museFloat 4s ease-in-out infinite,
+    museBreathe 5s ease-in-out infinite;
+}
+
+/* Stagger the float/breathe so avatars shown together (picker grid,
+   followers list, feed) don't move in lockstep — each gets a different
+   phase offset via :nth-child on the parent's children. */
+img[src*="/agriverse/avatar_"]:nth-child(4n+1) { animation-delay: 0s, 0.4s; }
+img[src*="/agriverse/avatar_"]:nth-child(4n+2) { animation-delay: 0.3s, 0.8s; }
+img[src*="/agriverse/avatar_"]:nth-child(4n+3) { animation-delay: 0.6s, 1.2s; }
+img[src*="/agriverse/avatar_"]:nth-child(4n+4) { animation-delay: 0.9s, 1.6s; }
+
+/* Larger avatars (profile header, edit modal preview) get the soft glow
+   too — only trigger the glow on elements that are at least 80px wide
+   via a helper class. */
+.muse-avatar-glow {
+  animation:
+    museFloat 4s ease-in-out infinite,
+    museBreathe 5s ease-in-out infinite,
+    museGlow 4s ease-in-out infinite !important;
+}
+
+/* On hover in the picker, pause the idle animation so the user can
+   inspect the avatar clearly. */
+button:hover img[src*="/agriverse/avatar_"],
+a:hover img[src*="/agriverse/avatar_"] {
+  animation-play-state: paused;
+}
+
+/* Respect reduced-motion preference — disable all avatar motion */
+@media (prefers-reduced-motion: reduce) {
+  img[src*="/agriverse/avatar_"],
+  .muse-avatar-glow {
+    animation: none !important;
+  }
+}

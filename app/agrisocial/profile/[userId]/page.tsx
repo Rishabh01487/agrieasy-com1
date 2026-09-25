@@ -155,7 +155,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                 onMouseUp={cancelPress}
                                 onMouseLeave={cancelPress}>
                                 {user.profilePic ? (
-                                    <img src={user.profilePic} alt={name} style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: '3px solid #fff' }} />
+                                    <img src={user.profilePic} alt={name} className="muse-avatar-glow" style={{ width: 76, height: 76, borderRadius: '50%', objectFit: 'cover', border: '3px solid #fff' }} />
                                 ) : (
                                     <div style={{ width: 76, height: 76, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '2rem', border: '3px solid #fff' }}>
                                         {name[0]?.toUpperCase()}
@@ -230,7 +230,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                             onMouseUp={cancelPress}
                             onMouseLeave={cancelPress}>
                             {user.profilePic ? (
-                                <img src={user.profilePic} alt={name} style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
+                                <img src={user.profilePic} alt={name} className="muse-avatar-glow" style={{ width: 144, height: 144, borderRadius: '50%', objectFit: 'cover', border: '4px solid #fff' }} />
                             ) : (
                                 <div style={{ width: 144, height: 144, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '3.5rem', border: '4px solid #fff' }}>
                                     {name[0]?.toUpperCase()}
