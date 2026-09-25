@@ -25,7 +25,7 @@ export const AGRIVERSE_AVATARS: AgriVerseAvatar[] = [
   { id: 'farmer_wheat',     name: 'Farmer Wheat',     src: '/agriverse/avatar_farmer_wheat.png',     tagline: 'The Wheat Whisperer' },
   { id: 'cow_keeper',       name: 'Cow Keeper',       src: '/agriverse/avatar_cow_keeper.png',       tagline: 'Guardian of the Herd' },
   { id: 'honey_bee',        name: 'Honey Bee',        src: '/agriverse/avatar_honey_bee.png',        tagline: 'Keeper of the Hive' },
-  { id: 'organic_sprout',   name: 'Organic Sprout',   src: '/agriverse/avatar_organic_sprout.png',   tagline: 'Zero-Chemical Pioneer' },
+  { id: 'organic_sprout',   name: 'Organic Sprout',   src: '/agriverse/avatar_organic_sprout_ref.png',   tagline: 'Zero-Chemical Pioneer' },
   { id: 'tractor_driver',   name: 'Tractor Driver',   src: '/agriverse/avatar_tractor_driver.png',   tagline: 'The Field Cruiser' },
 
   // ─── Crop & livestock farmers ───
@@ -57,12 +57,15 @@ export const AGRIVERSE_AVATARS: AgriVerseAvatar[] = [
   { id: 'milleteer',      name: 'Milleteer',      src: '/agriverse/avatar_milleteer.png',      tagline: 'Shree Anna Champion' },
   { id: 'greenhouse_bot', name: 'GreenHouse Bot', src: '/agriverse/avatar_greenhouse_bot.png', tagline: 'Climate-Controlled AgriBot' },
   // Original Flagship (renamed per the bundle file)
-  { id: 'kisan_veer',       name: 'Kisan Veer',       src: '/agriverse/avatar_kisan_veer.png',       tagline: 'Golden Wheat Guardian' },
-  { id: 'gauri_gau',        name: 'Gauri Gau',        src: '/agriverse/avatar_gauri_gau.png',        tagline: 'Sacred Desi Cow Keeper' },
-  { id: 'tractor_raja',     name: 'Tractor Raja',     src: '/agriverse/avatar_tractor_raja.png',     tagline: 'Mahindra Tractor Driver' },
+  // The 4 user-provided reference images (_ref.png) are used preferentially
+  // for the AgriMuse flagship avatars. These are the EXACT images the user
+  // uploaded, in the 3D plush-toy style matching Meta's Muse aesthetic.
+  { id: 'kisan_veer',       name: 'Kisan Veer',       src: '/agriverse/avatar_kisan_veer_ref.png',       tagline: 'Golden Wheat Guardian' },
+  { id: 'gauri_gau',        name: 'Gauri Gau',        src: '/agriverse/avatar_gauri_gau_ref.png',        tagline: 'Sacred Desi Cow Keeper' },
+  { id: 'tractor_raja',     name: 'Tractor Raja',     src: '/agriverse/avatar_tractor_raja.png',         tagline: 'Mahindra Tractor Driver' },
   // (organic_sprout already in the original group above, with the AgriMuse role)
-  { id: 'mandi_merchant',   name: 'Mandi Merchant',   src: '/agriverse/avatar_mandi_merchant.png',   tagline: 'APMC Wholesale Trader' },
-  { id: 'madhu_makhi',      name: 'Madhu Makhi',      src: '/agriverse/avatar_madhu_makhi.png',      tagline: 'Wild Honey Collector' },
+  { id: 'mandi_merchant',   name: 'Mandi Merchant',   src: '/agriverse/avatar_mandi_merchant.png',       tagline: 'APMC Wholesale Trader' },
+  { id: 'madhu_makhi',      name: 'Madhu Makhi',      src: '/agriverse/avatar_madhu_makhi_ref.png',      tagline: 'Wild Honey Collector' },
 ]
 
 /** Look up an avatar by id (returns undefined if not found). */
