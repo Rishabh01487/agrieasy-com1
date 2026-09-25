@@ -591,9 +591,13 @@ button, nav a {
 /* ══════════════════════════════════════════════════════════════════
    AgriVerse Avatar Animations — Meta Muse-style idle motion
    ══════════════════════════════════════════════════════════════════
-   Three layered animations that make every AgriVerse avatar feel alive:
-   1. museFloat   — gentle vertical drift (±2px, 4s) — like hovering
-   2. museBreathe — subtle scale pulse (1.0 → 1.015, 5s) — like breathing
+   Three layered animations that make every AgriVerse avatar feel alive.
+   Uses the NEW independent `translate` and `scale` properties (not
+   `transform`) so they don't conflict with inline `transform` styles
+   on the <img> elements (e.g. the rupee-tag rotate, hover translateY).
+
+   1. museFloat   — gentle vertical drift (±4px, 4s) — like hovering
+   2. museBreathe — subtle scale pulse (1.0 → 1.04, 5s) — like breathing
    3. museGlow    — soft aura pulse (box-shadow, 4s) — only on large avatars
 
    Applied globally to any img whose src contains "/agriverse/avatar_"
@@ -602,25 +606,31 @@ button, nav a {
    ══════════════════════════════════════════════════════════════════ */
 
 @keyframes museFloat {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-2px); }
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -4px; }
 }
 
 @keyframes museBreathe {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.015); }
+  0%, 100% { scale: 1; }
+  50%      { scale: 1.04; }
 }
 
 @keyframes museGlow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(112,145,230,0); }
-  50%      { box-shadow: 0 0 14px 2px rgba(112,145,230,0.30); }
+  50%      { box-shadow: 0 0 16px 3px rgba(112,145,230,0.40); }
 }
 
-/* Base idle animation for ALL AgriVerse avatars (float + breathe) */
+/* Base idle animation for ALL AgriVerse avatars (float + breathe).
+   Using `translate` and `scale` independent properties so they compose
+   with any inline `transform` (rotate, etc.) without overriding it. */
 img[src*="/agriverse/avatar_"] {
+  translate: 0 0;
+  scale: 1;
   animation:
     museFloat 4s ease-in-out infinite,
     museBreathe 5s ease-in-out infinite;
+  /* Promote to own layer for smoother animation */
+  will-change: translate, scale;
 }
 
 /* Stagger the float/breathe so avatars shown together (picker grid,
@@ -653,5 +663,7 @@ a:hover img[src*="/agriverse/avatar_"] {
   img[src*="/agriverse/avatar_"],
   .muse-avatar-glow {
     animation: none !important;
+    translate: 0 0 !important;
+    scale: 1 !important;
   }
 }
