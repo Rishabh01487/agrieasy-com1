@@ -77,8 +77,11 @@ export async function PATCH(req: NextRequest) {
         const updates: Record<string, unknown> = {}
 
         if (typeof body.profilePic === 'string') {
-            if (body.profilePic && !body.profilePic.startsWith('http')) {
-                return NextResponse.json({ error: 'profilePic must be a valid URL' }, { status: 400 })
+            // Accept either:
+            //   (a) absolute https URL — Cloudinary upload, or
+            //   (b) relative /agriverse/... path — AgriVerse avatar pick
+            if (body.profilePic && !body.profilePic.startsWith('http') && !body.profilePic.startsWith('/agriverse/')) {
+                return NextResponse.json({ error: 'profilePic must be a valid URL or an AgriVerse avatar path' }, { status: 400 })
             }
             updates.profilePic = sanitize(body.profilePic)
         }

@@ -8,6 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { useIsMobile } from '@/lib/use-is-mobile'
 import { Icon } from '@/lib/icons'
 import { LoadingScreen, InlineLoader } from '@/app/components/Spinner'
+import { AGRIVERSE_AVATARS, detectAgriVerseAvatar } from '@/lib/agriverse'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number }
@@ -29,6 +30,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
     const [uploading, setUploading] = useState(false)
     const [saving, setSaving] = useState(false)
     const [editError, setEditError] = useState('')
+    const [showAgriVersePicker, setShowAgriVersePicker] = useState(false)
     const [listModal, setListModal] = useState<'followers' | 'following' | null>(null)
     const [listUsers, setListUsers] = useState<any[]>([])
     const [listLoading, setListLoading] = useState(false)
@@ -177,7 +179,24 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         </div>
                         {/* Row 2: name + bio */}
                         <div style={{ marginBottom: 12 }}>
-                            <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>{name}</p>
+                            <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                {name}
+                                {(() => {
+                                    const av = detectAgriVerseAvatar(user.profilePic)
+                                    if (!av) return null
+                                    return (
+                                        <span title={`${av.name} — ${av.tagline}`} style={{
+                                            background: SOCIAL.bgSub, color: SOCIAL.primary,
+                                            border: `1px solid ${SOCIAL.border}`,
+                                            borderRadius: 100, padding: '1px 8px',
+                                            fontSize: '0.56rem', fontWeight: 700,
+                                            letterSpacing: '0.04em', textTransform: 'uppercase',
+                                        }}>
+                                            🎭 {av.name}
+                                        </span>
+                                    )
+                                })()}
+                            </p>
                             <p style={{ color: SOCIAL.text, fontWeight: 600, fontSize: '0.82rem', margin: '2px 0 0' }}>{roleLabel[user.role || ''] || 'AgriSocial Member'}</p>
                             {user.bio && <p style={{ color: SOCIAL.textSecondary, fontSize: '0.82rem', margin: '4px 0 0', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{user.bio}</p>}
                             {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
@@ -186,7 +205,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         {/* Row 3: action buttons — full width */}
                         {isOwn ? (
                             <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-                                <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowEditModal(true) }} style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, cursor: 'pointer' }}>Edit Profile</button>
+                                <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowAgriVersePicker(false); setShowEditModal(true) }} style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, cursor: 'pointer' }}>Edit Profile</button>
                                 <Link href="/agrisocial/create" style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, textDecoration: 'none', textAlign: 'center' }}>+ New Post</Link>
                                 <Link href="/agrisocial/saved" style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, textDecoration: 'none', textAlign: 'center' }}>🔖 Saved</Link>
                             </div>
@@ -220,10 +239,28 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                         </div>
                         <div style={{ flex: 1, minWidth: 280 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
-                                <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>{name}</h1>
+                                <h1 style={{ color: SOCIAL.text, fontWeight: 800, fontSize: '1.4rem', margin: 0 }}>
+                                    {name}
+                                    {(() => {
+                                        const av = detectAgriVerseAvatar(user.profilePic)
+                                        if (!av) return null
+                                        return (
+                                            <span title={`${av.name} — ${av.tagline}`} style={{
+                                                marginLeft: 8, verticalAlign: 'middle',
+                                                background: SOCIAL.bgSub, color: SOCIAL.primary,
+                                                border: `1px solid ${SOCIAL.border}`,
+                                                borderRadius: 100, padding: '2px 10px',
+                                                fontSize: '0.62rem', fontWeight: 700,
+                                                letterSpacing: '0.04em', textTransform: 'uppercase',
+                                            }}>
+                                                🎭 {av.name}
+                                            </span>
+                                        )
+                                    })()}
+                                </h1>
                                 {isOwn ? (
                                     <>
-                                        <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
+                                        <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowAgriVersePicker(false); setShowEditModal(true) }} style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, cursor: 'pointer' }}>✏️ Edit Profile</button>
                                         <Link href="/agrisocial/create" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>+ New Post</Link>
                                         <Link href="/agrisocial/saved" style={{ padding: '7px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.84rem', color: SOCIAL.text, textDecoration: 'none' }}>🔖 Saved</Link>
                                     </>
@@ -495,6 +532,87 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                 </label>
                             </div>
                             {uploading && <p style={{ color: SOCIAL.primary, fontSize: '0.78rem', margin: '8px 0 0' }}>Uploading…</p>}
+                        </div>
+
+                        {/* AgriVerse avatar picker — or upload your own photo */}
+                        <div style={{ marginBottom: 20 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                                <label style={{ color: SOCIAL.muted, fontSize: '0.78rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>AgriVerse Avatar</label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowAgriVersePicker(v => !v)}
+                                    style={{
+                                        background: showAgriVersePicker ? SOCIAL.bgSub : SOCIAL.primary,
+                                        color: showAgriVersePicker ? SOCIAL.text : '#fff',
+                                        border: `1px solid ${SOCIAL.border}`,
+                                        borderRadius: 100, padding: '4px 12px',
+                                        fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer',
+                                    }}
+                                >
+                                    {showAgriVersePicker ? '✕ Close' : '🎭 Pick avatar'}
+                                </button>
+                            </div>
+                            {(() => {
+                                const currentAvatar = detectAgriVerseAvatar(editPic || user.profilePic)
+                                return currentAvatar ? (
+                                    <p style={{ color: SOCIAL.text, fontSize: '0.78rem', margin: '0 0 8px' }}>
+                                        Current: <strong>{currentAvatar.name}</strong> — <span style={{ color: SOCIAL.muted, fontStyle: 'italic' }}>{currentAvatar.tagline}</span>
+                                    </p>
+                                ) : null
+                            })()}
+                            {showAgriVersePicker && (
+                                <div style={{
+                                    background: SOCIAL.bg, border: `1px solid ${SOCIAL.border}`,
+                                    borderRadius: 12, padding: 12,
+                                    maxHeight: 280, overflowY: 'auto',
+                                }}>
+                                    <div style={{
+                                        display: 'grid',
+                                        gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))',
+                                        gap: 10,
+                                    }}>
+                                        {AGRIVERSE_AVATARS.map(a => {
+                                            const selected = (editPic || user.profilePic) === a.src
+                                            return (
+                                                <button
+                                                    key={a.id}
+                                                    type="button"
+                                                    onClick={() => { setEditPic(a.src); setShowAgriVersePicker(false) }}
+                                                    title={`${a.name} — ${a.tagline}`}
+                                                    style={{
+                                                        background: 'transparent', border: 'none',
+                                                        padding: 0, cursor: 'pointer',
+                                                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                                                    }}
+                                                >
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={a.src}
+                                                        alt={a.name}
+                                                        style={{
+                                                            width: 56, height: 56, borderRadius: '50%',
+                                                            objectFit: 'cover',
+                                                            border: selected ? `3px solid ${SOCIAL.primary}` : `2px solid ${SOCIAL.border}`,
+                                                            boxShadow: selected ? `0 0 0 2px ${SOCIAL.primary}40` : 'none',
+                                                            transition: 'transform 0.2s ease, border-color 0.2s ease',
+                                                        }}
+                                                    />
+                                                    <span style={{
+                                                        fontSize: '0.6rem', fontWeight: 600,
+                                                        color: selected ? SOCIAL.primary : SOCIAL.muted,
+                                                        textAlign: 'center', lineHeight: 1.1,
+                                                        maxWidth: 72, overflow: 'hidden',
+                                                        textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                                                    }}>{a.name}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: '10px 0 0', textAlign: 'center', fontStyle: 'italic' }}>
+                                        Pick an AgriVerse avatar, or upload your own photo above. 📷
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Bio textarea */}
