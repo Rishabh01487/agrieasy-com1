@@ -46,6 +46,23 @@ export const AGRIVERSE_AVATARS: AgriVerseAvatar[] = [
   { id: 'mandi_agent',         name: 'Mandi Agent',         src: '/agriverse/avatar_mandi_agent.png',         tagline: 'Auction Whisperer' },
   { id: 'cold_storage_keeper', name: 'Cold Storage Keeper', src: '/agriverse/avatar_cold_storage_keeper.png', tagline: 'Frost Guardian' },
   { id: 'seed_seller',         name: 'Seed Seller',         src: '/agriverse/avatar_seed_seller.png',         tagline: 'Sower of Beginnings' },
+
+  // ═══ AgriMuse Collection (from avatar_bundle.html — exact names) ═══
+  // EasyPay & Fintech
+  { id: 'easypay',        name: 'EasyPay',        src: '/agriverse/avatar_easypay.png',        tagline: 'Digital Payment Pioneer' },
+  { id: 'rupee_rani',     name: 'Rupee Rani',     src: '/agriverse/avatar_rupee_rani.png',     tagline: 'Cashback Queen of Mandi' },
+  { id: 'upi_bot',        name: 'UPI Bot',        src: '/agriverse/avatar_upi_bot.png',        tagline: 'Instant Scan-to-Pay' },
+  { id: 'credit_dost',    name: 'Credit Dost',    src: '/agriverse/avatar_credit_dost.png',    tagline: 'Farm Loan Navigator' },
+  // New Agricultural Personas
+  { id: 'milleteer',      name: 'Milleteer',      src: '/agriverse/avatar_milleteer.png',      tagline: 'Shree Anna Champion' },
+  { id: 'greenhouse_bot', name: 'GreenHouse Bot', src: '/agriverse/avatar_greenhouse_bot.png', tagline: 'Climate-Controlled AgriBot' },
+  // Original Flagship (renamed per the bundle file)
+  { id: 'kisan_veer',       name: 'Kisan Veer',       src: '/agriverse/avatar_kisan_veer.png',       tagline: 'Golden Wheat Guardian' },
+  { id: 'gauri_gau',        name: 'Gauri Gau',        src: '/agriverse/avatar_gauri_gau.png',        tagline: 'Sacred Desi Cow Keeper' },
+  { id: 'tractor_raja',     name: 'Tractor Raja',     src: '/agriverse/avatar_tractor_raja.png',     tagline: 'Mahindra Tractor Driver' },
+  { id: 'organic_sprout',   name: 'Organic Sprout',   src: '/agriverse/avatar_organic_sprout.png',   tagline: 'Zero-Chemical Pioneer' },
+  { id: 'mandi_merchant',   name: 'Mandi Merchant',   src: '/agriverse/avatar_mandi_merchant.png',   tagline: 'APMC Wholesale Trader' },
+  { id: 'madhu_makhi',      name: 'Madhu Makhi',      src: '/agriverse/avatar_madhu_makhi.png',      tagline: 'Wild Honey Collector' },
 ]
 
 /** Look up an avatar by id (returns undefined if not found). */
