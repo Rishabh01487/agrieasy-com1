@@ -1,12 +1,12 @@
 {
     "name": "AgriEasy.com — India's Agricultural Marketplace",
     "short_name": "AgriEasy",
-    "description": "Connect farmers directly with buyers for seamless agricultural trade. End-to-end: list commodities, find buyers nearby, book vehicles, track live, pay via EasyPay.",
+    "description": "Connect farmers directly with buyers for seamless agricultural trade. End-to-end: list commodities, find buyers nearby, book vehicles, track live, pay via AgriPay.",
     "start_url": "/?source=pwa",
     "display": "standalone",
     "display_override": ["standalone", "minimal-ui", "browser"],
     "orientation": "portrait",
-    "background_color": "#f8fafc",
+    "background_color": "#F5F1E8",
     "theme_color": "#31372B",
     "lang": "en-IN",
     "scope": "/",
@@ -80,9 +80,9 @@
             ]
         },
         {
-            "name": "EasyPay Wallet",
+            "name": "AgriPay Wallet",
             "short_name": "Wallet",
-            "description": "Open your EasyPay wallet (Coming Soon)",
+            "description": "Open your AgriPay wallet",
             "url": "/agripay?source=pwa_shortcut",
             "icons": [
                 {
