@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
 
     return successBody
   } catch (error: unknown) {
-    console.error('Login error:', error instanceof Error ? error.message : String(error))
-    return apiError(ErrorCodes.INTERNAL_ERROR, 'An error occurred. Please try again.')
+    const errMsg = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+    console.error('Login error:', errMsg, error instanceof Error ? error.stack : '')
+    return apiError(ErrorCodes.INTERNAL_ERROR, `Debug: ${errMsg}`)
   }
 }
