@@ -14,16 +14,22 @@ const bcrypt = (bcryptModule as any).default || bcryptModule
 export async function POST(request: NextRequest) {
     if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   try {
+    console.log('[login] step 1: rate limit by IP')
     const rl = await rateLimitByIp(request, { windowMs: 60_000, max: 5, message: 'Too many login attempts. Try again in a minute.' })
     if (rl) return rl
 
+    console.log('[login] step 2: db connect')
     await dbConnect()
+
+    console.log('[login] step 3: parse body')
     let body: any = {}; try { body = await request.json() } catch { return validationError("Invalid login data", [{field: "phone", message: "Invalid input: expected string, received undefined"}, {field: "password", message: "Invalid input: expected string, received undefined"}]) }
 
+    console.log('[login] step 4: validate')
     const v = validateBody(loginSchema, body)
     if (!v.success) return validationError('Invalid login data', v.errors)
     const data = v.data
 
+    console.log('[login] step 5: rate limit by account')
     // Per-account rate limiting (prevents credential stuffing via rotating IPs)
     // 5 attempts per 15 minutes per account
     const accountRl = await rateLimitByAccount(data.phone, {
@@ -33,12 +39,15 @@ export async function POST(request: NextRequest) {
     })
     if (accountRl) return accountRl
 
+    console.log('[login] step 6: find user')
     const user = await User.findOne({ $or: [{ email: data.phone }, { phone: data.phone }] })
     if (!user) return apiError(ErrorCodes.AUTH_REQUIRED, 'Invalid credentials')
 
+    console.log('[login] step 7: compare password')
     const isPasswordValid = await bcrypt.compare(data.password, user.password)
     if (!isPasswordValid) return apiError(ErrorCodes.AUTH_REQUIRED, 'Invalid credentials')
 
+    console.log('[login] step 8: jwt sign')
     const secret = process.env.JWT_SECRET
     if (!secret || secret === 'your-secret-key') {
       return apiError(ErrorCodes.INTERNAL_ERROR, 'Server misconfigured: JWT_SECRET not set')
@@ -47,11 +56,13 @@ export async function POST(request: NextRequest) {
     const payload = { userId: user._id.toString(), email: user.email, role: user.role, tokenVersion: user.tokenVersion || 0 }
     const token = jwt.sign(payload, secret, { expiresIn: '7d' })
 
+    console.log('[login] step 9: build response')
     const successBody = apiSuccess({
       token,
       user: { id: user._id.toString(), email: user.email, phone: user.phone, role: user.role },
     })
 
+    console.log('[login] step 10: set cookie')
     try {
       successBody.cookies.set('token', token, {
         httpOnly: true,
@@ -61,19 +72,21 @@ export async function POST(request: NextRequest) {
         path: '/',
       })
     } catch (cookieErr) {
-      console.error('Cookie set error:', cookieErr)
+      console.error('[login] Cookie set error:', cookieErr)
     }
 
+    console.log('[login] step 11: audit log')
     try {
       await logAudit({ userId: user._id.toString(), action: 'LOGIN', resource: 'User', resourceId: user._id.toString(), details: { role: user.role }, request })
     } catch (auditErr) {
-      console.error('Audit log error:', auditErr)
+      console.error('[login] Audit log error:', auditErr)
     }
 
+    console.log('[login] step 12: return success')
     return successBody
   } catch (error: unknown) {
-    console.error('Login error:', error instanceof Error ? error.message : String(error))
-    console.error('Login error stack:', error instanceof Error ? error.stack : 'no stack')
+    console.error('[login] ERROR at step:', error instanceof Error ? error.message : String(error))
+    console.error('[login] ERROR stack:', error instanceof Error ? error.stack : 'no stack')
     return apiError(ErrorCodes.INTERNAL_ERROR, 'An error occurred. Please try again.')
   }
 }
