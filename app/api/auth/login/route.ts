@@ -1,16 +1,18 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
 import * as bcryptModule from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { logAudit } from '@/lib/audit'
-import { rateLimitByIp } from '@/lib/rate-limit'
+import { rateLimitByIp, rateLimitByAccount } from '@/lib/rate-limit'
 import { validateBody, loginSchema } from '@/lib/validation'
 import { apiSuccess, validationError, apiError, ErrorCodes } from '@/lib/api-response'
 
 const bcrypt = (bcryptModule as any).default || bcryptModule
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   try {
     const rl = await rateLimitByIp(request, { windowMs: 60_000, max: 5, message: 'Too many login attempts. Try again in a minute.' })
     if (rl) return rl
@@ -21,6 +23,15 @@ export async function POST(request: NextRequest) {
     const v = validateBody(loginSchema, body)
     if (!v.success) return validationError('Invalid login data', v.errors)
     const data = v.data
+
+    // Per-account rate limiting (prevents credential stuffing via rotating IPs)
+    // 5 attempts per 15 minutes per account
+    const accountRl = await rateLimitByAccount(data.phone, {
+      windowMs: 15 * 60_000,
+      max: 5,
+      message: 'Too many login attempts for this account. Try again in 15 minutes.'
+    })
+    if (accountRl) return accountRl
 
     const user = await User.findOne({ $or: [{ email: data.phone }, { phone: data.phone }] })
     if (!user) return apiError(ErrorCodes.AUTH_REQUIRED, 'Invalid credentials')

@@ -1,3 +1,4 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import dbConnect from '@/lib/mongodb'
@@ -17,6 +18,7 @@ function getRazorpay() {
 }
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 

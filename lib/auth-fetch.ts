@@ -14,6 +14,19 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
     headers.set('Authorization', `Bearer ${token}`)
   }
 
+  // CSRF protection: for state-changing requests, attach the X-CSRF-Token
+  // header from the csrf_token cookie set by the middleware.
+  const method = (options.method || 'GET').toUpperCase()
+  if (method !== 'GET' && method !== 'HEAD' && typeof document !== 'undefined') {
+    const csrfCookie = document.cookie
+      .split('; ')
+      .find(c => c.startsWith('csrf_token='))
+    if (csrfCookie) {
+      const csrfToken = csrfCookie.split('=')[1]
+      headers.set('X-CSRF-Token', csrfToken)
+    }
+  }
+
   const key = getRequestKey(url, options)
   // Don't deduplicate if a signal is provided (abort controller needs unique requests)
   if (key && !options.signal && inflightRequests.has(key)) {

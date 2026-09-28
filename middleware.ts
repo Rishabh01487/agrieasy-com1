@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ensureCsrfCookie } from '@/lib/csrf'
 
 const SECURITY_HEADERS: Record<string, string> = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
@@ -25,7 +26,12 @@ function applyCors(request: NextRequest, response: NextResponse) {
   const corsRaw = process.env.CORS_ORIGINS || ''
   const allowedOrigins = corsRaw ? corsRaw.split(',').map(s => s.trim()).filter(Boolean) : []
 
-  const isAllowed = isDev || allowedOrigins.length === 0 || allowedOrigins.includes(origin)
+  // In production: FAIL CLOSED — only allow explicitly listed origins.
+  // If CORS_ORIGINS is not set in production, NO cross-origin requests are allowed.
+  // In dev: allow all origins (localhost, preview deployments, etc.)
+  const isAllowed = isDev
+    ? true
+    : (allowedOrigins.length > 0 && allowedOrigins.includes(origin))
 
   if (isAllowed && origin) {
     response.headers.set('Access-Control-Allow-Origin', origin)
@@ -35,6 +41,7 @@ function applyCors(request: NextRequest, response: NextResponse) {
       'Content-Type',
       'Authorization',
       'X-Request-Id',
+      'X-CSRF-Token',
     ].join(', '))
     response.headers.set('Access-Control-Max-Age', '86400')
   }
@@ -62,6 +69,9 @@ export function middleware(request: NextRequest) {
   }
 
   applyCors(request, response)
+
+  // Ensure CSRF cookie is set on every response
+  ensureCsrfCookie(request, response)
 
   const isStatic = url.pathname.startsWith('/_next') ||
     url.pathname.startsWith('/icons/') ||

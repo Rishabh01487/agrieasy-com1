@@ -1,3 +1,4 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
@@ -8,6 +9,7 @@ import { validationError } from '@/lib/api-response'
 import { objectIdSchema } from '@/lib/validation'
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   try {
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()

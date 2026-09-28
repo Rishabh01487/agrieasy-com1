@@ -100,13 +100,39 @@ export async function rateLimitByUser(userId: string, config: RateLimitConfig): 
   return checkLimit(key, config)
 }
 
+/**
+ * Per-account rate limiting for login/OTP attempts.
+ * This is SEPARATE from IP-based limiting — it prevents credential stuffing
+ * where an attacker uses rotating proxy IPs to try many passwords against
+ * one account, OR one password across many accounts.
+ *
+ * Key includes the account identifier (email/phone) so each account has
+ * its own limit regardless of which IP the request comes from.
+ */
+export async function rateLimitByAccount(account: string, config: RateLimitConfig): Promise<NextResponse | null> {
+  // Normalize: lowercase + trim to prevent bypass via case variation
+  const normalized = account.toLowerCase().trim()
+  const key = `account:${normalized}`
+  return checkLimit(key, config)
+}
+
 async function checkLimit(key: string, config: RateLimitConfig): Promise<NextResponse | null> {
   const redis = await getRedis()
+  const isProduction = process.env.NODE_ENV === 'production'
 
   let result: { allowed: boolean; remaining: number }
 
   if (redis) {
     result = await checkLimitRedis(key, config)
+  } else if (isProduction) {
+    // FAIL CLOSED in production: if Redis is not configured, deny the request.
+    // This prevents rate-limit bypass via serverless cold starts.
+    // (In dev, fall through to in-memory which is fine for local testing.)
+    console.error('[rate-limit] PRODUCTION: Redis not configured — DENYING request (fail-closed)')
+    return NextResponse.json(
+      { error: 'Service temporarily unavailable. Please try again.' },
+      { status: 503 }
+    )
   } else {
     result = checkLimitMemory(key, config)
   }

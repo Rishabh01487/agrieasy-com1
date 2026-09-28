@@ -1,3 +1,4 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
@@ -7,6 +8,7 @@ import { validateBody, sendOtpSchema } from '@/lib/validation'
 import { apiSuccess, validationError, notFound, apiError, ErrorCodes } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   const rl = await rateLimitByIp(request, { windowMs: 60_000, max: 3, message: 'Too many OTP requests. Try again in a minute.' })
   if (rl) return rl
 

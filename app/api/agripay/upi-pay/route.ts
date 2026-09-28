@@ -1,3 +1,4 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
@@ -69,6 +70,7 @@ const recordUpiPaymentSchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()

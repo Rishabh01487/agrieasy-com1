@@ -1,3 +1,4 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import BuyerVehicle from '@/lib/models/BuyerVehicle'
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
   if (auth.user.role !== 'buyer') return forbidden('Only buyer accounts can add vehicles')

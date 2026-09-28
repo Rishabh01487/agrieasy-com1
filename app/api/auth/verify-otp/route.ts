@@ -1,3 +1,4 @@
+import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import User from '@/lib/models/User'
@@ -9,6 +10,7 @@ import { validateBody, verifyOtpSchema } from '@/lib/validation'
 import { apiSuccess, validationError, badRequest, notFound, apiError, ErrorCodes } from '@/lib/api-response'
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
   const rl = await rateLimitByIp(request, { windowMs: 60_000, max: 5, message: 'Too many attempts. Try again in a minute.' })
   if (rl) return rl
 
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
     successBody.cookies.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: 'strict',
       maxAge: 7 * 24 * 60 * 60,
       path: '/',
     })
