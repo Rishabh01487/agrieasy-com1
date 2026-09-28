@@ -85,8 +85,9 @@ export async function POST(request: NextRequest) {
     console.log('[login] step 12: return success')
     return successBody
   } catch (error: unknown) {
-    console.error('[login] ERROR at step:', error instanceof Error ? error.message : String(error))
-    console.error('[login] ERROR stack:', error instanceof Error ? error.stack : 'no stack')
-    return apiError(ErrorCodes.INTERNAL_ERROR, 'An error occurred. Please try again.')
+    const errMsg = error instanceof Error ? error.message : String(error)
+    const errStack = error instanceof Error ? error.stack : 'no stack'
+    console.error('[login] ERROR:', errMsg, errStack)
+    return apiError(ErrorCodes.INTERNAL_ERROR, `Login error: ${errMsg}`)
   }
 }
