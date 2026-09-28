@@ -52,19 +52,28 @@ export async function POST(request: NextRequest) {
       user: { id: user._id.toString(), email: user.email, phone: user.phone, role: user.role },
     })
 
-    successBody.cookies.set('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60,
-      path: '/',
-    })
+    try {
+      successBody.cookies.set('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60,
+        path: '/',
+      })
+    } catch (cookieErr) {
+      console.error('Cookie set error:', cookieErr)
+    }
 
-    await logAudit({ userId: user._id.toString(), action: 'LOGIN', resource: 'User', resourceId: user._id.toString(), details: { role: user.role }, request })
+    try {
+      await logAudit({ userId: user._id.toString(), action: 'LOGIN', resource: 'User', resourceId: user._id.toString(), details: { role: user.role }, request })
+    } catch (auditErr) {
+      console.error('Audit log error:', auditErr)
+    }
 
     return successBody
   } catch (error: unknown) {
-    console.error('Login error:', error)
+    console.error('Login error:', error instanceof Error ? error.message : String(error))
+    console.error('Login error stack:', error instanceof Error ? error.stack : 'no stack')
     return apiError(ErrorCodes.INTERNAL_ERROR, 'An error occurred. Please try again.')
   }
 }
