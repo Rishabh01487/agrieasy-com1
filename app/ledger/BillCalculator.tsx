@@ -827,7 +827,7 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
             // Step 1: Try Qwen3-VL via server proxy (highest accuracy, ~₹0.035/bill)
             let data: { commodities: CommodityGroup[]; grandTotalBags: number; grandTotalWeight: number; rawText: string } | null = null
             try {
-                const res = await fetch('/api/ledger/bill-ocr', {
+                const res = await authFetch('/api/ledger/bill-ocr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ image: b64 }),

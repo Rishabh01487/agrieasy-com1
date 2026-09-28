@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useSession } from 'next-auth/react'
+import { authFetch } from '@/lib/auth-fetch'
 
 /**
  * AuthSync bridges the NextAuth Google session (cookie-based, server-side)
@@ -73,7 +74,7 @@ async function autoRegisterGoogleUser(
   phone: string,
 ): Promise<boolean> {
   try {
-    const res = await fetch('/api/auth/register', {
+    const res = await authFetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -102,7 +103,7 @@ export default function AuthSync() {
         const email = session.user.email
 
         // Step 1: exchange NextAuth session → check if registered
-        fetch('/api/auth/session-token', {
+        authFetch('/api/auth/session-token', {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
@@ -141,7 +142,7 @@ export default function AuthSync() {
                         if (ok) {
                             clearPendingReg()
                             // Fetch the JWT now that the user exists
-                            const tokenRes = await fetch('/api/auth/session-token', {
+                            const tokenRes = await authFetch('/api/auth/session-token', {
                                 method: 'POST',
                                 credentials: 'include',
                                 headers: { 'Content-Type': 'application/json' },

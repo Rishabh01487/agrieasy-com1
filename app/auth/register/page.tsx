@@ -8,6 +8,7 @@ import { useForm } from 'react-hook-form'
 //               and restore the Google button (see git history).
 import Link from 'next/link'
 import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
+import { authFetch } from '@/lib/auth-fetch'
 
 type FormData = {
   name: string
@@ -112,7 +113,7 @@ export default function Register() {
     setError('')
     if (!address.trim()) { setError('Please enter your address'); setIsLoading(false); return }
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await authFetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

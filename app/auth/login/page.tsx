@@ -8,6 +8,7 @@ import Link from 'next/link'
 // To re-enable: import { signIn } from 'next-auth/react'
 //               and restore the Google button (see git history).
 import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
+import { authFetch } from '@/lib/auth-fetch'
 
 type FormData = { identifier: string; password: string }
 
@@ -46,7 +47,7 @@ export default function Login() {
     setIsLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await authFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: data.identifier, password: data.password }),
