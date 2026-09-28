@@ -51,10 +51,22 @@ async function checkLimitRedis(key: string, config: RateLimitConfig): Promise<{ 
   const now = Date.now()
   const windowStart = now - config.windowMs
 
-  const pipeline = redis.pipeline()
-
-  const raw: string | null = await redis.get(windowKey)
-  let timestamps: number[] = raw ? JSON.parse(raw) : []
+  const raw = await redis.get(windowKey)
+  // Upstash Redis .get() may return the value already parsed (not a string).
+  // Handle: string (JSON), number[], number, null, or object.
+  let timestamps: number[] = []
+  if (raw) {
+    if (Array.isArray(raw)) {
+      timestamps = raw as number[]
+    } else if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw)
+        if (Array.isArray(parsed)) timestamps = parsed
+      } catch { /* not JSON, ignore */ }
+    } else if (typeof raw === 'number') {
+      timestamps = [raw]
+    }
+  }
 
   // Prune expired
   timestamps = timestamps.filter((t: number) => t > windowStart)
