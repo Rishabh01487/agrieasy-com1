@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
-import { BUYER, FARMER, SHARED, navStyle } from '@/lib/styles'
+import { LEDGER, SHARED } from '@/lib/styles'
 import BillCalculator from './BillCalculator'
 import ManualBillEntry from './ManualBillEntry'
 
@@ -34,21 +34,41 @@ interface Summary {
 }
 
 const typeLabel: Record<string, { label: string; icon: string; color: string }> = {
-    bill: { label: 'Bill', icon: '🧾', color: '#f59e0b' },
-    invoice: { label: 'Invoice', icon: '📄', color: '#31372B' },
-    earning: { label: 'Earning', icon: '💰', color: '#10b981' },
-    expense: { label: 'Expense', icon: '💸', color: '#ef4444' },
+    bill: { label: 'Bill', icon: '\u{1F9FE}', color: LEDGER.gold },
+    invoice: { label: 'Invoice', icon: '\u{1F4C4}', color: '#60A5FA' },
+    earning: { label: 'Earning', icon: '\u{1F4B0}', color: LEDGER.green },
+    expense: { label: 'Expense', icon: '\u{1F4B8}', color: LEDGER.red },
 }
 
 const statusStyle: Record<string, { bg: string; color: string }> = {
-    pending: { bg: '#fef3c7', color: '#92400e' },
-    paid: { bg: '#d1fae5', color: '#065f46' },
-    overdue: { bg: '#fee2e2', color: '#991b1b' },
-    cancelled: { bg: '#f3f4f6', color: '#374151' },
+    pending: { bg: 'rgba(245, 158, 11, 0.15)', color: '#FBBF24' },
+    paid: { bg: 'rgba(34, 197, 94, 0.15)', color: '#4ADE80' },
+    overdue: { bg: 'rgba(239, 68, 68, 0.15)', color: '#F87171' },
+    cancelled: { bg: 'rgba(148, 163, 184, 0.15)', color: '#94A3B8' },
 }
 
 function formatINR(n: number) {
-    return '₹' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+    return '\u20B9' + n.toLocaleString('en-IN', { maximumFractionDigits: 0 })
+}
+
+// ── Impressive Camera Icon (SVG) for Bill Calculator ──
+function CameraIcon({ size = 28, color = LEDGER.gold }: { size?: number; color?: string }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            {/* Camera body */}
+            <rect x="6" y="14" width="36" height="26" rx="4" fill="none" stroke={color} strokeWidth="2.5" />
+            {/* Camera top hump */}
+            <path d="M16 14 L18 8 L30 8 L32 14" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+            {/* Lens outer circle */}
+            <circle cx="24" cy="27" r="8" stroke={color} strokeWidth="2.5" fill="none" />
+            {/* Lens inner circle */}
+            <circle cx="24" cy="27" r="4" fill={color} opacity="0.3" />
+            {/* Flash dot */}
+            <circle cx="36" cy="20" r="1.5" fill={color} />
+            {/* Shutter highlight */}
+            <circle cx="21" cy="24" r="1.5" fill={color} opacity="0.5" />
+        </svg>
+    )
 }
 
 export default function LedgerPage() {
@@ -60,7 +80,7 @@ export default function LedgerPage() {
     const [filter, setFilter] = useState<'all' | 'bill' | 'invoice' | 'earning' | 'expense'>('all')
     const [showAddModal, setShowAddModal] = useState(false)
     const [userRole, setUserRole] = useState('')
-    const [manualResult, setManualResult] = useState<any>(null)  // result from ManualBillEntry
+    const [manualResult, setManualResult] = useState<any>(null)
 
     const [entryType, setEntryType] = useState<'bill' | 'invoice' | 'earning' | 'expense'>('bill')
     const [counterpartyName, setCounterpartyName] = useState('')
@@ -116,14 +136,13 @@ export default function LedgerPage() {
             fd.append('timestamp', sig.timestamp.toString())
             fd.append('signature', sig.signature)
             fd.append('folder', sig.folder)
-            // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
             fd.append('resource_type', sig.resourceType)
             fd.append('allowed_formats', sig.allowedFormats)
             const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
             const cld = await cldRes.json()
             if (cldRes.ok && cld.secure_url) setBillPhoto(cld.secure_url)
             else setError('Upload failed: ' + (cld?.error?.message || 'Unknown'))
-        } catch (err) {
+        } catch {
             setError('Upload failed')
         } finally {
             setUploading(false)
@@ -138,14 +157,9 @@ export default function LedgerPage() {
             const res = await authFetch('/api/ledger', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    type: entryType,
-                    counterpartyName,
-                    amount: parseFloat(amount),
-                    commodity,
-                    quantity: quantity ? parseFloat(quantity) : 0,
-                    description,
-                    billPhoto,
-                    status: 'pending',
+                    type: entryType, counterpartyName, amount: parseFloat(amount),
+                    commodity, quantity: quantity ? parseFloat(quantity) : 0,
+                    description, billPhoto, status: 'pending',
                 }),
             })
             const d = await res.json()
@@ -173,66 +187,75 @@ export default function LedgerPage() {
         } catch {}
     }
 
-    const palette = userRole === 'buyer' ? BUYER : FARMER
+    const L = LEDGER // shorthand
 
     return (
-        <div style={{ minHeight: '100vh', background: palette.bg, fontFamily: SHARED.font }}>
-            <nav style={{ ...navStyle(palette), background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ minHeight: '100vh', background: L.gradient, fontFamily: SHARED.font }}>
+            {/* ── Navigation ── */}
+            <nav style={{
+                position: 'sticky', top: 0, zIndex: 50,
+                background: 'rgba(21, 29, 46, 0.85)',
+                backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                borderBottom: `1px solid ${L.border}`,
+            }}>
+                <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <Link href={`/${userRole}/dashboard`} style={{ color: palette.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem' }}>← Dashboard</Link>
-                        <span style={{ color: palette.muted }}>›</span>
-                        <span style={{ color: palette.text, fontWeight: 800, fontSize: '1.05rem' }}>📒 Ledger</span>
+                        <Link href={`/${userRole}/dashboard`} style={{ color: L.gold, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem', transition: 'color 0.2s' }}>
+                            ← Dashboard
+                        </Link>
+                        <span style={{ color: L.muted }}>|</span>
+                        <span style={{ color: L.white, fontWeight: 800, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: '1.2rem' }}>📒</span> Ledger
+                        </span>
                     </div>
                     {userRole !== 'buyer' && (
-                        <button onClick={() => setShowAddModal(true)} style={{ background: palette.primary, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer' }}>+ Add Entry</button>
+                        <button onClick={() => setShowAddModal(true)} style={{
+                            background: L.gradientGold, color: '#1A233A',
+                            border: 'none', borderRadius: 10, padding: '8px 18px',
+                            fontSize: '0.84rem', fontWeight: 800, cursor: 'pointer',
+                            boxShadow: L.shadowGold, transition: 'transform 0.2s',
+                        }}>+ Add Entry</button>
                     )}
                 </div>
             </nav>
 
-            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '24px 16px 60px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                    <div>
-                        <h1 style={{ color: palette.text, fontWeight: 800, fontSize: '1.6rem', margin: '0 0 6px' }}>📒 Ledger</h1>
-                        <p style={{ color: palette.muted, margin: 0, fontSize: '0.92rem' }}>Track your bills, invoices, earnings, and expenses.</p>
-                    </div>
-                    {userRole === 'buyer' && (
-                        <button onClick={() => setShowAddModal(true)} style={{
-                            background: palette.white, color: palette.text,
-                            border: `1.5px solid ${palette.border}`, borderRadius: 10,
-                            padding: '10px 18px', fontSize: '0.86rem', fontWeight: 700, cursor: 'pointer',
-                        }}>+ Manual Entry</button>
-                    )}
+            <div style={{ maxWidth: '900px', margin: '0 auto', padding: '28px 16px 80px' }}>
+                {/* ── Header ── */}
+                <div style={{ marginBottom: 28 }}>
+                    <h1 style={{ color: L.white, fontWeight: 800, fontSize: '1.8rem', margin: '0 0 6px' }}>📒 Ledger</h1>
+                    <p style={{ color: L.textSecondary, margin: 0, fontSize: '0.92rem' }}>Track your bills, invoices, earnings, and expenses.</p>
                 </div>
 
-                {/* ── INLINE BILL CALCULATOR ──
-                     For buyers, the bill calculator is embedded directly on this page
-                     so they can snap or upload a photo and get the total in one click —
-                     no navigation to a separate page needed.
-                     When manualResult is set (from ManualBillEntry below), this same
-                     BillCalculator displays the manual result via initialResult prop. */}
+                {/* ── Bill Calculator with Camera Icon ── */}
                 {userRole === 'buyer' && (
                     <div style={{
-                        background: palette.bgSub, borderRadius: 16, padding: 16,
-                        marginBottom: 24, border: `1px solid ${palette.border}`,
+                        background: L.card, borderRadius: 16, padding: 20,
+                        marginBottom: 24, border: `1px solid ${L.border}`,
+                        boxShadow: L.shadow,
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 4px' }}>
-                            <span style={{ fontSize: '1.3rem' }}>{manualResult ? '📋' : '🧮'}</span>
-                            <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
-                                {manualResult ? 'Generated Bill' : 'Bill Calculator'}
-                            </h2>
-                            <span style={{ color: palette.muted, fontSize: '0.76rem', marginLeft: 'auto' }}>
-                                {manualResult ? 'From manual entry' : 'Take/upload a bill photo → get instant total'}
-                            </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                            {/* ── Impressive Camera Icon ── */}
+                            <div style={{
+                                width: 48, height: 48, borderRadius: 12,
+                                background: L.goldLight, border: `1px solid ${L.border}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <CameraIcon size={28} color={L.gold} />
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <h2 style={{ color: L.white, fontWeight: 800, fontSize: '1.15rem', margin: 0 }}>
+                                    {manualResult ? 'Generated Bill' : 'Bill Calculator'}
+                                </h2>
+                                <p style={{ color: L.muted, fontSize: '0.76rem', margin: '2px 0 0' }}>
+                                    {manualResult ? 'From manual entry' : 'Snap or upload a bill photo to get instant total'}
+                                </p>
+                            </div>
                             {manualResult && (
-                                <button
-                                    onClick={() => setManualResult(null)}
-                                    style={{
-                                        background: palette.white, border: `1px solid ${palette.border}`,
-                                        borderRadius: 8, padding: '4px 12px', color: palette.text,
-                                        fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', marginLeft: 8,
-                                    }}
-                                >✕ Clear</button>
+                                <button onClick={() => setManualResult(null)} style={{
+                                    background: 'transparent', border: `1px solid ${L.border}`,
+                                    borderRadius: 8, padding: '6px 12px', color: L.textSecondary,
+                                    fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                                }}>✕ Clear</button>
                             )}
                         </div>
                         <BillCalculator
@@ -244,103 +267,117 @@ export default function LedgerPage() {
                     </div>
                 )}
 
-                {/* ── MANUAL BILL ENTRY ──
-                     For buyers who want to enter commodity + per-bag weights manually
-                     (no photo). Supports unlimited commodities × unlimited bags.
-                     Per-bag weights are auto-grouped into batches of 10 for display.
-                     Hidden when a manual result is being shown above. */}
+                {/* ── Manual Bill Entry ── */}
                 {userRole === 'buyer' && !manualResult && (
                     <div style={{
-                        background: palette.bgSub, borderRadius: 16, padding: 16,
-                        marginBottom: 24, border: `1px solid ${palette.border}`,
+                        background: L.card, borderRadius: 16, padding: 20,
+                        marginBottom: 24, border: `1px solid ${L.borderLight}`,
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, padding: '0 4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                             <span style={{ fontSize: '1.3rem' }}>✍️</span>
-                            <h2 style={{ color: palette.text, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>
-                                Manual Bill Entry
-                            </h2>
-                            <span style={{ color: palette.muted, fontSize: '0.76rem', marginLeft: 'auto' }}>
-                                Enter commodity + per-bag weights → auto-batched in 10s
-                            </span>
+                            <h2 style={{ color: L.white, fontWeight: 800, fontSize: '1.1rem', margin: 0 }}>Manual Bill Entry</h2>
+                            <span style={{ color: L.muted, fontSize: '0.76rem', marginLeft: 'auto' }}>Enter commodity + per-bag weights</span>
                         </div>
-                        <ManualBillEntry
-                            onGenerate={(result) => setManualResult(result)}
-                        />
+                        <ManualBillEntry onGenerate={(result) => setManualResult(result)} />
                     </div>
                 )}
 
-                {/* Summary cards */}
+                {/* ── Summary Cards ── */}
                 {summary && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
-                        <div style={{ background: palette.white, border: `1px solid ${palette.borderLight}`, borderRadius: 12, padding: 16, boxShadow: SHARED.shadowMd }}>
-                            <p style={{ color: palette.muted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Total Earnings</p>
-                            <p style={{ color: '#10b981', fontSize: '1.4rem', fontWeight: 800, margin: '4px 0 0' }}>{formatINR(summary.totalEarnings)}</p>
-                        </div>
-                        <div style={{ background: palette.white, border: `1px solid ${palette.borderLight}`, borderRadius: 12, padding: 16, boxShadow: SHARED.shadowMd }}>
-                            <p style={{ color: palette.muted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Total Expenses</p>
-                            <p style={{ color: '#ef4444', fontSize: '1.4rem', fontWeight: 800, margin: '4px 0 0' }}>{formatINR(summary.totalExpenses)}</p>
-                        </div>
-                        <div style={{ background: palette.white, border: `1px solid ${palette.borderLight}`, borderRadius: 12, padding: 16, boxShadow: SHARED.shadowMd }}>
-                            <p style={{ color: palette.muted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Receivables</p>
-                            <p style={{ color: '#f59e0b', fontSize: '1.4rem', fontWeight: 800, margin: '4px 0 0' }}>{formatINR(summary.pendingReceivables)}</p>
-                            <p style={{ color: palette.muted, fontSize: '0.68rem', margin: '2px 0 0' }}>Pending incoming</p>
-                        </div>
-                        <div style={{ background: palette.white, border: `1px solid ${palette.borderLight}`, borderRadius: 12, padding: 16, boxShadow: SHARED.shadowMd }}>
-                            <p style={{ color: palette.muted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Payables</p>
-                            <p style={{ color: '#dc2626', fontSize: '1.4rem', fontWeight: 800, margin: '4px 0 0' }}>{formatINR(summary.pendingPayables)}</p>
-                            <p style={{ color: palette.muted, fontSize: '0.68rem', margin: '2px 0 0' }}>Pending outgoing</p>
-                        </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12, marginBottom: 28 }}>
+                        {[
+                            { label: 'Total Earnings', value: summary.totalEarnings, color: '#4ADE80', icon: '💰' },
+                            { label: 'Total Expenses', value: summary.totalExpenses, color: '#F87171', icon: '💸' },
+                            { label: 'Receivables', value: summary.pendingReceivables, color: '#FBBF24', icon: '📥', sub: 'Pending incoming' },
+                            { label: 'Payables', value: summary.pendingPayables, color: '#F87171', icon: '📤', sub: 'Pending outgoing' },
+                        ].map((card, i) => (
+                            <div key={i} style={{
+                                background: L.card, borderRadius: 14, padding: 18,
+                                border: `1px solid ${L.borderLight}`, boxShadow: L.shadow,
+                                transition: 'transform 0.2s, border-color 0.2s',
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <span style={{ fontSize: '1.2rem' }}>{card.icon}</span>
+                                    <p style={{ color: L.muted, fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', margin: 0 }}>{card.label}</p>
+                                </div>
+                                <p style={{ color: card.color, fontSize: '1.5rem', fontWeight: 800, margin: 0 }}>{formatINR(card.value)}</p>
+                                {card.sub && <p style={{ color: L.muted, fontSize: '0.66rem', margin: '4px 0 0' }}>{card.sub}</p>}
+                            </div>
+                        ))}
                     </div>
                 )}
 
-                {/* Filter tabs */}
+                {/* ── Filter Tabs ── */}
                 <div style={{ display: 'flex', gap: 6, marginBottom: 16, overflowX: 'auto' }} className="no-scrollbar">
                     {(['all', 'bill', 'invoice', 'earning', 'expense'] as const).map(t => (
-                        <button key={t} onClick={() => setFilter(t)} style={{ padding: '7px 14px', borderRadius: 100, border: `1.5px solid ${filter === t ? palette.primary : palette.border}`, background: filter === t ? palette.primary : palette.white, color: filter === t ? '#fff' : palette.muted, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', textTransform: 'capitalize' }}>
+                        <button key={t} onClick={() => setFilter(t)} style={{
+                            padding: '8px 16px', borderRadius: 100,
+                            border: `1.5px solid ${filter === t ? L.gold : L.borderLight}`,
+                            background: filter === t ? L.gradientGold : 'transparent',
+                            color: filter === t ? '#1A233A' : L.muted,
+                            fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer',
+                            whiteSpace: 'nowrap', textTransform: 'capitalize',
+                            transition: 'all 0.2s ease',
+                        }}>
                             {t === 'all' ? 'All' : typeLabel[t]?.label + 's'}
                         </button>
                     ))}
                 </div>
 
-                {/* Entries list */}
+                {/* ── Entries List ── */}
                 {loading ? (
-                    <div style={{ textAlign: 'center', padding: 40, color: palette.muted }}>Loading…</div>
+                    <div style={{ textAlign: 'center', padding: 40, color: L.muted }}>Loading…</div>
                 ) : entries.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 60, color: palette.muted }}>
+                    <div style={{ textAlign: 'center', padding: 60, color: L.muted }}>
                         <div style={{ fontSize: '3rem', marginBottom: 12 }}>📒</div>
-                        <h3 style={{ color: palette.text, margin: '0 0 6px' }}>No entries yet</h3>
+                        <h3 style={{ color: L.white, margin: '0 0 6px' }}>No entries yet</h3>
                         <p style={{ fontSize: '0.86rem', margin: 0 }}>Click "+ Add Entry" to record your first transaction.</p>
                     </div>
                 ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {entries.map(e => {
                             const meta = typeLabel[e.type] || { label: e.type, icon: '📝', color: '#6b7280' }
                             const ss = statusStyle[e.status] || statusStyle.pending
                             const isCredit = e.type === 'earning' || (e.type === 'bill' && userRole !== 'buyer')
                             return (
-                                <div key={e._id} style={{ background: palette.white, border: `1px solid ${palette.borderLight}`, borderRadius: 12, padding: 14, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                                    <div style={{ width: 44, height: 44, borderRadius: 10, background: `${meta.color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', flexShrink: 0 }}>{meta.icon}</div>
+                                <div key={e._id} style={{
+                                    background: L.card, border: `1px solid ${L.borderLight}`,
+                                    borderRadius: 12, padding: 16, display: 'flex', gap: 12, alignItems: 'flex-start',
+                                    transition: 'background 0.2s, border-color 0.2s',
+                                }}>
+                                    <div style={{
+                                        width: 44, height: 44, borderRadius: 10,
+                                        background: `${meta.color}18`, border: `1px solid ${meta.color}30`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: '1.3rem', flexShrink: 0,
+                                    }}>{meta.icon}</div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                                            <p style={{ color: palette.text, fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>{meta.label}{e.commodity ? ` · ${e.commodity}` : ''}</p>
+                                            <p style={{ color: L.white, fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>{meta.label}{e.commodity ? ` · ${e.commodity}` : ''}</p>
                                             <span style={{ background: ss.bg, color: ss.color, padding: '2px 8px', borderRadius: 100, fontSize: '0.66rem', fontWeight: 700, textTransform: 'capitalize' }}>{e.status}</span>
                                         </div>
-                                        {e.counterpartyName && <p style={{ color: palette.muted, fontSize: '0.78rem', margin: 0 }}>With: {e.counterpartyName}</p>}
-                                        {e.quantity > 0 && <p style={{ color: palette.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>{e.quantity} {e.unit} @ ₹{e.pricePerUnit}/{e.unit}</p>}
-                                        {e.description && <p style={{ color: palette.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>{e.description}</p>}
+                                        {e.counterpartyName && <p style={{ color: L.muted, fontSize: '0.78rem', margin: 0 }}>With: {e.counterpartyName}</p>}
+                                        {e.quantity > 0 && <p style={{ color: L.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>{e.quantity} {e.unit} @ ₹{e.pricePerUnit}/{e.unit}</p>}
+                                        {e.description && <p style={{ color: L.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>{e.description}</p>}
                                         {e.billPhoto && (
                                             <a href={e.billPhoto} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 6 }}>
                                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img src={e.billPhoto} alt="bill" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${palette.border}` }} />
+                                                <img src={e.billPhoto} alt="bill" style={{ width: 80, height: 60, objectFit: 'cover', borderRadius: 6, border: `1px solid ${L.border}` }} />
                                             </a>
                                         )}
-                                        <p style={{ color: palette.muted, fontSize: '0.68rem', margin: '6px 0 0' }}>{new Date(e.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}{e.paidAt && ` · Paid ${new Date(e.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}</p>
+                                        <p style={{ color: L.muted, fontSize: '0.68rem', margin: '6px 0 0' }}>{new Date(e.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}{e.paidAt && ` · Paid ${new Date(e.paidAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`}</p>
                                         {e.status === 'pending' && (
-                                            <button onClick={() => markPaid(e._id)} style={{ marginTop: 6, background: '#10b981', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}>Mark as Paid</button>
+                                            <button onClick={() => markPaid(e._id)} style={{
+                                                marginTop: 6, background: L.green, color: '#fff',
+                                                border: 'none', borderRadius: 6, padding: '5px 14px',
+                                                fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer',
+                                            }}>Mark as Paid</button>
                                         )}
                                     </div>
                                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                        <p style={{ color: isCredit ? '#10b981' : '#ef4444', fontWeight: 800, fontSize: '1.05rem', margin: 0 }}>{isCredit ? '+' : '-'}{formatINR(e.amount)}</p>
+                                        <p style={{ color: isCredit ? '#4ADE80' : '#F87171', fontWeight: 800, fontSize: '1.05rem', margin: 0 }}>
+                                            {isCredit ? '+' : '-'}{formatINR(e.amount)}
+                                        </p>
                                     </div>
                                 </div>
                             )
@@ -349,57 +386,112 @@ export default function LedgerPage() {
                 )}
             </div>
 
-            {/* Add Entry Modal */}
+            {/* ── Add Entry Modal ── */}
             {showAddModal && (
-                <div onClick={() => setShowAddModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
-                    <div onClick={e => e.stopPropagation()} style={{ background: palette.white, borderRadius: 16, padding: 28, maxWidth: 440, width: '100%', boxShadow: SHARED.shadowXl, maxHeight: '90vh', overflowY: 'auto' }}>
-                        <h3 style={{ margin: '0 0 20px', color: palette.text, fontWeight: 800, fontSize: '1.2rem', textAlign: 'center' }}>Add Ledger Entry</h3>
+                <div onClick={() => setShowAddModal(false)} style={{
+                    position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+                    backdropFilter: 'blur(4px)',
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        background: L.card, borderRadius: 16, padding: 28, maxWidth: 440, width: '100%',
+                        boxShadow: L.shadow, maxHeight: '90vh', overflowY: 'auto',
+                        border: `1px solid ${L.border}`,
+                    }}>
+                        <h3 style={{ margin: '0 0 20px', color: L.white, fontWeight: 800, fontSize: '1.2rem', textAlign: 'center' }}>Add Ledger Entry</h3>
 
                         {/* Type selector */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
                             {(['bill', 'invoice', 'earning', 'expense'] as const).map(t => (
-                                <button key={t} onClick={() => setEntryType(t)} style={{ padding: '10px', borderRadius: 8, border: `1.5px solid ${entryType === t ? palette.primary : palette.border}`, background: entryType === t ? palette.primary : palette.white, color: entryType === t ? '#fff' : palette.muted, fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                                <button key={t} onClick={() => setEntryType(t)} style={{
+                                    padding: '10px', borderRadius: 8,
+                                    border: `1.5px solid ${entryType === t ? L.gold : L.borderLight}`,
+                                    background: entryType === t ? L.gradientGold : 'transparent',
+                                    color: entryType === t ? '#1A233A' : L.muted,
+                                    fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
+                                    transition: 'all 0.2s ease',
+                                }}>
                                     {typeLabel[t].icon} {typeLabel[t].label}
                                 </button>
                             ))}
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <input value={counterpartyName} onChange={e => setCounterpartyName(e.target.value)} placeholder="Counterparty name (buyer/farmer/transporter)" style={{ width: '100%', padding: '11px 14px', border: `1.5px solid ${palette.border}`, borderRadius: 10, fontSize: '0.88rem', color: palette.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font }} />
+                            <input value={counterpartyName} onChange={e => setCounterpartyName(e.target.value)} placeholder="Counterparty name" style={{
+                                width: '100%', padding: '11px 14px', border: `1.5px solid ${L.borderLight}`,
+                                borderRadius: 10, fontSize: '0.88rem', color: L.white, outline: 'none',
+                                boxSizing: 'border-box', fontFamily: SHARED.font, background: L.bgSub,
+                            }} />
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="Amount ₹" style={{ padding: '11px 14px', border: `1.5px solid ${palette.border}`, borderRadius: 10, fontSize: '0.88rem', color: palette.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font }} />
-                                <input value={commodity} onChange={e => setCommodity(e.target.value)} placeholder="Commodity" style={{ padding: '11px 14px', border: `1.5px solid ${palette.border}`, borderRadius: 10, fontSize: '0.88rem', color: palette.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font }} />
+                                <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="Amount ₹" style={{
+                                    padding: '11px 14px', border: `1.5px solid ${L.borderLight}`, borderRadius: 10,
+                                    fontSize: '0.88rem', color: L.white, outline: 'none', boxSizing: 'border-box',
+                                    fontFamily: SHARED.font, background: L.bgSub,
+                                }} />
+                                <input value={commodity} onChange={e => setCommodity(e.target.value)} placeholder="Commodity" style={{
+                                    padding: '11px 14px', border: `1.5px solid ${L.borderLight}`, borderRadius: 10,
+                                    fontSize: '0.88rem', color: L.white, outline: 'none', boxSizing: 'border-box',
+                                    fontFamily: SHARED.font, background: L.bgSub,
+                                }} />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                <input value={quantity} onChange={e => setQuantity(e.target.value)} type="number" placeholder="Quantity (kg)" style={{ padding: '11px 14px', border: `1.5px solid ${palette.border}`, borderRadius: 10, fontSize: '0.88rem', color: palette.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font }} />
-                                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Notes (optional)" style={{ padding: '11px 14px', border: `1.5px solid ${palette.border}`, borderRadius: 10, fontSize: '0.88rem', color: palette.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font }} />
+                                <input value={quantity} onChange={e => setQuantity(e.target.value)} type="number" placeholder="Quantity (kg)" style={{
+                                    padding: '11px 14px', border: `1.5px solid ${L.borderLight}`, borderRadius: 10,
+                                    fontSize: '0.88rem', color: L.white, outline: 'none', boxSizing: 'border-box',
+                                    fontFamily: SHARED.font, background: L.bgSub,
+                                }} />
+                                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Notes (optional)" style={{
+                                    padding: '11px 14px', border: `1.5px solid ${L.borderLight}`, borderRadius: 10,
+                                    fontSize: '0.88rem', color: L.white, outline: 'none', boxSizing: 'border-box',
+                                    fontFamily: SHARED.font, background: L.bgSub,
+                                }} />
                             </div>
 
-                            {/* Bill photo upload (especially for 'bill' type) */}
+                            {/* Bill photo upload */}
                             {(entryType === 'bill' || entryType === 'invoice') && (
                                 <div>
-                                    <label style={{ color: palette.muted, fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 6 }}>{entryType === 'bill' ? '🧾 Upload weighing slip / bill photo' : '📄 Upload invoice photo'}</label>
+                                    <label style={{ color: L.muted, fontSize: '0.78rem', fontWeight: 700, display: 'block', marginBottom: 6 }}>
+                                        {entryType === 'bill' ? 'Upload weighing slip / bill photo' : 'Upload invoice photo'}
+                                    </label>
                                     {billPhoto ? (
                                         <div style={{ position: 'relative', display: 'inline-block' }}>
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={billPhoto} alt="bill" style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 8, border: `1.5px solid ${palette.border}` }} />
-                                            <button onClick={() => setBillPhoto('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: '0.75rem' }}>✕</button>
+                                            <img src={billPhoto} alt="bill" style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 8, border: `1.5px solid ${L.border}` }} />
+                                            <button onClick={() => setBillPhoto('')} style={{
+                                                position: 'absolute', top: 4, right: 4,
+                                                background: 'rgba(0,0,0,0.7)', color: '#fff', border: 'none',
+                                                borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: '0.75rem',
+                                            }}>✕</button>
                                         </div>
                                     ) : (
-                                        <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 120, height: 90, border: `2px dashed ${palette.border}`, borderRadius: 8, cursor: 'pointer', gap: 4, background: palette.bg }}>
-                                            <span style={{ fontSize: '1.2rem' }}>📷</span>
-                                            <span style={{ color: palette.muted, fontSize: '0.7rem' }}>{uploading ? 'Uploading…' : 'Upload'}</span>
+                                        <label style={{
+                                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                            width: 120, height: 90, border: `2px dashed ${L.border}`, borderRadius: 8,
+                                            cursor: 'pointer', gap: 4, background: L.bgSub,
+                                        }}>
+                                            <CameraIcon size={24} color={L.gold} />
+                                            <span style={{ color: L.muted, fontSize: '0.7rem' }}>{uploading ? 'Uploading…' : 'Upload'}</span>
                                             <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBillPhotoUpload} disabled={uploading} />
                                         </label>
                                     )}
                                 </div>
                             )}
 
-                            {error && <p style={{ color: '#dc2626', fontSize: '0.82rem', margin: 0 }}>{error}</p>}
+                            {error && <p style={{ color: L.red, fontSize: '0.82rem', margin: 0 }}>{error}</p>}
 
                             <div style={{ display: 'flex', gap: 10 }}>
-                                <button onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: '11px', background: palette.bg, border: `1.5px solid ${palette.border}`, borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: palette.textSecondary, cursor: 'pointer' }}>Cancel</button>
-                                <button onClick={handleAddEntry} disabled={saving || uploading} style={{ flex: 1, padding: '11px', background: palette.primary, border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: '#fff', cursor: 'pointer', opacity: (saving || uploading) ? 0.6 : 1 }}>{saving ? 'Saving…' : 'Add Entry'}</button>
+                                <button onClick={() => setShowAddModal(false)} style={{
+                                    flex: 1, padding: '11px', background: 'transparent',
+                                    border: `1.5px solid ${L.borderLight}`, borderRadius: 10,
+                                    fontWeight: 700, fontSize: '0.88rem', color: L.textSecondary, cursor: 'pointer',
+                                }}>Cancel</button>
+                                <button onClick={handleAddEntry} disabled={saving || uploading} style={{
+                                    flex: 1, padding: '11px', background: L.gradientGold,
+                                    border: 'none', borderRadius: 10, fontWeight: 800, fontSize: '0.88rem',
+                                    color: '#1A233A', cursor: 'pointer', opacity: (saving || uploading) ? 0.6 : 1,
+                                    boxShadow: L.shadowGold,
+                                }}>{saving ? 'Saving…' : 'Add Entry'}</button>
                             </div>
                         </div>
                     </div>

@@ -229,28 +229,33 @@ export const BUYER = {
 //   Masterpiece Red #5A2132 · Dirty White #EFE9E9
 
 export const LEDGER = {
-  bg: '#EFE9E9',
-  bgSub: '#E0D5D5',
-  white: SHARED.white,
-  primary: '#5A2132',
-  primaryHover: '#3F1525',
-  primaryLight: '#F0DCDF',
-  primarySoft: '#EFE9E9',
-  accent: '#7A3050',
-  text: '#3A1520',
-  textSecondary: '#6A4555',
-  muted: '#A89098',
-  border: '#D5C5C8',
-  borderLight: '#E0D5D5',
-  card: SHARED.white,
-  red: SHARED.error,
-  redLight: '#fef2f2',
-  green: SHARED.success,
-  greenLight: '#dcfce7',
-  gold: '#7A3050',
-  goldLight: '#EFE9E9',
-  gradient: 'linear-gradient(135deg, #5A2132 0%, #6F2A40 50%, #7A3050 100%)',
-  gradientSoft: 'linear-gradient(135deg, #EFE9E9 0%, #E0D5D5 100%)',
+  bg: '#1A233A',           // deep navy (Ridgewood primary)
+  bgSub: '#151D2E',        // darker navy (cards, sections)
+  white: '#FFFFFF',
+  primary: '#D4A853',      // antique gold (buttons, accents)
+  primaryHover: '#E8B84B', // brighter gold (hover states)
+  primaryLight: 'rgba(201, 161, 78, 0.15)', // gold tint background
+  primarySoft: 'rgba(201, 161, 78, 0.08)',
+  accent: '#D4A853',       // gold accent
+  text: '#FFFFFF',         // white headings
+  textSecondary: '#E0E6ED', // light gray-blue body text
+  muted: '#8A95B0',        // muted blue-gray
+  border: 'rgba(201, 161, 78, 0.25)', // gold border
+  borderLight: 'rgba(255, 255, 255, 0.08)',
+  card: '#151D2E',         // dark card background
+  cardHover: '#1E2942',    // lighter navy on hover
+  red: '#EF4444',
+  redLight: 'rgba(239, 68, 68, 0.12)',
+  green: '#22C55E',
+  greenLight: 'rgba(34, 197, 94, 0.12)',
+  gold: '#D4A853',
+  goldLight: 'rgba(201, 161, 78, 0.15)',
+  goldBright: '#E8B84B',
+  gradient: 'linear-gradient(135deg, #1A233A 0%, #151D2E 50%, #0F1626 100%)',
+  gradientSoft: 'linear-gradient(135deg, #151D2E 0%, #1A233A 100%)',
+  gradientGold: 'linear-gradient(135deg, #D4A853 0%, #E8B84B 100%)',
+  shadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
+  shadowGold: '0 4px 20px rgba(201, 161, 78, 0.25)',
 }
 
 // ── Farmer Palette (Home — Floral White + Black Olive) ─────────────

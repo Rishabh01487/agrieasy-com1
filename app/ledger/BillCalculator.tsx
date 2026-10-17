@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
-import { BUYER, SHARED, navStyle } from '@/lib/styles'
+import { LEDGER, SHARED, navStyle } from '@/lib/styles'
 
 interface Batch { bagCount: number; weight: number; individualWeights?: number[] }
 interface CommodityGroup {
@@ -726,7 +726,7 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
         })()
     }, [])
 
-    const palette = BUYER
+    const palette = LEDGER
 
     /**
      * Compress an image file client-side before uploading.

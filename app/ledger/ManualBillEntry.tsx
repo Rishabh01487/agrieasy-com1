@@ -24,7 +24,7 @@
  */
 
 import { useState } from 'react'
-import { BUYER, SHARED } from '@/lib/styles'
+import { LEDGER, SHARED } from '@/lib/styles'
 
 interface Batch { bagCount: number; weight: number; individualWeights?: number[] }
 interface CommodityGroup {
@@ -78,7 +78,7 @@ function emptyCommodity(): ManualCommodity {
 export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
     const [commodities, setCommodities] = useState<ManualCommodity[]>([emptyCommodity()])
     const [counterpartyName, setCounterpartyName] = useState('')
-    const palette = BUYER
+    const palette = LEDGER
 
     // ── Commodity operations ──
     const addCommodity = () => {
@@ -511,7 +511,7 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
     )
 }
 
-function inputStyle(palette: typeof BUYER): React.CSSProperties {
+function inputStyle(palette: typeof LEDGER): React.CSSProperties {
     return {
         width: '100%', padding: '8px 12px', background: palette.white,
         border: `1px solid ${palette.border}`, borderRadius: 8,
