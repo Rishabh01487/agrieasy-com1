@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
 import { shareContent } from '@/lib/share'
+import ShareSheet from '../../components/ShareSheet'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -17,7 +18,7 @@ interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments: Comment[]; createdAt: string; location?: string; views?: number
-    savedBy?: string[]; savedCount?: number; sharedCount?: number
+    savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean
 }
 
 function timeAgo(iso: string) {
@@ -46,6 +47,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const [deleting, setDeleting] = useState(false)
     const [carouselIdx, setCarouselIdx] = useState(0)
     const [shareCopied, setShareCopied] = useState(false)
+    const [showShareSheet, setShowShareSheet] = useState(false)
     const [replyTo, setReplyTo] = useState<string | null>(null)
 
     useEffect(() => {
@@ -92,12 +94,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const handleShare = async () => {
         if (!post) return
         try { await authFetch(`/api/social/posts/${post._id}/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }) } catch {}
-        const url = `${window.location.origin}/agrisocial/post/${post._id}`
-        const result = await shareContent(url, 'AgriEasy Post', post.caption)
-        if (result === 'copied' || result === 'shared') {
-            setShareCopied(true)
-            setTimeout(() => setShareCopied(false), 1800)
-        }
+        setShowShareSheet(true)
     }
 
     const handleDelete = async () => {
@@ -397,6 +394,19 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                         )}
                     </div>
                 </div>
+            )}
+
+            {/* Share Sheet */}
+            {post && (
+                <ShareSheet
+                    isOpen={showShareSheet}
+                    onClose={() => setShowShareSheet(false)}
+                    postUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/agrisocial/post/${post._id}`}
+                    postCaption={post.caption}
+                    mediaUrl={post.mediaUrl || post.mediaUrls?.[0]}
+                    mediaType={post.mediaType}
+                    allowDownload={post.allowDownload !== false}
+                />
             )}
         </div>
     )

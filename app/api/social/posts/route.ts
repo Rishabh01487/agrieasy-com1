@@ -148,6 +148,7 @@ export async function POST(req: NextRequest) {
             hashtags: data.hashtags,
             category: data.category,
             location: data.location || '',
+            allowDownload: body.allowDownload !== false, // default true
         })
 
         await logAudit({

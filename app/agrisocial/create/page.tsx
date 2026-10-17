@@ -5,27 +5,19 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
-import { applyInstagramFilterToBlob } from '@/lib/camera-presets'
-import { ADVANCED_FILTERS, FILTER_CATEGORIES } from '@/lib/advanced-filters'
-import { useAdvancedFilter } from '@/lib/use-advanced-filter'
-import ProCamera from '../components/ProCamera'
-import '../cssfx.css'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
-// ── ADVANCED FILTER ENGINE ──────────────────────────────────────────
-// 23 presets in 7 categories: Natural, Cinematic, Film, Vintage, Vivid,
-// Mono, Artistic. Each preset combines:
-//   - CSS-level preview filter (instant)
-//   - Pixel-level ops (white balance, tone curves, split-toning, HSL bands,
-//     film grain, master saturation/contrast/brightness)
-//   - Canvas-composite ops (vignette, light leak, bloom, Orton effect)
-//
-// All applied via Web Worker for off-main-thread processing.
-// What you see in the preview is exactly what gets uploaded.
-//
-// See lib/advanced-filters.ts for the full pipeline.
-const FILTERS = ADVANCED_FILTERS
+const FILTERS = [
+    { name: 'Normal', style: 'none' },
+    { name: 'Vivid', style: 'saturate(1.8) contrast(1.1)' },
+    { name: 'Warm', style: 'sepia(0.4) saturate(1.3) brightness(1.05)' },
+    { name: 'Cool', style: 'hue-rotate(20deg) saturate(1.2) brightness(1.05)' },
+    { name: 'B&W', style: 'grayscale(1) contrast(1.2)' },
+    { name: 'Fade', style: 'opacity(0.85) contrast(0.9) brightness(1.1)' },
+    { name: 'Golden', style: 'sepia(0.6) saturate(1.5) hue-rotate(-10deg)' },
+    { name: 'Crisp', style: 'contrast(1.3) brightness(0.95) saturate(1.1)' },
+]
 
 type Mode = 'choose' | 'camera' | 'recording' | 'preview' | 'details'
 type MediaFile = { url: string; type: 'image' | 'video'; blob?: Blob }
@@ -39,48 +31,24 @@ function CreateContent() {
         typeParam === 'story' ? 'story' : 'post'
 
     const [postType, setPostType] = useState<'post' | 'krishiclip' | 'story'>(defaultPostType)
-    const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment')
     const [mode, setMode] = useState<Mode>('choose')
     const [mediaFile, setMediaFile] = useState<MediaFile | null>(null)
-    // Tracks which camera facing was used for the most recent capture.
-    // Used to (a) mirror the displayed <img> via CSS so it matches the
-    // CSS-mirrored live preview, and (b) bake a canvas mirror into the
-    // uploaded blob so the saved post is also mirrored (Instagram-style
-    // WYSIWYG selfie). captureProcessedStill no longer mirrors in the
-    // capture canvas; this is the source of truth for mirror behavior.
-    const [lastCaptureFacing, setLastCaptureFacing] = useState<'user' | 'environment'>('environment')
     const [carouselFiles, setCarouselFiles] = useState<MediaFile[]>([])
     const [carouselIdx, setCarouselIdx] = useState(0)
     const [selectedFilter, setSelectedFilter] = useState(0)
-    const [advancedFilterPreview, setAdvancedFilterPreview] = useState<string | null>(null)
-    // Web Worker-based advanced filter hook. Applies the full pixel-level
-    // pipeline off the main thread so the UI stays smooth during filter
-    // baking on large 1080p+ images.
-    const { applyFilter: applyAdvancedFilter, previewFilter, isProcessing: isFilterProcessing } = useAdvancedFilter()
     const [caption, setCaption] = useState('')
     const [category, setCategory] = useState('farming')
     const [location, setLocation] = useState('')
+    const [allowDownload, setAllowDownload] = useState(true)
     const [submitting, setSubmitting] = useState(false)
-    const [uploadProgress, setUploadProgress] = useState(0)
     const [error, setError] = useState('')
     const [camError, setCamError] = useState('')
     const [isRecording, setIsRecording] = useState(false)
     const [recordingTime, setRecordingTime] = useState(0)
-    const [brightness, setBrightness] = useState(100)  // 80..120 (% of filter's baked brightness)
-    const [contrast, setContrast] = useState(100)      // 80..120
-    const [saturation, setSaturation] = useState(100)  // 70..130
-    // New pro sliders — overlay adjustments baked into the upload,
-    // not just CSS preview. Wire: buildMergedFilter() consumes all
-    // 9 slider values and overlays them on the base FilterDefinition.
-    const [warmth, setWarmth] = useState(0)            // -50..+50 (° Kelvin shift)
-    const [highlights, setHighlights] = useState(0)    // -50..+50
-    const [shadows, setShadows] = useState(0)           // -50..+50
-    const [fade, setFade] = useState(0)                  // 0..50
-    const [sharpen, setSharpen] = useState(0)            // 0..50
-    const [vignette, setVignette] = useState(0)          // 0..50 (adds/extends vignette)
-    const [showProAdjust, setShowProAdjust] = useState(false)  // toggle for the 6 new sliders
+    const [brightness, setBrightness] = useState(100)
+    const [contrast, setContrast] = useState(100)
+    const [saturation, setSaturation] = useState(100)
     const [rotation, setRotation] = useState(0)
-    const [proCameraOpen, setProCameraOpen] = useState(false)
 
     const videoRef = useRef<HTMLVideoElement>(null)
     const streamRef = useRef<MediaStream | null>(null)
@@ -96,14 +64,6 @@ function CreateContent() {
 
     useEffect(() => () => { stopCamera(); if (timerRef.current) clearInterval(timerRef.current) }, [stopCamera])
 
-    // Sync postType with URL ?type= param on client-side navigation (Fix: Issue 1)
-    // Without this, navigating between /create and /create?type=krishiclip doesn't update postType
-    useEffect(() => {
-        if (typeParam === 'krishiclip') setPostType('krishiclip')
-        else if (typeParam === 'story') setPostType('story')
-        else setPostType('post')
-    }, [typeParam])
-
     useEffect(() => {
         if (mode === 'camera' && streamRef.current && videoRef.current) {
             videoRef.current.srcObject = streamRef.current
@@ -113,98 +73,38 @@ function CreateContent() {
 
     const startCamera = async () => {
         setCamError('')
-        setProCameraOpen(true)
-    }
-
-    // Called by ProCamera when a photo or video is captured.
-    // Replaces the old in-page getUserMedia + MediaRecorder flow with
-    // the Instagram-grade ProCamera pipeline (HDR, tap-to-focus, 4K,
-    // sharpening, denoise, white balance, color grading, proper EXIF).
-    const handleProCameraCapture = (blob: Blob, type: 'image' | 'video', facing: 'user' | 'environment' = 'environment') => {
-        const url = URL.createObjectURL(blob)
-        setMediaFile({ url, type, blob })
-        setLastCaptureFacing(facing)
-        setProCameraOpen(false)
-        setMode('preview')
-    }
-
-    // Flip between front (user) and back (environment) camera
-    const flipCamera = async () => {
-        const next = facingMode === 'environment' ? 'user' : 'environment'
-        setFacingMode(next)
-        stopCamera()
-        await new Promise(r => setTimeout(r, 50))
+        setMode('camera')
+        await new Promise(r => setTimeout(r, 100))
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: next } }, audio: postType === 'krishiclip' })
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: postType === 'krishiclip' })
             streamRef.current = stream
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
         } catch (e) {
+            console.error(e)
             stopCamera()
             setMode('choose')
-            setCamError('Could not switch camera. Your device may not have a front camera.')
+            setCamError('Camera access denied. Please allow camera permission in your browser settings, or use "Upload from Gallery" instead.')
         }
     }
 
     const capturePhoto = async () => {
         if (!videoRef.current) return
-        const video = videoRef.current
-        const vw = video.videoWidth || 1280, vh = video.videoHeight || 720
-
-        // Detect the ACTUAL facing mode from the live media stream — don't rely
-        // on React state, which can be stale if the user switched cameras just
-        // before capturing.
-        let actualFacing: 'user' | 'environment' = facingMode
-        if (streamRef.current) {
-            const track = streamRef.current.getVideoTracks()[0]
-            const settings = track?.getSettings?.() as any
-            if (settings?.facingMode === 'user' || settings?.facingMode === 'environment') {
-                actualFacing = settings.facingMode
-            }
-        }
-
-        // Capture the FULL video frame.
-        let outW = vw, outH = vh
-        if (outW > 1920) { outH = Math.round(outH * 1920 / outW); outW = 1920 }
-
+        const vw = videoRef.current.videoWidth || 1280, vh = videoRef.current.videoHeight || 720
+        let w = vw, h = vh
+        if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920 }
         const canvas = document.createElement('canvas')
-        canvas.width = outW
-        canvas.height = outH
+        canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-
-        // ── MIRROR LOGIC ──
-        // The camera preview <video> has transform: scaleX(-1) applied via CSS
-        // when facingMode === 'user'. This makes the preview feel like a mirror
-        // (natural for selfies).
-        //
-        // IMPORTANT: CSS transforms do NOT affect ctx.drawImage(). The canvas
-        // always draws the RAW video frame, regardless of CSS transforms on the
-        // <video> element. So we MUST manually mirror the canvas drawing to
-        // match what the user saw in the mirrored preview.
-        //
-        // Without this mirror, a selfie captured while the user tilts their
-        // head LEFT would show the head tilted RIGHT in the photo (because the
-        // raw sensor captures the non-mirrored view, as others see you).
-        //
-        // We mirror when actualFacing === 'user' (front camera / selfie).
-        if (actualFacing === 'user') {
-            ctx.translate(outW, 0)
-            ctx.scale(-1, 1)
-        }
-
-        // Draw the full frame. No filter baked in.
-        ctx.drawImage(video, 0, 0, outW, outH)
-
-        // Reset the transform (cleanup for any future draws)
-        ctx.setTransform(1, 0, 0, 1, 0, 0)
-
+        ctx.filter = buildFilterString()
+        ctx.drawImage(videoRef.current, 0, 0, w, h)
         canvas.toBlob(blob => {
             if (!blob) return
             const url = URL.createObjectURL(blob)
             setMediaFile({ url, type: 'image', blob })
             stopCamera()
             setMode('preview')
-        }, 'image/jpeg', 0.92)
+        }, 'image/jpeg', 0.85)
     }
 
     const getSupportedMimeType = () => {
@@ -216,9 +116,7 @@ function CreateContent() {
         if (!streamRef.current) return
         chunksRef.current = []
         const mimeType = getSupportedMimeType()
-        // Limit video bitrate to 2.5 Mbps — keeps 2-min video under ~37MB instead of 100MB+
-        // This is the #1 fix for slow uploads — smaller files upload 4x faster
-        const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType, videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 } : { videoBitsPerSecond: 2_500_000, audioBitsPerSecond: 128_000 })
+        const mr = new MediaRecorder(streamRef.current, mimeType ? { mimeType } : {})
         mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data) }
         mr.onstop = () => {
             const blobMime = mimeType || 'video/webm'
@@ -230,27 +128,14 @@ function CreateContent() {
             setIsRecording(false)
             if (timerRef.current) clearInterval(timerRef.current)
         }
-        mr.start(100) // collect data in 100ms chunks
+        mr.start(100)
         mediaRecorderRef.current = mr
         setIsRecording(true)
         setRecordingTime(0)
-        timerRef.current = setInterval(() => {
-            setRecordingTime(t => {
-                // Auto-stop at 3 minutes (180 seconds) — prevents huge files
-                if (t + 1 >= 180) {
-                    stopRecording()
-                    return 180
-                }
-                return t + 1
-            })
-        }, 1000)
+        timerRef.current = setInterval(() => setRecordingTime(t => t + 1), 1000)
     }
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-            mediaRecorderRef.current.stop()
-        }
-    }
+    const stopRecording = () => { mediaRecorderRef.current?.stop() }
 
     const compressImage = async (blob: Blob): Promise<Blob> => {
         const img = new Image()
@@ -258,17 +143,12 @@ function CreateContent() {
         await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
         URL.revokeObjectURL(url)
         let w = img.width, h = img.height
-        // Cap at 2400px on the long edge — keeps enough resolution for
-        // 4K displays at typical viewing sizes without bloating uploads.
-        // (Was 1920 + JPEG q=0.8 — visibly worse than camera-captured photos.)
-        if (w > 2400) { h = Math.round(h * 2400 / w); w = 2400 }
+        if (w > 1920) { h = Math.round(h * 1920 / w); w = 1920 }
         const canvas = document.createElement('canvas')
         canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d')!
-        ctx.imageSmoothingEnabled = true
-        ctx.imageSmoothingQuality = 'high'
         ctx.drawImage(img, 0, 0, w, h)
-        return new Promise(resolve => canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.92) as unknown as void)
+        return new Promise(resolve => canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.8) as unknown as void)
     }
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -305,94 +185,10 @@ function CreateContent() {
     }
 
     const buildFilterString = () => {
-        const f = FILTERS[selectedFilter]
-        // Advanced filter — use the CSS-level preview for instant feedback.
-        // The full pixel-level pipeline (tone curves, split-toning, grain,
-        // vignette, bloom, Orton) is applied at upload time via the
-        // useAdvancedFilter hook → Web Worker.
-        const base = f.previewCss !== 'none' ? f.previewCss : ''
+        const base = FILTERS[selectedFilter].style !== 'none' ? FILTERS[selectedFilter].style : ''
         const adj = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%)`
         return base ? `${base} ${adj}` : adj
     }
-
-    /**
-     * Build a merged FilterDefinition that overlays the user's slider
-     * adjustments on top of the selected base filter. Both previewFilter
-     * (live preview) and applyAdvancedFilter (upload bake) consume this
-     * merged filter — so what the user sees is exactly what gets uploaded.
-     *
-     * Slider-to-filter mapping:
-     *   brightness (80-120%)  → multiplies filter.brightness (default 1.0)
-     *   contrast   (80-120%)  → multiplies filter.contrast   (default 1.0)
-     *   saturation (70-130%)  → multiplies filter.saturation (default 1.0)
-     *   warmth     (-50..+50) → adds to filter.whiteBalance.temperature (range ±50)
-     *   highlights (-50..+50) → sets filter.toneRegions.highlights (range -1..+1)
-     *   shadows    (-50..+50) → sets filter.toneRegions.shadows  (range -1..+1)
-     *   fade       (0..50)    → sets filter.toneRegions.fade (range 0..1)
-     *   sharpen    (0..50)    → sets filter.sharpen { amount, radius, threshold }
-     *   vignette   (0..50)    → overrides/extends filter.vignette.amount
-     *
-     * Returns a fresh object each call — never mutates the base filter.
-     */
-    const buildMergedFilter = () => {
-        const base = FILTERS[selectedFilter]
-        return {
-            ...base,
-            // Master adjustments: multiply base values by slider ratio
-            brightness: (base.brightness ?? 1) * (brightness / 100),
-            contrast:   (base.contrast   ?? 1) * (contrast   / 100),
-            saturation: (base.saturation ?? 1) * (saturation / 100),
-            // White balance: overlay warmth slider (±50 = ±50° K shift)
-            whiteBalance: base.whiteBalance
-                ? { ...base.whiteBalance, temperature: (base.whiteBalance.temperature ?? 0) + warmth }
-                : (warmth !== 0 ? { temperature: warmth, tint: 0 } : undefined),
-            // Tone regions: highlights/shadows/fade (only set if non-zero)
-            toneRegions: (highlights !== 0 || shadows !== 0 || fade !== 0)
-                ? {
-                    highlights: highlights / 50,
-                    shadows: shadows / 50,
-                    fade: fade / 50,
-                }
-                : base.toneRegions,
-            // Sharpen (only set if slider > 0)
-            sharpen: sharpen > 0
-                ? { amount: sharpen / 25, radius: 1.5, threshold: 4 }  // amount 0..2
-                : base.sharpen,
-            // Vignette: if slider > 0, override/extend base vignette
-            vignette: vignette > 0
-                ? {
-                    amount: vignette / 100,   // 0..0.5 strength
-                    size: base.vignette?.size ?? 0.4,
-                    feather: base.vignette?.feather ?? 0.5,
-                    tint: base.vignette?.tint ?? 0,
-                }
-                : base.vignette,
-        }
-    }
-
-    // Live preview of the FULL advanced filter pipeline (not just CSS).
-    // Runs when the user changes the selected filter while in preview mode.
-    // Uses a small preview dimension (480px) so the Web Worker finishes
-    // in ~150ms even on mid-range phones.
-    useEffect(() => {
-        if (mode !== 'preview' || !mediaFile || mediaFile.type !== 'image' || !mediaFile.blob) {
-            setAdvancedFilterPreview(null)
-            return
-        }
-        let cancelled = false
-        // Pass mirrorSelfie so the worker-baked preview blob is already
-        // mirrored for front-camera captures — keeps the displayed
-        // preview WYSIWYG with the uploaded post. Without this, the
-        // selfie would flip back to the un-mirrored "real" orientation
-        // as soon as the worker finishes (~150ms after capture).
-        previewFilter(mediaFile.blob, buildMergedFilter(), { maxWidth: 480, mirrorSelfie: lastCaptureFacing === 'user' })
-            .then(url => { if (!cancelled) setAdvancedFilterPreview(url) })
-            .catch(() => { if (!cancelled) setAdvancedFilterPreview(null) })
-        return () => {
-            cancelled = true
-            setAdvancedFilterPreview(prev => { if (prev) URL.revokeObjectURL(prev); return null })
-        }
-    }, [mode, mediaFile, selectedFilter, previewFilter, brightness, contrast, saturation, warmth, highlights, shadows, fade, sharpen, vignette])
 
     const getFilterStyle = () => ({ filter: buildFilterString(), transform: `rotate(${rotation}deg)` })
 
@@ -404,102 +200,45 @@ function CreateContent() {
 
         let mediaUrl = ''
         let mediaType = 'text'
-        const allMediaUrls: string[] = []
+        let allMediaUrls: string[] = []
 
         const filesToUpload = carouselFiles.length > 0 ? carouselFiles : (mediaFile ? [mediaFile] : [])
 
         if (filesToUpload.length > 0 && filesToUpload.some(f => f.blob)) {
             try {
-                const kinds = Array.from(new Set(
-                    filesToUpload.filter(f => f.blob).map(f => f.type === 'video' ? 'video' : 'image')
-                ))
-                const sigs: Record<string, any> = {}
-                for (const kind of kinds) {
-                    const sigRes = await authFetch(`/api/social/upload-signature?kind=${kind}`)
-                    if (!sigRes.ok) {
-                        const errBody = await sigRes.json().catch(() => ({}))
-                        setError(errBody?.error || `Authentication failed (HTTP ${sigRes.status}). Please log in again.`)
-                        setSubmitting(false)
-                        return
-                    }
-                    const sig = await sigRes.json()
-                    if (!sig.available) {
-                        setError('Upload unavailable. Please try again or contact support.')
-                        setSubmitting(false)
-                        return
-                    }
-                    sigs[kind] = sig
+                const sigRes = await authFetch('/api/social/upload-signature')
+                const sig = await sigRes.json()
+                if (!sig.available) {
+                    setError('Media upload requires Cloudinary configuration. Please contact admin.')
+                    setSubmitting(false)
+                    return
+                }
+                if (!sig.apiKey || !sig.cloudName || !sig.signature) {
+                    setError('Upload signature incomplete — missing apiKey, cloudName, or signature. Check server env vars.')
+                    setSubmitting(false)
+                    return
                 }
 
-                setUploadProgress(0)
                 for (const file of filesToUpload) {
                     if (!file.blob) continue
-                    let uploadBlob: Blob = file.blob
-                    const mirrorSelfie = lastCaptureFacing === 'user' && file.type === 'image'
-                    if (file.type === 'image') {
-                        try {
-                            uploadBlob = await applyAdvancedFilter(file.blob, buildMergedFilter(), mirrorSelfie)
-                        } catch (e) {
-                            console.warn('Advanced filter failed, falling back to CSS baker:', e)
-                            try {
-                                uploadBlob = await applyInstagramFilterToBlob(file.blob, buildFilterString(), mirrorSelfie)
-                            } catch (e2) {
-                                console.warn('CSS baker also failed, uploading original:', e2)
-                                uploadBlob = file.blob
-                            }
-                        }
-                    }
                     const resourceType = file.type === 'video' ? 'video' : 'image'
-                    const sig = sigs[resourceType]
                     const fd = new FormData()
-                    fd.append('file', uploadBlob)
+                    fd.append('file', file.blob)
                     fd.append('api_key', sig.apiKey)
                     fd.append('timestamp', sig.timestamp.toString())
                     fd.append('signature', sig.signature)
                     fd.append('folder', sig.folder)
-
-                    const uploadUrl = `https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`
-                    const cld = await new Promise<any>((resolve, reject) => {
-                        const xhr = new XMLHttpRequest()
-                        xhr.open('POST', uploadUrl)
-
-                        // Track upload progress
-                        xhr.upload.onprogress = (e) => {
-                            if (e.lengthComputable) {
-                                const pct = Math.round((e.loaded / e.total) * 100)
-                                setUploadProgress(pct)
-                            }
-                        }
-
-                        xhr.onload = () => {
-                            try {
-                                const res = JSON.parse(xhr.responseText)
-                                if (xhr.status >= 200 && xhr.status < 300 && res.secure_url) {
-                                    resolve(res)
-                                } else {
-                                    reject(new Error(res?.error?.message || `Cloudinary HTTP ${xhr.status}`))
-                                }
-                            } catch {
-                                reject(new Error(`Cloudinary HTTP ${xhr.status}`))
-                            }
-                        }
-
-                        xhr.onerror = () => reject(new Error('Network error during upload. Check your connection.'))
-                        xhr.ontimeout = () => reject(new Error('Upload timed out. Try a shorter video or check your connection.'))
-                        xhr.timeout = 120000 // 2 minute timeout for large videos
-                        xhr.send(fd)
-                    }).catch(e => {
-                        const msg = e instanceof Error ? e.message : 'Upload failed'
-                        setError(msg)
+                    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
+                    const cld = await cldRes.json()
+                    if (cldRes.ok && cld.secure_url) {
+                        allMediaUrls.push(cld.secure_url)
+                    } else {
+                        const cldMsg = cld?.error?.message || `Cloudinary HTTP ${cldRes.status}`
+                        setError('Upload failed: ' + cldMsg)
                         setSubmitting(false)
-                        setUploadProgress(0)
-                        return null
-                    })
-
-                    if (!cld) return
-                    allMediaUrls.push(cld.secure_url)
+                        return
+                    }
                 }
-                setUploadProgress(100)
                 if (allMediaUrls.length > 0) {
                     mediaUrl = allMediaUrls[0]
                     mediaType = filesToUpload[0].type
@@ -558,6 +297,7 @@ function CreateContent() {
                 category,
                 location,
                 hashtags,
+                allowDownload,
             }),
         })
         const d = await res.json()
@@ -582,7 +322,7 @@ function CreateContent() {
                     {mode === 'choose' ? (postType === 'story' ? 'New Story' : postType === 'krishiclip' ? 'New KrishiClip' : 'New Post') : mode === 'camera' ? (isRecording ? '🔴 Recording' : '📷 Camera') : mode === 'preview' ? '✨ Filters' : '📝 Details'}
                 </span>
                 {mode === 'preview' && <button onClick={() => setMode('details')} style={{ background: SOCIAL.primary, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>Next →</button>}
-                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? (uploadProgress > 0 && uploadProgress < 100 ? `⏳ ${uploadProgress}%` : '⏳…') : '✓ Share'}</button>}
+                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? 'Posting…' : '✓ Share'}</button>}
             </nav>
 
             {/* ── CHOOSE MODE ── */}
@@ -637,18 +377,18 @@ function CreateContent() {
                         </button>
                     </div>
 
-                    {camError && <div style={{ marginTop: '16px', background: '#fef2f2', border: '1px solid rgba(217,83,79,0.4)', borderRadius: '12px', padding: '12px 16px', color: SOCIAL.red, fontSize: '0.85rem' }}>⚠️ {camError}</div>}
+                    {camError && <div style={{ marginTop: '16px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '12px 16px', color: SOCIAL.red, fontSize: '0.85rem' }}>⚠️ {camError}</div>}
                 </div>
             )}
 
             {/* ── CAMERA MODE ── */}
             {mode === 'camera' && (
-                <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ maxWidth: '100%', maxHeight: 'calc(100vh - 56px)', width: 'auto', height: 'auto', objectFit: 'contain', transform: facingMode === 'user' ? 'scaleX(-1)' : 'none', background: '#000' }} />
+                <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
+                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString() }} />
 
                     {/* Recording timer */}
                     {isRecording && (
-                        <div style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(217,83,79,0.9)', borderRadius: '100px', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(239,68,68,0.9)', borderRadius: '100px', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', animation: 'pulse 1s infinite' }} />
                             <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.9rem' }}>
                                 {Math.floor(recordingTime / 60).toString().padStart(2, '0')}:{(recordingTime % 60).toString().padStart(2, '0')}
@@ -661,7 +401,7 @@ function CreateContent() {
                         {FILTERS.map((f, i) => (
                             <button key={f.name} onClick={() => setSelectedFilter(i)}
                                 style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #42476E, #D9534F)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.previewCss === 'none' ? 'none' : f.previewCss, transition: 'all 0.2s ease' }} />
+                                <div style={{ width: '52px', height: '52px', borderRadius: '10px', background: 'linear-gradient(135deg, #6b7280, #374151)', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.3)'}`, filter: f.style === 'none' ? 'none' : f.style, transition: 'all 0.2s ease' }} />
                                 <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.7)', fontSize: '0.65rem', fontWeight: 700 }}>{f.name}</span>
                             </button>
                         ))}
@@ -678,14 +418,11 @@ function CreateContent() {
                                 style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.4)', cursor: 'pointer', boxShadow: `0 0 0 3px ${SOCIAL.primary}b3`, transition: 'all 0.2s ease' }} />
                         ) : (
                             <button onClick={isRecording ? stopRecording : startRecording}
-                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: isRecording ? SOCIAL.red : '#fff', border: `4px solid ${isRecording ? 'rgba(217,83,79,0.4)' : 'rgba(255,255,255,0.4)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px ${isRecording ? 'rgba(217,83,79,0.7)' : SOCIAL.primary + 'b3'}`, transition: 'all 0.2s ease' }}>
+                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: isRecording ? SOCIAL.red : '#fff', border: `4px solid ${isRecording ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.4)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px ${isRecording ? 'rgba(239,68,68,0.7)' : SOCIAL.primary + 'b3'}`, transition: 'all 0.2s ease' }}>
                                 {isRecording ? <span style={{ display: 'block', width: '22px', height: '22px', borderRadius: '4px', background: '#fff' }} /> : null}
                             </button>
                         )}
-                        <button onClick={flipCamera} title="Flip camera"
-                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease' }}>
-                            🔄
-                        </button>
+                        <div style={{ width: '44px', height: '44px' }} />
                     </div>
                     <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
                     <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
@@ -695,32 +432,20 @@ function CreateContent() {
             {/* ── PREVIEW + FILTERS ── */}
             {mode === 'preview' && mediaFile && (
                 <div style={{ background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    {/* Media preview — full photo on neutral black background.
-                        objectFit: 'contain' preserves the entire image without cropping. */}
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '52vh', overflow: 'hidden', position: 'relative', background: '#000' }}>
+                    {/* Media preview */}
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', overflow: 'hidden', position: 'relative' }}>
                         {mediaFile.type === 'image' ? (
-                            // Use the Web-Worker-rendered preview when available
-                            // (full pixel-level pipeline result, including
-                            // grain/vignette/bloom/etc.). Falls back to the
-                            // raw capture URL with CSS filter when the worker
-                            // is still rendering or has failed.
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={advancedFilterPreview || mediaFile.url} alt="preview" style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', transform: `rotate(${rotation}deg)${lastCaptureFacing === 'user' && !advancedFilterPreview ? ' scaleX(-1)' : ''}`, ...(advancedFilterPreview ? {} : getFilterStyle()) }} />
+                            <img src={mediaFile.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
                         ) : (
-                            <video src={mediaFile.url} controls style={{ maxWidth: '100%', maxHeight: '100%', width: 'auto', height: 'auto', objectFit: 'contain', ...getFilterStyle() }} />
-                        )}
-                        {isFilterProcessing && (
-                            <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.65)', color: '#fff', padding: '6px 12px', borderRadius: 100, fontSize: '0.72rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ width: 8, height: 8, borderRadius: '50%', background: SOCIAL.primary, animation: 'pulse 1s infinite' }} />
-                                Rendering preview…
-                            </div>
+                            <video src={mediaFile.url} controls style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
                         )}
                         {/* Carousel dots + navigation */}
                         {carouselFiles.length > 1 && (
                             <>
                                 <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
                                     {carouselFiles.map((_, i) => (
-                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#D9534F' : 'rgba(255,255,255,0.5)' }} />
+                                        <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: i === carouselIdx ? '#3b82f6' : 'rgba(255,255,255,0.5)' }} />
                                     ))}
                                 </div>
                                 {carouselIdx > 0 && (
@@ -734,112 +459,50 @@ function CreateContent() {
                         )}
                     </div>
 
-                    {/* Filter row — grouped by category for browsability.
-                        23 advanced filters in 7 categories. Each thumbnail
-                        shows a CSS-filtered preview for instant feedback;
-                        the full pipeline result shows in the main preview
-                        once the worker finishes (~150ms). */}
-                    <div style={{ background: '#111', padding: '8px 0' }}>
-                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.68rem', fontWeight: 700, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 6px' }}>Advanced Filters</p>
-                        <div style={{ display: 'flex', gap: '14px', padding: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
-                            {FILTERS.map((f, i) => {
-                                // Insert a category label chip before the first filter of each category
-                                const isFirstInCategory = i === 0 || FILTERS[i - 1].category !== f.category
-                                const catMeta = FILTER_CATEGORIES.find(c => c.id === f.category)
-                                return (
-                                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-                                    {isFirstInCategory && catMeta && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
-                                            <div style={{ fontSize: '1.4rem' }}>{catMeta.icon}</div>
-                                            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{catMeta.label}</span>
-                                        </div>
-                                    )}
-                                    <button onClick={() => setSelectedFilter(i)}
-                                        style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                        <div style={{ width: '52px', height: '52px', borderRadius: '8px', overflow: 'hidden', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.15)'}`, transition: 'all 0.2s ease' }}>
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={mediaFile.url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: f.previewCss === 'none' ? 'none' : f.previewCss }} />
-                                        </div>
-                                        <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.55)', fontSize: '0.58rem', fontWeight: 700 }}>{f.name}</span>
-                                    </button>
-                                </div>
-                                )
-                            })}
+                    {/* Filter row */}
+                    <div style={{ background: '#111', padding: '12px 0' }}>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textAlign: 'center', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>Filters</p>
+                        <div style={{ display: 'flex', gap: '10px', padding: '0 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
+                            {FILTERS.map((f, i) => (
+                                <button key={f.name} onClick={() => setSelectedFilter(i)}
+                                    style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                    <div style={{ width: '60px', height: '60px', borderRadius: '10px', overflow: 'hidden', border: `2px solid ${selectedFilter === i ? SOCIAL.primary : 'rgba(255,255,255,0.15)'}`, transition: 'all 0.2s ease' }}>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={mediaFile.url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: f.style === 'none' ? 'none' : f.style }} />
+                                    </div>
+                                    <span style={{ color: selectedFilter === i ? SOCIAL.border : 'rgba(255,255,255,0.55)', fontSize: '0.62rem', fontWeight: 700 }}>{f.name}</span>
+                                </button>
+                            ))}
                         </div>
-                        {/* Filter description caption — shows what the selected filter does */}
-                        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '0.66rem', textAlign: 'center', marginTop: 6, fontStyle: 'italic' }}>
-                            {FILTERS[selectedFilter].description}
-                        </p>
                     </div>
 
                     {/* Adjustments */}
-                    <div style={{ background: '#42476E', padding: '8px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <div style={{ background: '#1a1a1a', padding: '12px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Adjust</p>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                {/* Pro toggle — reveals 6 more sliders (warmth/highlights/shadows/fade/sharpen/vignette) */}
-                                <button onClick={() => setShowProAdjust(s => !s)} title="Pro adjustments"
-                                    style={{ background: showProAdjust ? SOCIAL.primary : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: showProAdjust ? '#fff' : 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700 }}>✨ Pro</button>
+                            {/* Rotate buttons */}
+                            <div style={{ display: 'flex', gap: 8 }}>
                                 <button onClick={() => setRotation(r => r - 90)} title="Rotate left" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↺</button>
                                 <button onClick={() => setRotation(r => r + 90)} title="Rotate right" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↻</button>
-                                {rotation !== 0 && <button onClick={() => setRotation(0)} title="Reset rotation" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem' }}>↺↻</button>}
+                                {rotation !== 0 && <button onClick={() => setRotation(0)} title="Reset" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.72rem' }}>Reset</button>}
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {/* Basic 3 sliders — always visible */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>☀️ Bright</span>
-                                <input type="range" min={80} max={120} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <input type="range" min={50} max={150} value={brightness} onChange={e => setBrightness(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{brightness}%</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>◉ Contrast</span>
-                                <input type="range" min={80} max={120} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <input type="range" min={50} max={150} value={contrast} onChange={e => setContrast(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{contrast}%</span>
                             </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🎨 Saturat</span>
-                                <input type="range" min={70} max={130} value={saturation} onChange={e => setSaturation(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
+                                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🎨 Saturation</span>
+                                <input type="range" min={0} max={200} value={saturation} onChange={e => setSaturation(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
                                 <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{saturation}%</span>
                             </div>
-                            {/* 6 pro sliders — shown when user taps "Pro" */}
-                            {showProAdjust && (
-                                <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', marginTop: 4, paddingTop: 6, display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🔥 Warmth</span>
-                                        <input type="range" min={-50} max={50} value={warmth} onChange={e => setWarmth(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{warmth > 0 ? `+${warmth}` : warmth}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>⬆ Highlts</span>
-                                        <input type="range" min={-50} max={50} value={highlights} onChange={e => setHighlights(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{highlights > 0 ? `+${highlights}` : highlights}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>⬇ Shadows</span>
-                                        <input type="range" min={-50} max={50} value={shadows} onChange={e => setShadows(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{shadows > 0 ? `+${shadows}` : shadows}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🌫️ Fade</span>
-                                        <input type="range" min={0} max={50} value={fade} onChange={e => setFade(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{fade}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>🔪 Sharpen</span>
-                                        <input type="range" min={0} max={50} value={sharpen} onChange={e => setSharpen(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{sharpen}</span>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.75rem', width: '70px' }}>⚫ Vignette</span>
-                                        <input type="range" min={0} max={50} value={vignette} onChange={e => setVignette(+e.target.value)} style={{ flex: 1, accentColor: SOCIAL.primary }} />
-                                        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.72rem', width: '32px', textAlign: 'right' }}>{vignette}</span>
-                                    </div>
-                                    {/* Reset all pro adjustments */}
-                                    <button onClick={() => { setWarmth(0); setHighlights(0); setShadows(0); setFade(0); setSharpen(0); setVignette(0) }}
-                                        style={{ alignSelf: 'flex-end', background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 6, padding: '3px 8px', color: 'rgba(255,255,255,0.7)', cursor: 'pointer', fontSize: '0.68rem', marginTop: 2 }}>Reset Pro</button>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -888,19 +551,35 @@ function CreateContent() {
                             <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g., Nashik, Maharashtra" style={inp} />
                         </div>
 
-                        {error && <div style={{ background: '#fef2f2', border: '1px solid rgba(217,83,79,0.4)', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
+                        {/* Allow Download toggle */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: SOCIAL.bgSub, borderRadius: 10, border: `1px solid ${SOCIAL.border}` }}>
+                            <div>
+                                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text }}>Allow Download</p>
+                                <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>Let viewers download your {postType === 'krishiclip' ? 'clip' : 'post'}</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setAllowDownload(v => !v)}
+                                style={{
+                                    width: 48, height: 28, borderRadius: 100, border: 'none', cursor: 'pointer',
+                                    background: allowDownload ? SOCIAL.green : '#CBD5E1',
+                                    position: 'relative', transition: 'background 0.2s ease',
+                                }}
+                            >
+                                <span style={{
+                                    position: 'absolute', top: 3, left: allowDownload ? 23 : 3,
+                                    width: 22, height: 22, borderRadius: '50%', background: '#fff',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s ease',
+                                }} />
+                            </button>
+                        </div>
+
+                        {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
 
                         <button onClick={handlePost} disabled={submitting}
                             style={{ width: '100%', padding: '14px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                            {submitting ? (uploadProgress > 0 && uploadProgress < 100 ? `⏳ Uploading… ${uploadProgress}%` : '⏳ Sharing…') : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
+                            {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
                         </button>
-
-                        {/* Upload progress bar — CSSFX animated stripes */}
-                        {submitting && uploadProgress > 0 && uploadProgress < 100 && (
-                            <div className="fx-upload-progress" style={{ marginTop: 8 }}>
-                                <div className="fx-upload-progress-bar" style={{ width: `${uploadProgress}%` }} />
-                            </div>
-                        )}
                     </div>
 
                     {/* Bottom nav link */}
@@ -915,15 +594,6 @@ function CreateContent() {
         textarea:focus, input[type=text]:focus { border-color: ${SOCIAL.primary} !important; }
         ::-webkit-scrollbar { display: none; }
       `}</style>
-
-        {/* ── PRO CAMERA MODAL ── Instagram-grade capture experience */}
-        {proCameraOpen && (
-            <ProCamera
-                mode={postType === 'krishiclip' ? 'video' : 'photo'}
-                onCapture={handleProCameraCapture}
-                onClose={() => setProCameraOpen(false)}
-            />
-        )}
         </div>
     )
 }
