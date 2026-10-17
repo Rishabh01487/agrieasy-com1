@@ -229,43 +229,65 @@ export const BUYER = {
 //   Masterpiece Red #5A2132 · Dirty White #EFE9E9
 
 export const LEDGER = {
-  bg: '#F7F5EC',            // cream background (Ridgewood --background)
-  bgSub: '#EAE8DF',          // muted bg (Ridgewood --muted)
+  // ── Exact Ridgewood brand palette (from globals.css OKLCH values) ──
+  bg: '#FAF7F0',            // brand-cream — page background
+  bgGradient: 'linear-gradient(180deg, #FDFBF7 0%, #F5F2EC 100%)', // cream-gradient
+  bgSub: '#EAE8DF',          // muted bg
   white: '#FFFFFF',
-  primary: '#0C1C3F',        // deep navy (Ridgewood brand-navy)
-  primaryHover: '#050F2C',   // darker navy (brand-navy-dark)
-  primaryLight: 'rgba(232, 170, 78, 0.12)', // gold tint bg
-  primarySoft: 'rgba(12, 28, 63, 0.04)',
-  accent: '#E8AA4E',         // champagne gold (brand-gold)
-  accentDark: '#B57727',     // deeper gold (brand-gold-dark)
-  accentLight: '#FAD18A',    // light gold (brand-gold-light)
-  text: '#0C1C3F',           // navy text (foreground)
-  textSecondary: '#283757',  // mid navy (brand-navy-light)
-  muted: '#5D636F',          // muted gray-blue (muted-foreground)
-  border: '#DAD8CD',         // warm border (Ridgewood --border)
-  borderLight: '#EAE8DF',
-  borderGold: 'rgba(232, 170, 78, 0.3)', // gold border for accent cards
-  card: '#FFFFFF',           // pure white cards (Ridgewood --card)
-  cardHover: '#FDFCF8',      // ivory hover (brand-ivory)
+  ivory: '#FDFBF7',          // brand-ivory
+  cream: '#FAF7F0',          // brand-cream
+  primary: '#1A2B4C',        // brand-navy — headings, primary buttons
+  primaryHover: '#11183A',   // brand-navy-dark — hover state
+  primaryLight: '#2C3F6E',   // brand-navy-light — secondary text
+  primarySoft: 'rgba(26, 43, 76, 0.04)',
+  accent: '#C9A14E',         // brand-gold — accents, borders, icons
+  accentDark: '#9D7A2C',     // brand-gold-dark — eyebrow text, deeper gold
+  accentLight: '#E8D49A',    // brand-gold-light — light gold bg
+  accentSoft: 'rgba(201, 161, 78, 0.12)', // gold tint background
+  text: '#1A2B4C',           // navy text (foreground)
+  textSecondary: '#2C3F6E',  // mid navy (body text)
+  textMuted: 'rgba(26, 43, 76, 0.70)', // 70% navy
+  textLight: 'rgba(26, 43, 76, 0.55)', // 55% navy
+  muted: '#5D636F',          // muted gray-blue
+  border: '#DAD8CD',         // warm border (--border)
+  borderLight: 'rgba(26, 43, 76, 0.10)', // navy/10
+  borderGold: 'rgba(201, 161, 78, 0.25)', // gold/25
+  borderGoldHover: 'rgba(201, 161, 78, 0.40)', // gold/40
+  card: '#FFFFFF',           // pure white cards (--card)
+  cardHover: '#FDFBF7',      // ivory hover
   red: '#DC2626',
   redLight: 'rgba(220, 38, 38, 0.08)',
   green: '#16A34A',
   greenLight: 'rgba(22, 163, 74, 0.08)',
-  gold: '#E8AA4E',           // champagne gold
-  goldLight: 'rgba(232, 170, 78, 0.12)',
-  goldDark: '#B57727',       // deeper gold
-  goldBright: '#FAD18A',     // light gold
-  maroon: '#68231D',         // brand-maroon
-  cream: '#F9F7EE',          // brand-cream
-  ivory: '#FDFCF8',          // brand-ivory
-  gradient: 'linear-gradient(135deg, #F7F5EC 0%, #F9F7EE 50%, #FDFCF8 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FFFFFF 0%, #F7F5EC 100%)',
-  gradientGold: 'linear-gradient(135deg, #E8AA4E 0%, #FAD18A 100%)',
-  gradientNavy: 'linear-gradient(135deg, #0C1C3F 0%, #283757 100%)',
-  shadow: '0 2px 12px rgba(12, 28, 63, 0.08)',
-  shadowGold: '0 2px 12px rgba(232, 170, 78, 0.25)',
-  shadowMd: '0 4px 16px rgba(12, 28, 63, 0.1)',
-  shadowXl: '0 8px 32px rgba(12, 28, 63, 0.15)',
+  gold: '#C9A14E',           // brand-gold
+  goldLight: '#E8D49A',      // brand-gold-light
+  goldDark: '#9D7A2C',       // brand-gold-dark
+  goldBright: '#E8AA4E',
+  maroon: '#7D2C2C',         // brand-maroon
+  // ── Gradients ──
+  gradient: 'linear-gradient(180deg, #FDFBF7 0%, #F5F2EC 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FFFFFF 0%, #FAF7F0 100%)',
+  gradientGold: 'linear-gradient(135deg, #E8D49A 0%, #9D7A2C 100%)', // gold-gradient
+  gradientNavy: 'linear-gradient(135deg, #1A2B4C 0%, #11183A 100%)', // navy-gradient
+  gradientNavyRadial: 'radial-gradient(circle at 30% 20%, #2C3F6E, #11183A 70%)',
+  // ── Shadows (exact from Ridgewood globals.css) ──
+  shadowSoft: '0 1px 2px rgba(17, 24, 58, 0.04), 0 8px 24px -8px rgba(17, 24, 58, 0.08)',
+  shadowLuxe: '0 1px 2px rgba(17, 24, 58, 0.05), 0 12px 32px -10px rgba(17, 24, 58, 0.15), 0 24px 48px -16px rgba(201, 161, 78, 0.10)',
+  shadowGold: '0 0 0 1px rgba(201, 161, 78, 0.20), 0 16px 40px -12px rgba(201, 161, 78, 0.25)',
+  shadowNavy: '0 1px 2px rgba(17, 24, 58, 0.10), 0 12px 32px -10px rgba(17, 24, 58, 0.30), 0 24px 48px -16px rgba(17, 24, 58, 0.20)',
+  shadowMd: '0 4px 16px rgba(17, 24, 58, 0.10)',
+  shadowXl: '0 8px 32px rgba(17, 24, 58, 0.15)',
+  // ── Glass effects ──
+  glassLight: 'rgba(255, 255, 255, 0.65)',
+  glassDark: 'rgba(17, 24, 58, 0.55)',
+  // ── Misc ──
+  radius: '0.75rem',         // 12px base
+  radiusSm: '0.5rem',        // 8px
+  radiusMd: '0.625rem',      // 10px
+  radiusLg: '0.75rem',       // 12px
+  radiusXl: '1rem',          // 16px
+  radius2xl: '1.25rem',      // 20px
+  radius3xl: '1.5rem',       // 24px
 }
 
 // ── Farmer Palette (Home — Floral White + Black Olive) ─────────────
