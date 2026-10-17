@@ -229,33 +229,43 @@ export const BUYER = {
 //   Masterpiece Red #5A2132 · Dirty White #EFE9E9
 
 export const LEDGER = {
-  bg: '#1A233A',           // deep navy (Ridgewood primary)
-  bgSub: '#151D2E',        // darker navy (cards, sections)
+  bg: '#F7F5EC',            // cream background (Ridgewood --background)
+  bgSub: '#EAE8DF',          // muted bg (Ridgewood --muted)
   white: '#FFFFFF',
-  primary: '#D4A853',      // antique gold (buttons, accents)
-  primaryHover: '#E8B84B', // brighter gold (hover states)
-  primaryLight: 'rgba(201, 161, 78, 0.15)', // gold tint background
-  primarySoft: 'rgba(201, 161, 78, 0.08)',
-  accent: '#D4A853',       // gold accent
-  text: '#FFFFFF',         // white headings
-  textSecondary: '#E0E6ED', // light gray-blue body text
-  muted: '#8A95B0',        // muted blue-gray
-  border: 'rgba(201, 161, 78, 0.25)', // gold border
-  borderLight: 'rgba(255, 255, 255, 0.08)',
-  card: '#151D2E',         // dark card background
-  cardHover: '#1E2942',    // lighter navy on hover
-  red: '#EF4444',
-  redLight: 'rgba(239, 68, 68, 0.12)',
-  green: '#22C55E',
-  greenLight: 'rgba(34, 197, 94, 0.12)',
-  gold: '#D4A853',
-  goldLight: 'rgba(201, 161, 78, 0.15)',
-  goldBright: '#E8B84B',
-  gradient: 'linear-gradient(135deg, #1A233A 0%, #151D2E 50%, #0F1626 100%)',
-  gradientSoft: 'linear-gradient(135deg, #151D2E 0%, #1A233A 100%)',
-  gradientGold: 'linear-gradient(135deg, #D4A853 0%, #E8B84B 100%)',
-  shadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
-  shadowGold: '0 4px 20px rgba(201, 161, 78, 0.25)',
+  primary: '#0C1C3F',        // deep navy (Ridgewood brand-navy)
+  primaryHover: '#050F2C',   // darker navy (brand-navy-dark)
+  primaryLight: 'rgba(232, 170, 78, 0.12)', // gold tint bg
+  primarySoft: 'rgba(12, 28, 63, 0.04)',
+  accent: '#E8AA4E',         // champagne gold (brand-gold)
+  accentDark: '#B57727',     // deeper gold (brand-gold-dark)
+  accentLight: '#FAD18A',    // light gold (brand-gold-light)
+  text: '#0C1C3F',           // navy text (foreground)
+  textSecondary: '#283757',  // mid navy (brand-navy-light)
+  muted: '#5D636F',          // muted gray-blue (muted-foreground)
+  border: '#DAD8CD',         // warm border (Ridgewood --border)
+  borderLight: '#EAE8DF',
+  borderGold: 'rgba(232, 170, 78, 0.3)', // gold border for accent cards
+  card: '#FFFFFF',           // pure white cards (Ridgewood --card)
+  cardHover: '#FDFCF8',      // ivory hover (brand-ivory)
+  red: '#DC2626',
+  redLight: 'rgba(220, 38, 38, 0.08)',
+  green: '#16A34A',
+  greenLight: 'rgba(22, 163, 74, 0.08)',
+  gold: '#E8AA4E',           // champagne gold
+  goldLight: 'rgba(232, 170, 78, 0.12)',
+  goldDark: '#B57727',       // deeper gold
+  goldBright: '#FAD18A',     // light gold
+  maroon: '#68231D',         // brand-maroon
+  cream: '#F9F7EE',          // brand-cream
+  ivory: '#FDFCF8',          // brand-ivory
+  gradient: 'linear-gradient(135deg, #F7F5EC 0%, #F9F7EE 50%, #FDFCF8 100%)',
+  gradientSoft: 'linear-gradient(135deg, #FFFFFF 0%, #F7F5EC 100%)',
+  gradientGold: 'linear-gradient(135deg, #E8AA4E 0%, #FAD18A 100%)',
+  gradientNavy: 'linear-gradient(135deg, #0C1C3F 0%, #283757 100%)',
+  shadow: '0 2px 12px rgba(12, 28, 63, 0.08)',
+  shadowGold: '0 2px 12px rgba(232, 170, 78, 0.25)',
+  shadowMd: '0 4px 16px rgba(12, 28, 63, 0.1)',
+  shadowXl: '0 8px 32px rgba(12, 28, 63, 0.15)',
 }
 
 // ── Farmer Palette (Home — Floral White + Black Olive) ─────────────
