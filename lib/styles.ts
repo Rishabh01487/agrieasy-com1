@@ -230,56 +230,54 @@ export const BUYER = {
 
 export const LEDGER = {
   // ── Exact Ridgewood brand palette (from globals.css OKLCH values) ──
-  bg: '#FAF7F0',            // brand-cream — page background
-  bgGradient: 'linear-gradient(180deg, #FDFBF7 0%, #F5F2EC 100%)', // cream-gradient
-  bgSub: '#EAE8DF',          // muted bg
-  white: '#FFFFFF',
-  ivory: '#FDFBF7',          // brand-ivory
-  cream: '#FAF7F0',          // brand-cream
-  primary: '#1A2B4C',        // brand-navy — headings, primary buttons
-  primaryHover: '#11183A',   // brand-navy-dark — hover state
-  primaryLight: '#2C3F6E',   // brand-navy-light — secondary text
-  primarySoft: 'rgba(26, 43, 76, 0.04)',
+  bg: '#050C1E',             // dark midnight navy
+  bgGradient: 'radial-gradient(circle at 30% 20%, #1A2B4C 0%, #11183A 50%, #050C1E 100%)',
+  bgSub: '#111A2D',          // dark card bg
+  white: '#FAF7F0',          // cream-white text
+  ivory: '#FDFBF7',
+  cream: '#FAF7F0',
+  primary: '#E8AA4E',        // GOLD is primary in dark mode
+  primaryHover: '#FAD18A',
+  primaryLight: 'rgba(232, 170, 78, 0.12)',
+  primarySoft: 'rgba(232, 170, 78, 0.06)',
   accent: '#C9A14E',         // brand-gold — accents, borders, icons
   accentDark: '#9D7A2C',     // brand-gold-dark — eyebrow text, deeper gold
   accentLight: '#E8D49A',    // brand-gold-light — light gold bg
   accentSoft: 'rgba(201, 161, 78, 0.12)', // gold tint background
-  text: '#1A2B4C',           // navy text (foreground)
-  textSecondary: '#2C3F6E',  // mid navy (body text)
-  textMuted: 'rgba(26, 43, 76, 0.70)', // 70% navy
-  textLight: 'rgba(26, 43, 76, 0.55)', // 55% navy
-  muted: '#5D636F',          // muted gray-blue
-  border: '#DAD8CD',         // warm border (--border)
-  borderLight: 'rgba(26, 43, 76, 0.10)', // navy/10
-  borderGold: 'rgba(201, 161, 78, 0.25)', // gold/25
-  borderGoldHover: 'rgba(201, 161, 78, 0.40)', // gold/40
-  card: '#FFFFFF',           // pure white cards (--card)
-  cardHover: '#FDFBF7',      // ivory hover
-  red: '#DC2626',
-  redLight: 'rgba(220, 38, 38, 0.08)',
-  green: '#16A34A',
-  greenLight: 'rgba(22, 163, 74, 0.08)',
+  text: '#FAF7F0',           // cream text on dark
+  textSecondary: 'rgba(250, 247, 240, 0.75)',
+  textMuted: 'rgba(250, 247, 240, 0.55)',
+  textLight: 'rgba(250, 247, 240, 0.40)',
+  muted: 'rgba(250, 247, 240, 0.50)',
+  border: '#242E42',         // dark border
+  borderLight: 'rgba(250, 247, 240, 0.08)',
+  borderGold: 'rgba(201, 161, 78, 0.25)',
+  borderGoldHover: 'rgba(201, 161, 78, 0.45)',
+  card: 'rgba(17, 24, 58, 0.55)', // glass-dark
+  cardSolid: '#111A2D',
+  cardHover: 'rgba(26, 43, 76, 0.65)',
+  red: '#F87171',
+  redLight: 'rgba(248, 113, 113, 0.12)',
+  green: '#4ADE80',
+  greenLight: 'rgba(74, 222, 128, 0.12)',
   gold: '#C9A14E',           // brand-gold
   goldLight: '#E8D49A',      // brand-gold-light
   goldDark: '#9D7A2C',       // brand-gold-dark
   goldBright: '#E8AA4E',
   maroon: '#7D2C2C',         // brand-maroon
   // ── Gradients ──
-  gradient: 'linear-gradient(180deg, #FDFBF7 0%, #F5F2EC 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FFFFFF 0%, #FAF7F0 100%)',
-  gradientGold: 'linear-gradient(135deg, #E8D49A 0%, #9D7A2C 100%)', // gold-gradient
-  gradientNavy: 'linear-gradient(135deg, #1A2B4C 0%, #11183A 100%)', // navy-gradient
-  gradientNavyRadial: 'radial-gradient(circle at 30% 20%, #2C3F6E, #11183A 70%)',
-  // ── Shadows (exact from Ridgewood globals.css) ──
-  shadowSoft: '0 1px 2px rgba(17, 24, 58, 0.04), 0 8px 24px -8px rgba(17, 24, 58, 0.08)',
-  shadowLuxe: '0 1px 2px rgba(17, 24, 58, 0.05), 0 12px 32px -10px rgba(17, 24, 58, 0.15), 0 24px 48px -16px rgba(201, 161, 78, 0.10)',
-  shadowGold: '0 0 0 1px rgba(201, 161, 78, 0.20), 0 16px 40px -12px rgba(201, 161, 78, 0.25)',
-  shadowNavy: '0 1px 2px rgba(17, 24, 58, 0.10), 0 12px 32px -10px rgba(17, 24, 58, 0.30), 0 24px 48px -16px rgba(17, 24, 58, 0.20)',
-  shadowMd: '0 4px 16px rgba(17, 24, 58, 0.10)',
-  shadowXl: '0 8px 32px rgba(17, 24, 58, 0.15)',
-  // ── Glass effects ──
-  glassLight: 'rgba(255, 255, 255, 0.65)',
-  glassDark: 'rgba(17, 24, 58, 0.55)',
+  gradient: 'radial-gradient(circle at 30% 20%, #1A2B4C 0%, #11183A 50%, #050C1E 100%)',
+  gradientSoft: 'linear-gradient(135deg, #111A2D 0%, #050C1E 100%)',
+  gradientGold: 'linear-gradient(135deg, #E8D49A 0%, #C9A14E 50%, #9D7A2C 100%)',
+  gradientNavy: 'linear-gradient(135deg, #1A2B4C 0%, #11183A 100%)',
+  shadowSoft: '0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.4)',
+  shadowLuxe: '0 1px 2px rgba(0,0,0,0.2), 0 12px 32px -10px rgba(0,0,0,0.4), 0 24px 48px -16px rgba(201,161,78,0.15)',
+  shadowGold: '0 0 0 1px rgba(201,161,78,0.30), 0 8px 24px -8px rgba(201,161,78,0.35)',
+  shadowNavy: '0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -10px rgba(0,0,0,0.5)',
+  shadowMd: '0 4px 16px rgba(0,0,0,0.4)',
+  shadowXl: '0 8px 32px rgba(0,0,0,0.5)',
+  glassLight: 'rgba(255,255,255,0.08)',
+  glassDark: 'rgba(17,24,58,0.55)',
   // ── Misc ──
   radius: '0.75rem',         // 12px base
   radiusSm: '0.5rem',        // 8px
