@@ -8,6 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Spinner, InlineLoader } from '@/app/components/Spinner'
 import { Icon } from '@/lib/icons'
 import BottomSheet from '@/app/components/BottomSheet'
+import ShareSheet from '../components/ShareSheet'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -17,7 +18,7 @@ const CATEGORIES = [
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string }
-interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number }
+interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number; allowDownload?: boolean }
 
 function timeAgo(iso: string) {
     const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -36,6 +37,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
     const [followLoading, setFollowLoading] = useState(false)
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
     const [shareCopied, setShareCopied] = useState(false)
+    const [showShareSheet, setShowShareSheet] = useState(false)
     const [muted, setMuted] = useState(false)
     const [paused, setPaused] = useState(false)
     const [ended, setEnded] = useState(false)  // true when clip finishes — shows AgriSocial branding
@@ -213,7 +215,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
             }).catch(() => null)
         } catch {}
-        window.location.href = `/agrisocial/dm?sharePost=${clip._id}`
+        setShowShareSheet(true)
     }
 
     const openComments = async () => {
@@ -544,6 +546,17 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                     </div>
                 )}
             </BottomSheet>
+
+            {/* Share Sheet */}
+            <ShareSheet
+                isOpen={showShareSheet}
+                onClose={() => setShowShareSheet(false)}
+                postUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/agrisocial/clips`}
+                postCaption={clip.caption}
+                mediaUrl={clip.mediaUrl}
+                mediaType={clip.mediaType}
+                allowDownload={clip.allowDownload !== false}
+            />
         </div>
     )
 }

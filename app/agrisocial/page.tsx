@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
+import ShareSheet from './components/ShareSheet'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -26,7 +27,7 @@ interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments?: Comment[]; createdAt: string; location?: string
-    savedBy?: string[]; savedCount?: number; sharedCount?: number
+    savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean
 }
 
 interface StoryItem { _id: string; mediaUrl: string; mediaType: string; caption?: string; duration?: number; viewed: boolean; likesCount?: number; createdAt: string }
@@ -74,6 +75,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [burst, setBurst] = useState(false)
     const [carouselIdx, setCarouselIdx] = useState(0)
     const [shareCopied, setShareCopied] = useState(false)
+    const [showShareSheet, setShowShareSheet] = useState(false)
     const lastTapRef = useRef<number>(0)
 
     const isDeletedUser = !post.userId || typeof post.userId !== 'object'
@@ -159,14 +161,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         try {
             await authFetch(`/api/social/posts/${post._id}/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
         } catch {}
-        const url = `${window.location.origin}/agrisocial/post/${post._id}`
-        try {
-            await navigator.clipboard.writeText(url)
-            setShareCopied(true)
-            setTimeout(() => setShareCopied(false), 1800)
-        } catch {
-            window.open(url, '_blank')
-        }
+        setShowShareSheet(true)
     }
 
     const handleDelete = async () => {
@@ -347,6 +342,17 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     )}
                 </div>
             )}
+
+            {/* Share Sheet — inside PostCard so it has access to post + showShareSheet */}
+            <ShareSheet
+                isOpen={showShareSheet}
+                onClose={() => setShowShareSheet(false)}
+                postUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/agrisocial/post/${post._id}`}
+                postCaption={post.caption}
+                mediaUrl={post.mediaUrl || post.mediaUrls?.[0]}
+                mediaType={post.mediaType}
+                allowDownload={post.allowDownload !== false}
+            />
         </div>
     )
 }
