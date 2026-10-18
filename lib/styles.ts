@@ -233,9 +233,9 @@ export const LEDGER = {
   bg: '#050C1E',             // dark midnight navy
   bgGradient: 'radial-gradient(circle at 30% 20%, #1A2B4C 0%, #11183A 50%, #050C1E 100%)',
   bgSub: '#111A2D',          // dark card bg
-  white: '#FAF7F0',          // cream-white text
-  ivory: '#FDFBF7',
-  cream: '#FAF7F0',
+  white: '#111A2D',          // DARK CARD background (child components use palette.white as bg)
+  ivory: '#111A2D',
+  cream: '#0F1626',          // darker bg for inputs
   primary: '#E8AA4E',        // GOLD is primary in dark mode
   primaryHover: '#FAD18A',
   primaryLight: 'rgba(232, 170, 78, 0.12)',
@@ -249,8 +249,8 @@ export const LEDGER = {
   textMuted: 'rgba(250, 247, 240, 0.55)',
   textLight: 'rgba(250, 247, 240, 0.40)',
   muted: 'rgba(250, 247, 240, 0.50)',
-  border: '#242E42',         // dark border
-  borderLight: 'rgba(250, 247, 240, 0.08)',
+  border: 'rgba(201, 161, 78, 0.20)', // gold-tinted border (visible on dark)
+  borderLight: 'rgba(250, 247, 240, 0.10)', // subtle light border
   borderGold: 'rgba(201, 161, 78, 0.25)',
   borderGoldHover: 'rgba(201, 161, 78, 0.45)',
   card: 'rgba(17, 24, 58, 0.55)', // glass-dark
