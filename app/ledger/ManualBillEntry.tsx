@@ -501,10 +501,11 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                 disabled={liveTotals.bags === 0}
                 style={{
                     width: '100%', padding: '14px 24px',
-                    background: liveTotals.bags > 0 ? palette.primary : palette.muted,
-                    color: '#fff', border: 'none', borderRadius: 12,
-                    fontSize: '1rem', fontWeight: 700,
+                    background: liveTotals.bags > 0 ? 'linear-gradient(135deg, #E8D49A 0%, #C9A14E 50%, #9D7A2C 100%)' : palette.muted,
+                    color: liveTotals.bags > 0 ? '#050C1E' : 'rgba(250,247,240,0.4)', border: 'none', borderRadius: 12,
+                    fontSize: '1rem', fontWeight: 800,
                     cursor: liveTotals.bags > 0 ? 'pointer' : 'not-allowed',
+                    boxShadow: liveTotals.bags > 0 ? '0 4px 16px rgba(201, 161, 78, 0.35)' : 'none',
                 }}
             >📋 Generate Calculated Bill</button>
         </div>
