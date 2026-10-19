@@ -318,19 +318,6 @@ export default function ShareSheet({
           {sharing ? 'Preparing video…' : 'Share to...'}
         </p>
 
-        {/* File-share availability hint */}
-        {isSharableFile && isVideo && !sharing && (
-          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: SOCIAL.muted, margin: '0 0 14px', lineHeight: 1.4 }}>
-            WhatsApp &amp; Instagram will receive the full video clip.<br />
-            Other apps will receive a link.
-          </p>
-        )}
-        {!isSharableFile && isVideo === false && mediaType === 'youtube' && (
-          <p style={{ textAlign: 'center', fontSize: '0.7rem', color: SOCIAL.muted, margin: '0 0 14px', fontStyle: 'italic' }}>
-            YouTube clips are shared as a link.
-          </p>
-        )}
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 12, marginBottom: 16 }}>
           {shareOptions.map((option, i) => (
             <button key={i} onClick={option.onClick} disabled={sharing} style={{

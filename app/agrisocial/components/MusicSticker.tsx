@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useId } from 'react'
 
 interface MusicStickerProps {
   audioUrl: string
@@ -12,12 +12,25 @@ interface MusicStickerProps {
   compact?: boolean
 }
 
+/* ------------------------------------------------------------------ */
+/* Global single-audio-source coordinator                              */
+/*                                                                    */
+/* Only ONE MusicSticker can play at a time across the whole app.     */
+/* When a sticker starts playing, it broadcasts an event with its     */
+/* unique ID. All other stickers listen and pause themselves.         */
+/* This fixes the feed bug where post A's music kept playing after    */
+/* the user scrolled to post B and tapped play on B's music.          */
+/* ------------------------------------------------------------------ */
+
+const PLAY_EVENT = 'agrieasy-music-play'
+
 /**
  * MusicSticker — Instagram-style music overlay for posts/clips/stories.
  * - Auto-plays only when: autoPlay && isActive && userInteracted
  *   (prevents music blasting the moment the app/page opens — needs a user gesture first)
  * - Self-pauses via its own IntersectionObserver when scrolled out of view
- *   (safety net so the previous clip's music never keeps playing on the feed)
+ * - SINGLE AUDIO SOURCE: playing this sticker pauses all other MusicStickers
+ *   on the page (feed bug fix — post A's music now stops when post B plays)
  * - On feed posts: user taps play/pause button
  * - Scrolling marquee shows song name + artist
  */
@@ -33,11 +46,54 @@ export default function MusicSticker({
   const audioRef = useRef<HTMLAudioElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(false)
+  // useId() — React's built-in stable unique ID (SSR-safe, no impure calls)
+  const myId = useId()
+
+  // Helper: actually start playback + claim the audio slot
+  const startPlayback = () => {
+    if (!audioRef.current) return
+    audioRef.current.volume = 0.5
+    const p = audioRef.current.play()
+    if (p && typeof p.then === 'function') {
+      p.then(() => {
+        setPlaying(true)
+        // Broadcast: "I'm playing now" — all other stickers will pause
+        window.dispatchEvent(new CustomEvent(PLAY_EVENT, { detail: { id: myId } }))
+      }).catch(() => setPlaying(false))
+    } else {
+      setPlaying(true)
+      window.dispatchEvent(new CustomEvent(PLAY_EVENT, { detail: { id: myId } }))
+    }
+  }
+
+  // Helper: pause playback (no broadcast needed — pausing doesn't affect others)
+  const stopPlayback = () => {
+    if (audioRef.current) {
+      audioRef.current.pause()
+    }
+    setPlaying(false)
+  }
+
+  // SINGLE AUDIO SOURCE — listen for other stickers starting to play.
+  // When another sticker claims the audio slot, pause this one immediately.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (!detail || detail.id === myId) return  // it's me, ignore
+      // Another sticker started playing — pause this one
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause()
+        setPlaying(false)
+      }
+    }
+    window.addEventListener(PLAY_EVENT, handler as EventListener)
+    return () => window.removeEventListener(PLAY_EVENT, handler as EventListener)
+  }, [myId])
 
   // Self-pause IntersectionObserver — if the sticker scrolls out of view,
-  // pause the audio IMMEDIATELY. This is a safety net on top of the isActive
-  // prop, so that even if the parent's activeIdx update has a timing gap,
-  // the previous clip's music can never keep playing.
+  // pause the audio IMMEDIATELY. Uses a HIGH threshold (0.5) so the pause
+  // triggers as soon as half the sticker leaves the viewport, not when it's
+  // almost completely gone. Fixes the feed scroll-away bug.
   useEffect(() => {
     const el = wrapperRef.current
     if (!el) return
@@ -50,7 +106,7 @@ export default function MusicSticker({
           }
         })
       },
-      { threshold: 0.25 }
+      { threshold: [0, 0.25, 0.5] }
     )
     observer.observe(el)
     return () => observer.disconnect()
@@ -62,15 +118,11 @@ export default function MusicSticker({
   useEffect(() => {
     if (!audioRef.current) return
     if (autoPlay && isActive && userInteracted) {
-      audioRef.current.volume = 0.5
-      const p = audioRef.current.play()
-      if (p && typeof p.then === 'function') {
-        p.then(() => setPlaying(true)).catch(() => setPlaying(false))
-      }
+      startPlayback()
     } else {
-      audioRef.current.pause()
-      setPlaying(false)
+      stopPlayback()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoPlay, isActive, userInteracted, audioUrl])
 
   // Cleanup on unmount — always pause to release the audio element
@@ -99,16 +151,9 @@ export default function MusicSticker({
     e.stopPropagation()
     if (!audioRef.current) return
     if (playing) {
-      audioRef.current.pause()
-      setPlaying(false)
+      stopPlayback()
     } else {
-      audioRef.current.volume = 0.5
-      const p = audioRef.current.play()
-      if (p && typeof p.then === 'function') {
-        p.then(() => setPlaying(true)).catch(() => {})
-      } else {
-        setPlaying(true)
-      }
+      startPlayback()
     }
   }
 
