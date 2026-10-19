@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
-import MusicLibrary from './components/MusicLibrary'
+import MusicLibrary from '../components/MusicLibrary'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
@@ -686,7 +686,7 @@ function CreateContent() {
                         {/* Music Library Modal — powered by iTunes Search API (millions of songs) */}
                         {showMusicLibrary && (
                             <MusicLibrary
-                                onSelect={(song) => {
+                                onSelect={(song: { url: string; title: string; artist: string }) => {
                                     setAudioUrl(song.url)
                                     setAudioTitle(song.title)
                                     setAudioArtist(song.artist)
