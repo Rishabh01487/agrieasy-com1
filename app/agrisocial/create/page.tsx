@@ -40,6 +40,11 @@ function CreateContent() {
     const [category, setCategory] = useState('farming')
     const [location, setLocation] = useState('')
     const [allowDownload, setAllowDownload] = useState(true)
+    const [audioUrl, setAudioUrl] = useState('')
+    const [audioTitle, setAudioTitle] = useState('')
+    const [audioArtist, setAudioArtist] = useState('')
+    const [audioUploading, setAudioUploading] = useState(false)
+    const audioInputRef = useRef<HTMLInputElement>(null)
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [camError, setCamError] = useState('')
@@ -224,6 +229,35 @@ function CreateContent() {
 
     const getFilterStyle = () => ({ filter: buildFilterString(), transform: `rotate(${rotation}deg)` })
 
+    const handleAudioUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file) return
+        if (file.size > 15 * 1024 * 1024) { setError('Audio file too large (max 15MB)'); return }
+        setAudioUploading(true); setError('')
+        try {
+            const sigRes = await authFetch('/api/social/upload-signature?kind=video')
+            const sig = await sigRes.json()
+            if (!sig.available) { setError('Audio upload not configured'); return }
+            const fd = new FormData()
+            fd.append('file', file)
+            fd.append('api_key', sig.apiKey)
+            fd.append('timestamp', sig.timestamp.toString())
+            fd.append('signature', sig.signature)
+            fd.append('folder', sig.folder)
+            fd.append('resource_type', 'auto')
+            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/auto/upload`, { method: 'POST', body: fd })
+            const cld = await cldRes.json()
+            if (cldRes.ok && cld.secure_url) {
+                setAudioUrl(cld.secure_url)
+                // Extract song name from filename (remove extension)
+                const name = file.name.replace(/\.[^/.]+$/, '')
+                setAudioTitle(name)
+                setAudioArtist('')
+            } else { setError('Audio upload failed') }
+        } catch { setError('Audio upload failed') }
+        finally { setAudioUploading(false) }
+    }
+
     const handlePost = async () => {
         if (!caption.trim() && !mediaFile) { setError('Add a caption or media'); return }
         const userId = localStorage.getItem('userId')
@@ -330,6 +364,9 @@ function CreateContent() {
                 location,
                 hashtags,
                 allowDownload,
+                audioUrl,
+                audioTitle,
+                audioArtist,
             }),
         })
         const d = await res.json()
@@ -613,6 +650,29 @@ function CreateContent() {
                                     boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s ease',
                                 }} />
                             </button>
+                        </div>
+
+                        {/* Add Music */}
+                        <div>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎵 Add Music (optional)</label>
+                            {audioUrl ? (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: SOCIAL.primaryLight, borderRadius: 12, padding: '12px 14px', border: `1px solid ${SOCIAL.border}` }}>
+                                    <span style={{ fontSize: '1.3rem' }}>🎵</span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioTitle || 'Unknown track'}</p>
+                                        {audioArtist && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>{audioArtist}</p>}
+                                    </div>
+                                    <input value={audioTitle} onChange={e => setAudioTitle(e.target.value)} placeholder="Song name" style={{ width: 100, padding: '4px 8px', border: `1px solid ${SOCIAL.border}`, borderRadius: 6, fontSize: '0.78rem', color: SOCIAL.text, outline: 'none', fontFamily: SHARED.font }} />
+                                    <button onClick={() => { setAudioUrl(''); setAudioTitle(''); setAudioArtist('') }} style={{ background: 'none', border: 'none', color: SOCIAL.red, cursor: 'pointer', fontSize: '1.1rem', padding: 4 }}>✕</button>
+                                </div>
+                            ) : (
+                                <button onClick={() => audioInputRef.current?.click()} disabled={audioUploading}
+                                    style={{ width: '100%', padding: '14px', background: SOCIAL.white, border: `1.5px dashed ${SOCIAL.border}`, borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: SOCIAL.muted, fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s' }}>
+                                    {audioUploading ? '⏳ Uploading…' : '🎵 Add a song from your device'}
+                                </button>
+                            )}
+                            <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" style={{ display: 'none' }} onChange={handleAudioUpload} />
+                            <p style={{ margin: '6px 0 0', fontSize: '0.68rem', color: SOCIAL.muted }}>MP3, M4A, WAV up to 15MB</p>
                         </div>
 
                         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}

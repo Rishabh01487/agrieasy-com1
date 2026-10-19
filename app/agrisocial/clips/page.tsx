@@ -9,6 +9,7 @@ import { Spinner, InlineLoader } from '@/app/components/Spinner'
 import { Icon } from '@/lib/icons'
 import BottomSheet from '@/app/components/BottomSheet'
 import ShareSheet from '../components/ShareSheet'
+import MusicSticker from '../components/MusicSticker'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -18,7 +19,7 @@ const CATEGORIES = [
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string }
-interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number; allowDownload?: boolean }
+interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number; allowDownload?: boolean; audioUrl?: string; audioTitle?: string; audioArtist?: string }
 
 function timeAgo(iso: string) {
     const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -491,6 +492,11 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 </div>
                 {clip.caption && <p style={{ color: 'rgba(245,245,245,0.9)', fontSize: '0.85rem', margin: '0 0 4px', lineHeight: 1.4 }}>{clip.caption}</p>}
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
+                {clip.audioUrl && (
+                    <div style={{ marginTop: 8 }}>
+                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} autoPlay={isActive} compact />
+                    </div>
+                )}
             </div>
 
             {/* YouTube-style play button badge (replaces 🎬 KrishiClip emoji) */}

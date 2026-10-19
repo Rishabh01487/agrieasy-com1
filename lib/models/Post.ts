@@ -39,7 +39,10 @@ const PostSchema = new mongoose.Schema({
     viewedByIpHash: [{ type: String }],
     location: { type: String, default: '' },
     isActive: { type: Boolean, default: true },
-    allowDownload: { type: Boolean, default: true }, // creator controls whether viewers can download
+    allowDownload: { type: Boolean, default: true },
+    audioUrl: { type: String, default: '' },           // music track URL (Cloudinary)
+    audioTitle: { type: String, default: '' },          // song name
+    audioArtist: { type: String, default: '' },         // artist name
     // Ranked-feed scoring helpers
     rankScore: { type: Number, default: 0 },
 }, { timestamps: true })

@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
 import ShareSheet from './components/ShareSheet'
+import MusicSticker from './components/MusicSticker'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -27,7 +28,7 @@ interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments?: Comment[]; createdAt: string; location?: string
-    savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean
+    savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean; audioUrl?: string; audioTitle?: string; audioArtist?: string
 }
 
 interface StoryItem { _id: string; mediaUrl: string; mediaType: string; caption?: string; duration?: number; viewed: boolean; likesCount?: number; createdAt: string }
@@ -234,6 +235,15 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             ) : post.mediaUrl && post.mediaType === 'video' ? (
                 <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
             ) : null}
+
+            {/* Music Sticker — shows if post has audio */}
+            {post.audioUrl && (
+                <div style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', bottom: 8, left: 8, zIndex: 5 }}>
+                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} compact />
+                    </div>
+                </div>
+            )}
 
             {/* Actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '8px 10px' }}>
