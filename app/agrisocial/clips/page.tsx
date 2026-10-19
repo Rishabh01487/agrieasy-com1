@@ -494,7 +494,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
                 {clip.audioUrl && (
                     <div style={{ marginTop: 8 }}>
-                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} autoPlay={isActive} compact />
+                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} autoPlay={isActive} isActive={isActive} compact />
                     </div>
                 )}
             </div>

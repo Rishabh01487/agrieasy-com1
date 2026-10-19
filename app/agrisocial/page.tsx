@@ -240,7 +240,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             {post.audioUrl && (
                 <div style={{ position: 'relative' }}>
                     <div style={{ position: 'absolute', bottom: 8, left: 8, zIndex: 5 }}>
-                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} compact />
+                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} autoPlay compact />
                     </div>
                 </div>
             )}

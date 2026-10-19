@@ -1,34 +1,46 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { SOCIAL } from '@/lib/styles'
 
 interface MusicStickerProps {
   audioUrl: string
   audioTitle: string
   audioArtist?: string
-  autoPlay?: boolean
+  autoPlay?: boolean       // auto-play when component mounts (for clips when active)
+  isActive?: boolean       // whether this clip is currently in view (stops audio when false)
   compact?: boolean
 }
 
 /**
  * MusicSticker — Instagram-style music overlay for posts/clips/stories.
- * Shows a scrolling marquee with the song name + a play/pause button.
- * The audio plays from the Cloudinary-hosted URL.
+ * - Auto-plays when autoPlay=true (used on clips when the clip is active)
+ * - Stops audio when isActive=false (previous clip scrolled away)
+ * - On feed posts: user taps play/pause button
+ * - Scrolling marquee shows song name + artist
  */
-export default function MusicSticker({ audioUrl, audioTitle, audioArtist, autoPlay = false, compact = false }: MusicStickerProps) {
+export default function MusicSticker({ audioUrl, audioTitle, audioArtist, autoPlay = false, isActive = true, compact = false }: MusicStickerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
 
+  // Auto-play when active, stop when inactive
   useEffect(() => {
-    if (autoPlay && audioRef.current) {
+    if (!audioRef.current) return
+    if (autoPlay && isActive) {
       audioRef.current.volume = 0.5
       audioRef.current.play().then(() => setPlaying(true)).catch(() => {})
+    } else {
+      audioRef.current.pause()
+      setPlaying(false)
     }
-    return () => { if (audioRef.current) audioRef.current.pause() }
-  }, [autoPlay, audioUrl])
+  }, [autoPlay, isActive, audioUrl])
 
-  const togglePlay = () => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { if (audioRef.current) audioRef.current.pause() }
+  }, [])
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation()
     if (!audioRef.current) return
     if (playing) { audioRef.current.pause(); setPlaying(false) }
     else { audioRef.current.volume = 0.5; audioRef.current.play().then(() => setPlaying(true)).catch(() => {}) }
@@ -67,7 +79,7 @@ export default function MusicSticker({ audioUrl, audioTitle, audioArtist, autoPl
         <div style={{
           display: 'inline-block', whiteSpace: 'nowrap',
           color: '#fff', fontSize: compact ? '0.68rem' : '0.76rem', fontWeight: 600,
-          animation: 'musicMarquee 10s linear infinite',
+          animation: playing ? 'musicMarquee 10s linear infinite' : 'none',
         }}>
           {audioTitle || 'Unknown Track'}{audioArtist ? ` · ${audioArtist}` : ''}
         </div>
