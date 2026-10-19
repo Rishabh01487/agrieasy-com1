@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import MusicLibrary from './components/MusicLibrary'
 
 const CATEGORIES = ['farming', 'agritrading', 'technique', 'equipment', 'weather', 'livestock', 'organic', 'general']
 
@@ -45,44 +46,8 @@ function CreateContent() {
     const [audioArtist, setAudioArtist] = useState('')
     const [audioUploading, setAudioUploading] = useState(false)
     const audioInputRef = useRef<HTMLInputElement>(null)
+    // ── Music library state (powered by iTunes Search API — millions of songs) ──
     const [showMusicLibrary, setShowMusicLibrary] = useState(false)
-    const [musicSearch, setMusicSearch] = useState('')
-
-    // ── In-app music library — all genres (like Instagram) ──
-    // Users can pick from these OR upload their own from device
-    // URLs point to free preview clips (30s) from free music archives
-    const MUSIC_LIBRARY = [
-        // Bollywood / Hindi
-        { title: 'Tum Hi Ho', artist: 'Arijit Singh', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/tum-hi-ho.mp3', genre: 'Bollywood' },
-        { title: 'Chaiya Chaiya', artist: 'A.R. Rahman', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/chaiya-chaiya.mp3', genre: 'Bollywood' },
-        { title: 'Kala Chashma', artist: 'Badshah', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/kala-chashma.mp3', genre: 'Bollywood' },
-        { title: 'Bekhayali', artist: 'Arijit Singh', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/bekhayali.mp3', genre: 'Bollywood' },
-        { title: 'Gerua', artist: 'Arijit Singh', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/gerua.mp3', genre: 'Bollywood' },
-        { title: 'Dilbar', artist: 'Neha Kakkar', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/dilbar.mp3', genre: 'Bollywood' },
-        // Punjabi
-        { title: 'Lover', artist: 'Diljit Dosanjh', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/lover.mp3', genre: 'Punjabi' },
-        { title: 'Born to Shine', artist: 'Diljit Dosanjh', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/born-to-shine.mp3', genre: 'Punjabi' },
-        { title: 'Goat', artist: 'Diljit Dosanjh', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/goat.mp3', genre: 'Punjabi' },
-        { title: 'Punjabi Mashup', artist: 'Various', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/punjabi-mashup.mp3', genre: 'Punjabi' },
-        // Pop / International
-        { title: 'Shape of You', artist: 'Ed Sheeran', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/shape-of-you.mp3', genre: 'Pop' },
-        { title: 'Blinding Lights', artist: 'The Weeknd', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/blinding-lights.mp3', genre: 'Pop' },
-        { title: 'Levitating', artist: 'Dua Lipa', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/levitating.mp3', genre: 'Pop' },
-        { title: 'As It Was', artist: 'Harry Styles', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/as-it-was.mp3', genre: 'Pop' },
-        { title: 'Flowers', artist: 'Miley Cyrus', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/flowers.mp3', genre: 'Pop' },
-        // Hip-Hop / Rap
-        { title: 'Hotline Bling', artist: 'Drake', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/hotline-bling.mp3', genre: 'Hip-Hop' },
-        { title: 'God\'s Plan', artist: 'Drake', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/gods-plan.mp3', genre: 'Hip-Hop' },
-        { title: 'SICKO MODE', artist: 'Travis Scott', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/sicko-mode.mp3', genre: 'Hip-Hop' },
-        // Indian Classical / Folk
-        { title: 'Kisan Geet', artist: 'Folk Mix', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/kisan-geet.mp3', genre: 'Folk' },
-        { title: 'Rural Rhythm', artist: 'Desi LoFi', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/rural-rhythm.mp3', genre: 'Folk' },
-        { title: 'Mandi Vibes', artist: 'AgriBeats', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/mandi-vibes.mp3', genre: 'Folk' },
-        // Lo-Fi / Chill
-        { title: 'Lo-Fi Beats', artist: 'ChillHop', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/lofi-beats.mp3', genre: 'Lo-Fi' },
-        { title: 'Study Session', artist: 'Lo-Fi Girl', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/study-session.mp3', genre: 'Lo-Fi' },
-        { title: 'Midnight Drive', artist: 'Synthwave', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/midnight-drive.mp3', genre: 'Lo-Fi' },
-    ]
 
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
@@ -718,38 +683,17 @@ function CreateContent() {
                             <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" style={{ display: 'none' }} onChange={handleAudioUpload} />
                         </div>
 
-                        {/* Music Library Modal */}
+                        {/* Music Library Modal — powered by iTunes Search API (millions of songs) */}
                         {showMusicLibrary && (
-                            <div onClick={() => setShowMusicLibrary(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-                                <div onClick={e => e.stopPropagation()} style={{ background: SOCIAL.white, borderRadius: '20px 20px 0 0', padding: '20px', width: '100%', maxWidth: '500px', maxHeight: '70vh', overflowY: 'auto', boxShadow: SHARED.shadowXl }}>
-                                    <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0E0E0', margin: '0 auto 16px' }} />
-                                    <h3 style={{ margin: '0 0 12px', color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
-                                    <input value={musicSearch} onChange={e => setMusicSearch(e.target.value)} placeholder="Search songs, artists, genres..." style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontSize: '0.88rem', color: SOCIAL.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font, marginBottom: 12 }} />
-                                    {/* Genre filter pills */}
-                                    <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto' }} className="no-scrollbar">
-                                        {['All', 'Bollywood', 'Punjabi', 'Pop', 'Hip-Hop', 'Folk', 'Lo-Fi'].map(g => (
-                                            <button key={g} onClick={() => setMusicSearch(musicSearch === g ? '' : g)} style={{ padding: '5px 12px', borderRadius: 100, border: `1px solid ${musicSearch === g ? SOCIAL.primary : SOCIAL.border}`, background: musicSearch === g ? SOCIAL.primary : 'transparent', color: musicSearch === g ? '#fff' : SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>{g}</button>
-                                        ))}
-                                    </div>
-                                    {MUSIC_LIBRARY.filter(s => !musicSearch || s.title.toLowerCase().includes(musicSearch.toLowerCase()) || s.artist.toLowerCase().includes(musicSearch.toLowerCase()) || s.genre.toLowerCase().includes(musicSearch.toLowerCase())).map((song, i) => (
-                                        <button key={i} onClick={() => { setAudioUrl(song.url); setAudioTitle(song.title); setAudioArtist(song.artist); setShowMusicLibrary(false) }}
-                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'transparent', border: `1px solid ${SOCIAL.borderLight}`, borderRadius: 10, cursor: 'pointer', marginBottom: 8, transition: 'all 0.2s' }}
-                                            onMouseEnter={e => { e.currentTarget.style.background = SOCIAL.primaryLight }}
-                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
-                                            <div style={{ width: 40, height: 40, borderRadius: 8, background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🎵</div>
-                                            <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
-                                                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</p>
-                                                <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>{song.artist} · {song.genre}</p>
-                                            </div>
-                                            <span style={{ color: SOCIAL.muted, fontSize: '1.2rem', flexShrink: 0 }}>＋</span>
-                                        </button>
-                                    ))}
-                                    {MUSIC_LIBRARY.filter(s => !musicSearch || s.title.toLowerCase().includes(musicSearch.toLowerCase()) || s.artist.toLowerCase().includes(musicSearch.toLowerCase()) || s.genre.toLowerCase().includes(musicSearch.toLowerCase())).length === 0 && (
-                                        <p style={{ textAlign: 'center', color: SOCIAL.muted, fontSize: '0.85rem', padding: 20 }}>No songs found. Try another search or upload from device 📤</p>
-                                    )}
-                                    <button onClick={() => setShowMusicLibrary(false)} style={{ width: '100%', padding: '12px', background: SOCIAL.bgSub, border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: SOCIAL.textSecondary, cursor: 'pointer', marginTop: 8 }}>Cancel</button>
-                                </div>
-                            </div>
+                            <MusicLibrary
+                                onSelect={(song) => {
+                                    setAudioUrl(song.url)
+                                    setAudioTitle(song.title)
+                                    setAudioArtist(song.artist)
+                                    setShowMusicLibrary(false)
+                                }}
+                                onClose={() => setShowMusicLibrary(false)}
+                            />
                         )}
 
                         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}

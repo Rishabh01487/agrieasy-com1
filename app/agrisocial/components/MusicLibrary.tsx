@@ -1,0 +1,251 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { SOCIAL, SHARED } from '@/lib/styles'
+
+interface Song {
+  title: string
+  artist: string
+  previewUrl: string  // 30-second preview clip (m4a)
+  artworkUrl: string   // album art
+  genre: string
+}
+
+interface MusicLibraryProps {
+  onSelect: (song: { url: string; title: string; artist: string }) => void
+  onClose: () => void
+}
+
+/**
+ * MusicLibrary — Instagram-style music picker powered by iTunes Search API.
+ * Gives access to millions of songs (entire Apple Music catalog).
+ * Returns 30-second preview clips that play in the app.
+ *
+ * No API key required. Free. CORS-friendly.
+ */
+export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<Song[]>([])
+  const [loading, setLoading] = useState(false)
+  const [playingUrl, setPlayingUrl] = useState('')
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const [trending, setTrending] = useState<Song[]>([])
+
+  // Load trending songs on mount
+  useEffect(() => {
+    searchMusic('top bollywood songs 2024', true)
+  }, [])
+
+  const searchMusic = async (searchQuery: string, isTrending = false) => {
+    if (!searchQuery.trim()) return
+    setLoading(true)
+    if (!isTrending) setResults([])
+    try {
+      const res = await fetch(
+        `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=50&country=in`,
+        { headers: { 'Accept': 'application/json' } }
+      )
+      const data = await res.json()
+      const songs: Song[] = (data.results || []).map((r: any) => ({
+        title: r.trackName || 'Unknown',
+        artist: r.artistName || 'Unknown',
+        previewUrl: r.previewUrl || '',
+        artworkUrl: (r.artworkUrl100 || '').replace('100x100', '200x200'),
+        genre: r.primaryGenreName || 'Music',
+      })).filter((s: Song) => s.previewUrl) // only songs with preview clips
+
+      if (isTrending) {
+        setTrending(songs)
+      } else {
+        setResults(songs)
+      }
+    } catch (e) {
+      console.error('Music search failed:', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSearch = (value: string) => {
+    setQuery(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (!value.trim()) {
+      setResults([])
+      return
+    }
+    debounceRef.current = setTimeout(() => {
+      searchMusic(value)
+    }, 400)
+  }
+
+  const togglePreview = (url: string) => {
+    if (!audioRef.current) return
+    if (playingUrl === url) {
+      audioRef.current.pause()
+      setPlayingUrl('')
+    } else {
+      audioRef.current.src = url
+      audioRef.current.volume = 0.5
+      audioRef.current.play().catch(() => {})
+      setPlayingUrl(url)
+    }
+  }
+
+  const handleSelect = (song: Song) => {
+    if (audioRef.current) audioRef.current.pause()
+    onSelect({ url: song.previewUrl, title: song.title, artist: song.artist })
+  }
+
+  const displaySongs = query.trim() ? results : trending
+
+  const GENRE_SUGGESTIONS = [
+    'Bollywood', 'Punjabi', 'Arijit Singh', 'Diljit Dosanjh',
+    'Ed Sheeran', 'Drake', 'Taylor Swift', 'Lofi beats',
+    'Kumar Sanu', 'Sidhu Moose Wala', 'Neha Kakkar', 'Badshah',
+  ]
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100,
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+      }}
+    >
+      <audio ref={audioRef} onEnded={() => setPlayingUrl('')} />
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: SOCIAL.white, borderRadius: '20px 20px 0 0',
+          padding: '20px', width: '100%', maxWidth: '500px',
+          maxHeight: '80vh', overflowY: 'auto', boxShadow: SHARED.shadowXl,
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        {/* Handle bar */}
+        <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0E0E0', margin: '0 auto 16px', flexShrink: 0 }} />
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
+          <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: SOCIAL.muted, fontSize: '1.3rem', cursor: 'pointer', padding: 4 }}>✕</button>
+        </div>
+
+        {/* Search bar */}
+        <input
+          value={query}
+          onChange={e => handleSearch(e.target.value)}
+          placeholder="Search millions of songs..."
+          autoFocus
+          style={{
+            width: '100%', padding: '12px 16px',
+            border: `1.5px solid ${SOCIAL.border}`, borderRadius: 12,
+            fontSize: '0.92rem', color: SOCIAL.text, outline: 'none',
+            boxSizing: 'border-box', fontFamily: SHARED.font,
+            marginBottom: 12, flexShrink: 0,
+          }}
+        />
+
+        {/* Quick suggestions */}
+        {!query.trim() && (
+          <div style={{ display: 'flex', gap: 6, marginBottom: 12, overflowX: 'auto', flexShrink: 0 }} className="no-scrollbar">
+            {GENRE_SUGGESTIONS.map(g => (
+              <button key={g} onClick={() => { setQuery(g); searchMusic(g) }}
+                style={{
+                  padding: '6px 14px', borderRadius: 100,
+                  border: `1px solid ${SOCIAL.border}`,
+                  background: 'transparent', color: SOCIAL.muted,
+                  fontSize: '0.74rem', fontWeight: 600, cursor: 'pointer',
+                  whiteSpace: 'nowrap', transition: 'all 0.2s',
+                }}>
+                {g}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Loading */}
+        {loading && (
+          <div style={{ textAlign: 'center', padding: 30, color: SOCIAL.muted, fontSize: '0.85rem' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2.5px solid ${SOCIAL.borderLight}`, borderTopColor: SOCIAL.primary, animation: 'spin 0.7s linear infinite', margin: '0 auto 10px' }} />
+            Searching...
+          </div>
+        )}
+
+        {/* Results */}
+        {!loading && displaySongs.length > 0 && (
+          <div style={{ flex: 1, overflowY: 'auto' }}>
+            {!query.trim() && (
+              <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 8px' }}>
+                🔥 Trending Now
+              </p>
+            )}
+            {displaySongs.map((song, i) => (
+              <div key={i} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '10px',
+                borderRadius: 10, marginBottom: 6,
+                transition: 'background 0.2s',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = SOCIAL.primaryLight }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+              >
+                {/* Artwork + play button */}
+                <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}
+                  onClick={() => togglePreview(song.previewUrl)}>
+                  {song.artworkUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={song.artworkUrl} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: 48, height: 48, borderRadius: 8, background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🎵</div>
+                  )}
+                  <div style={{
+                    position: 'absolute', inset: 0, borderRadius: 8,
+                    background: 'rgba(0,0,0,0.5)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    opacity: playingUrl === song.previewUrl ? 1 : 0,
+                    transition: 'opacity 0.2s',
+                  }}>
+                    {playingUrl === song.previewUrl ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
+                    )}
+                  </div>
+                </div>
+
+                {/* Song info */}
+                <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => handleSelect(song)}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</p>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist} · {song.genre}</p>
+                </div>
+
+                {/* Select button */}
+                <button onClick={() => handleSelect(song)} style={{
+                  background: SOCIAL.primary, color: '#fff', border: 'none',
+                  borderRadius: 8, padding: '6px 14px', fontSize: '0.74rem',
+                  fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+                  transition: 'all 0.2s',
+                }}>
+                  Use
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* No results */}
+        {!loading && query.trim() && displaySongs.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 30, color: SOCIAL.muted }}>
+            <p style={{ fontSize: '0.85rem', margin: 0 }}>No songs found for &quot;{query}&quot;</p>
+            <p style={{ fontSize: '0.72rem', margin: '8px 0 0' }}>Try a different search term</p>
+          </div>
+        )}
+
+        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      </div>
+    </div>
+  )
+}
