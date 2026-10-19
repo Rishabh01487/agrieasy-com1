@@ -8,48 +8,114 @@ interface MusicStickerProps {
   audioArtist?: string
   autoPlay?: boolean       // auto-play when component mounts (for clips when active)
   isActive?: boolean       // whether this clip is currently in view (stops audio when false)
+  userInteracted?: boolean // whether the user has interacted with the page (gates autoplay on app open)
   compact?: boolean
 }
 
 /**
  * MusicSticker — Instagram-style music overlay for posts/clips/stories.
- * - Auto-plays when autoPlay=true (used on clips when the clip is active)
- * - Stops audio when isActive=false (previous clip scrolled away)
+ * - Auto-plays only when: autoPlay && isActive && userInteracted
+ *   (prevents music blasting the moment the app/page opens — needs a user gesture first)
+ * - Self-pauses via its own IntersectionObserver when scrolled out of view
+ *   (safety net so the previous clip's music never keeps playing on the feed)
  * - On feed posts: user taps play/pause button
  * - Scrolling marquee shows song name + artist
  */
-export default function MusicSticker({ audioUrl, audioTitle, audioArtist, autoPlay = false, isActive = true, compact = false }: MusicStickerProps) {
+export default function MusicSticker({
+  audioUrl,
+  audioTitle,
+  audioArtist,
+  autoPlay = false,
+  isActive = true,
+  userInteracted = true,
+  compact = false,
+}: MusicStickerProps) {
   const audioRef = useRef<HTMLAudioElement>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const [playing, setPlaying] = useState(false)
 
-  // Auto-play when active, stop when inactive
+  // Self-pause IntersectionObserver — if the sticker scrolls out of view,
+  // pause the audio IMMEDIATELY. This is a safety net on top of the isActive
+  // prop, so that even if the parent's activeIdx update has a timing gap,
+  // the previous clip's music can never keep playing.
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (!e.isIntersecting && audioRef.current) {
+            audioRef.current.pause()
+            setPlaying(false)
+          }
+        })
+      },
+      { threshold: 0.25 }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // Auto-play when active + user has interacted, stop otherwise.
+  // The userInteracted gate prevents music from auto-playing the moment
+  // the clips page loads — it only starts after the first tap/scroll.
   useEffect(() => {
     if (!audioRef.current) return
-    if (autoPlay && isActive) {
+    if (autoPlay && isActive && userInteracted) {
       audioRef.current.volume = 0.5
-      audioRef.current.play().then(() => setPlaying(true)).catch(() => {})
+      const p = audioRef.current.play()
+      if (p && typeof p.then === 'function') {
+        p.then(() => setPlaying(true)).catch(() => setPlaying(false))
+      }
     } else {
       audioRef.current.pause()
       setPlaying(false)
     }
-  }, [autoPlay, isActive, audioUrl])
+  }, [autoPlay, isActive, userInteracted, audioUrl])
 
-  // Cleanup on unmount
+  // Cleanup on unmount — always pause to release the audio element
   useEffect(() => {
-    return () => { if (audioRef.current) audioRef.current.pause() }
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+      }
+    }
+  }, [])
+
+  // Also pause when the document is hidden (user switched tabs / minimized)
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden && audioRef.current) {
+        audioRef.current.pause()
+        setPlaying(false)
+      }
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation()
     if (!audioRef.current) return
-    if (playing) { audioRef.current.pause(); setPlaying(false) }
-    else { audioRef.current.volume = 0.5; audioRef.current.play().then(() => setPlaying(true)).catch(() => {}) }
+    if (playing) {
+      audioRef.current.pause()
+      setPlaying(false)
+    } else {
+      audioRef.current.volume = 0.5
+      const p = audioRef.current.play()
+      if (p && typeof p.then === 'function') {
+        p.then(() => setPlaying(true)).catch(() => {})
+      } else {
+        setPlaying(true)
+      }
+    }
   }
 
   if (!audioUrl) return null
 
   return (
-    <div style={{
+    <div ref={wrapperRef} style={{
       display: 'inline-flex', alignItems: 'center', gap: 8,
       background: 'rgba(0, 0, 0, 0.55)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
       borderRadius: 100, padding: compact ? '4px 10px' : '6px 14px',

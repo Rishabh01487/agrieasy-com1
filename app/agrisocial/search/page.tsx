@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string }
 interface Hashtag { tag: string; count: number }
@@ -204,6 +205,9 @@ function AgriSocialSearchInner() {
                     </div>
                 )}
             </div>
+
+            {/* Instagram-style bottom nav */}
+            <AgriSocialBottomNav active="search" />
         </div>
     )
 }

@@ -29,7 +29,7 @@ function timeAgo(iso: string) {
     return `${Math.floor(s / 86400)}d`
 }
 
-function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId: string; isActive: boolean; onDelete?: (id: string) => void }) {
+function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip: Clip; viewerId: string; isActive: boolean; userInteracted: boolean; onDelete?: (id: string) => void }) {
     const [liked, setLiked] = useState(viewerId ? clip.likes?.includes(viewerId) : false)
     const [likesCount, setLikesCount] = useState(clip.likesCount || 0)
     const [saved, setSaved] = useState(viewerId ? clip.savedBy?.includes(viewerId) : false)
@@ -494,7 +494,7 @@ function ClipCard({ clip, viewerId, isActive, onDelete }: { clip: Clip; viewerId
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
                 {clip.audioUrl && (
                     <div style={{ marginTop: 8 }}>
-                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} autoPlay={isActive} isActive={isActive} compact />
+                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} autoPlay={isActive} isActive={isActive} userInteracted={userInteracted} compact />
                     </div>
                 )}
             </div>
@@ -575,6 +575,9 @@ export default function KrishiClips() {
     const pageRef = useRef(1)
     const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [activeIdx, setActiveIdx] = useState(0)
+    // userInteracted gates audio autoplay — music only starts after the
+    // user first taps/scrolls the clips feed, NOT the moment the page opens.
+    const [userInteracted, setUserInteracted] = useState(false)
     const [userId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [category, setCategory] = useState('all')
     const containerRef = useRef<HTMLDivElement>(null)
@@ -685,21 +688,66 @@ export default function KrishiClips() {
         return () => observer.disconnect()
     }, [hasMore, loadingMore, clips.length])
 
+    // Mark userInteracted=true on the first tap/scroll/keydown inside the
+    // clips feed. Until then, MusicSticker won't auto-play — so the music
+    // does NOT blast the moment the page opens, only after the user engages.
     useEffect(() => {
         const container = containerRef.current
         if (!container) return
+        const handler = () => setUserInteracted(true)
+        container.addEventListener('pointerdown', handler, { once: true, passive: true })
+        container.addEventListener('touchstart', handler, { once: true, passive: true })
+        container.addEventListener('scroll', handler, { once: true, passive: true })
+        container.addEventListener('wheel', handler, { once: true, passive: true })
+        container.addEventListener('keydown', handler, { once: true, passive: true })
+        return () => {
+            container.removeEventListener('pointerdown', handler)
+            container.removeEventListener('touchstart', handler)
+            container.removeEventListener('scroll', handler)
+            container.removeEventListener('wheel', handler)
+            container.removeEventListener('keydown', handler)
+        }
+    }, [])
+
+    // Track the MOST-VISIBLE clip and set it as active.
+    // The old single-threshold (0.6) observer had a timing gap: when clip A
+    // dropped below 60% and clip B hadn't yet reached 60%, activeIdx stayed
+    // on A — so A's music kept playing during the scroll. By tracking the
+    // highest intersection ratio across ALL clips with multiple thresholds,
+    // activeIdx always reflects the truly-most-visible clip, eliminating the
+    // gap where the previous clip's sound could keep playing.
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return
+        const ratios = new Map<number, number>()
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 const idx = parseInt((e.target as HTMLElement).dataset.idx || '0')
-                if (e.isIntersecting) {
-                    setActiveIdx(idx)
-                } else {
-                    // Explicitly pause clips that scroll out of view (Fix: Issue 2 — safety net)
-                    const video = e.target.querySelector('video')
-                    if (video && !video.paused) video.pause()
+                ratios.set(idx, e.intersectionRatio)
+            })
+            // Pick the most-visible clip
+            let bestIdx = -1
+            let bestRatio = 0
+            ratios.forEach((ratio, idx) => {
+                if (ratio > bestRatio) { bestRatio = ratio; bestIdx = idx }
+            })
+            if (bestIdx >= 0 && bestRatio >= 0.4) {
+                setActiveIdx(bestIdx)
+            }
+            // Force-pause videos on any clip that is NOT the most-visible one.
+            // Belt-and-suspenders safety net so audio from a previous clip
+            // can never bleed into the next one during a fast scroll.
+            ratios.forEach((ratio, idx) => {
+                if (idx !== bestIdx) {
+                    const el = container.querySelector(`.clip-item[data-idx="${idx}"]`) as HTMLElement | null
+                    const video = el?.querySelector('video')
+                    if (video && !video.paused) {
+                        video.pause()
+                        video.currentTime = 0
+                    }
                 }
             })
-        }, { root: container, threshold: 0.6 })
+        }, { root: container, threshold: [0, 0.1, 0.25, 0.4, 0.5, 0.75, 1] })
         container.querySelectorAll('.clip-item').forEach(el => observer.observe(el))
         return () => observer.disconnect()
     }, [clips])
@@ -746,7 +794,7 @@ export default function KrishiClips() {
                     </div>
                 ) : clips.map((clip, idx) => (
                     <div key={clip._id} className="clip-item" data-idx={idx.toString()}>
-                        <ClipCard clip={clip} viewerId={userId} isActive={idx === activeIdx} onDelete={(id) => setClips(cs => cs.filter(x => x._id !== id))} />
+                        <ClipCard clip={clip} viewerId={userId} isActive={idx === activeIdx} userInteracted={userInteracted} onDelete={(id) => setClips(cs => cs.filter(x => x._id !== id))} />
                     </div>
                 ))}
                 {/* Infinite scroll sentinel */}

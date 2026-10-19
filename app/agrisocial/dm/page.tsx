@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
 interface Conversation {
@@ -48,6 +49,94 @@ function timeAgo(iso: string) {
 
 function Avatar({ name, size = 44 }: { name: string; size?: number }) {
     return <div style={{ width: size, height: size, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: size * 0.4, flexShrink: 0 }}>{name?.[0]?.toUpperCase() || 'U'}</div>
+}
+
+/* ------------------------------------------------------------------ */
+/* Shared-post preview card — renders inside DM conversations          */
+/* Detects /agrisocial/post/{id} URLs in message text and shows the    */
+/* post's thumbnail + caption as a tappable card (Instagram Direct).   */
+/* ------------------------------------------------------------------ */
+interface SharedPostData {
+    _id: string
+    mediaUrl?: string
+    mediaType?: string
+    caption: string
+    userId?: { _id: string; farmerName?: string; firmName?: string; profilePic?: string } | string
+}
+
+// Module-level cache so we don't re-fetch the same shared post every render
+const sharedPostCache: Record<string, SharedPostData | null> = {}
+
+function SharedPostCard({ postId, isMine }: { postId: string; isMine: boolean }) {
+    const [post, setPost] = useState<SharedPostData | null | undefined>(sharedPostCache[postId] === undefined ? undefined : sharedPostCache[postId])
+
+    useEffect(() => {
+        if (sharedPostCache[postId] !== undefined) { setPost(sharedPostCache[postId]); return }
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await authFetch(`/api/social/posts/${postId}`)
+                if (cancelled || !res.ok) { sharedPostCache[postId] = null; setPost(null); return }
+                const d = await res.json()
+                const p = d.post || d.data?.post
+                sharedPostCache[postId] = p || null
+                setPost(p || null)
+            } catch {
+                sharedPostCache[postId] = null
+                setPost(null)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [postId])
+
+    if (post === undefined) {
+        return <div style={{ padding: '14px 18px', background: isMine ? 'rgba(255,255,255,0.15)' : SOCIAL.bgSub, borderRadius: 12, fontSize: '0.78rem', color: isMine ? '#fff' : SOCIAL.muted, textAlign: 'center' }}>Loading shared post…</div>
+    }
+    if (post === null) {
+        return (
+            <Link href={`/agrisocial/post/${postId}`} style={{ display: 'block', padding: '10px 14px', background: isMine ? 'rgba(255,255,255,0.15)' : SOCIAL.bgSub, borderRadius: 12, fontSize: '0.78rem', color: isMine ? '#fff' : SOCIAL.primary, textDecoration: 'none', fontWeight: 700 }}>
+                View shared post →
+            </Link>
+        )
+    }
+
+    const author = typeof post.userId === 'object' ? post.userId : null
+    const authorName = author?.farmerName || author?.firmName || 'User'
+    const isVideo = post.mediaType === 'video'
+    const isImage = post.mediaType === 'image' && post.mediaUrl
+
+    return (
+        <Link href={`/agrisocial/post/${postId}`} style={{ display: 'block', textDecoration: 'none', borderRadius: 12, overflow: 'hidden', border: `1px solid ${isMine ? 'rgba(255,255,255,0.25)' : SOCIAL.border}`, background: '#000', maxWidth: 260 }}>
+            {/* Media thumbnail */}
+            {post.mediaUrl && (isVideo || isImage) ? (
+                <div style={{ position: 'relative', background: '#000' }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={isVideo ? `${post.mediaUrl.replace(/\.[^.]+$/, '')}.jpg` : post.mediaUrl} alt="shared" style={{ width: '100%', maxHeight: 220, objectFit: 'cover', display: 'block' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    {isVideo && (
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
+                            </div>
+                        </div>
+                    )}
+                    <span style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '0.6rem', fontWeight: 700, padding: '2px 7px', borderRadius: 100 }}>{isVideo ? '🎬 Clip' : '📸 Post'}</span>
+                </div>
+            ) : (
+                <div style={{ background: isMine ? 'rgba(255,255,255,0.1)' : SOCIAL.bgSub, padding: '20px', textAlign: 'center', color: isMine ? '#fff' : SOCIAL.muted, fontSize: '1.4rem' }}>📝</div>
+            )}
+            {/* Caption + author */}
+            <div style={{ padding: '8px 12px', background: isMine ? 'rgba(255,255,255,0.12)' : SOCIAL.white }}>
+                <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 700, color: isMine ? '#fff' : SOCIAL.text, opacity: 0.9 }}>@{authorName.toLowerCase().replace(/[^a-z0-9]/g, '')}</p>
+                {post.caption && <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: isMine ? 'rgba(255,255,255,0.9)' : SOCIAL.text, lineHeight: 1.35, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{post.caption}</p>}
+            </div>
+        </Link>
+    )
+}
+
+// Detect /agrisocial/post/{id} or /agrisocial/stories/{id} URLs in a text
+function extractSharedPostId(text: string): string | null {
+    const m = text.match(/\/agrisocial\/post\/([a-f0-9]{24})/i)
+    return m ? m[1] : null
 }
 
 export default function AgriSocialDM() {
@@ -305,7 +394,17 @@ function AgriSocialDMInner() {
                                                     // eslint-disable-next-line @next/next/no-img-element
                                                     <img src={m.mediaUrl} alt="msg" style={{ width: '100%', borderRadius: 8, marginBottom: m.text ? 6 : 0 }} />
                                                 )}
-                                                {m.text && <p style={{ margin: 0, lineHeight: 1.4 }}>{m.text}</p>}
+                                                {(() => {
+                                                    // Detect a shared-post URL in the text and render it
+                                                    // as a rich preview card (Instagram Direct style) so
+                                                    // shared clips/posts are visible inline in the chat.
+                                                    if (!m.text) return null
+                                                    const sharedId = extractSharedPostId(m.text)
+                                                    if (sharedId) {
+                                                        return <SharedPostCard postId={sharedId} isMine={isMine} />
+                                                    }
+                                                    return <p style={{ margin: 0, lineHeight: 1.4 }}>{m.text}</p>
+                                                })()}
                                                 {/* Read receipt for my messages */}
                                                 {isMine && m.readBy && m.readBy.length > 1 && (
                                                     <span style={{ fontSize: '0.62rem', opacity: 0.7, marginTop: 2, display: 'block', textAlign: 'right' }}>Seen</span>
@@ -391,6 +490,9 @@ function AgriSocialDMInner() {
                     )}
                 </div>
             </div>
+
+            {/* Instagram-style bottom nav */}
+            <AgriSocialBottomNav active="send" />
         </div>
     )
 }

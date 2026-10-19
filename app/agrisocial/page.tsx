@@ -8,6 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
 import ShareSheet from './components/ShareSheet'
 import MusicSticker from './components/MusicSticker'
+import AgriSocialBottomNav from './components/AgriSocialBottomNav'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -240,7 +241,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             {post.audioUrl && (
                 <div style={{ position: 'relative' }}>
                     <div style={{ position: 'absolute', bottom: 8, left: 8, zIndex: 5 }}>
-                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} autoPlay compact />
+                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} autoPlay={false} compact />
                     </div>
                 </div>
             )}
@@ -634,7 +635,7 @@ export default function AgriSocialFeed() {
                     <span style={{ color: SOCIAL.muted, fontSize: '0.84rem' }}>Search AgriSocial</span>
                 </Link>
 
-                <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                <div className="hide-on-mobile" style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
                     <Link href="/" title="AgriEasy Home" style={{ width: '38px', height: '38px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}>
                         <Icon name="home" size={24} color={SOCIAL.text} />
                     </Link>
@@ -658,6 +659,14 @@ export default function AgriSocialFeed() {
                         <Icon name="plus" size={22} color="#fff" strokeWidth={2.5} />
                     </button>
                 </div>
+
+                {/* Mobile: keep only the Create button (the 5 main icons live in the bottom nav) */}
+                <button onClick={() => router.push('/agrisocial/create')}
+                    className="show-on-mobile-only"
+                    style={{ background: SOCIAL.gradient, border: 'none', borderRadius: '10px', padding: '0', width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                    title="Create">
+                    <Icon name="plus" size={22} color="#fff" strokeWidth={2.5} />
+                </button>
             </nav>
 
             <div className="agrisocial-layout" style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 14px 80px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '24px' }}>
@@ -777,22 +786,8 @@ export default function AgriSocialFeed() {
                 </div>
             </div>
 
-            {/* Bottom nav (mobile) */}
-            <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.95)', borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', justifyContent: 'space-around', padding: '8px 0', zIndex: 50, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                {([
-                    ['home', 'Feed', '/agrisocial'],
-                    ['reels', 'Reels', '/agrisocial/clips'],
-                    ['plus', 'Create', '/agrisocial/create'],
-                    ['search', 'Search', '/agrisocial/search'],
-                    ['heart-nav', 'Activity', '/agrisocial/notifications'],
-                    ['explore', 'Profile', userId ? `/agrisocial/profile/${userId}` : '/auth/login'],
-                ] as const).map(([iconName, label, href]) => (
-                    <Link key={label} href={href}
-                        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textDecoration: 'none', color: SOCIAL.muted, fontSize: '0.6rem', fontWeight: 700, gap: '2px', flex: 1 }}>
-                        <Icon name={iconName as any} size={24} color={SOCIAL.muted} />{label}
-                    </Link>
-                ))}
-            </div>
+            {/* Instagram-style bottom nav (mobile) */}
+            <AgriSocialBottomNav active="home" />
         </div>
     )
 }

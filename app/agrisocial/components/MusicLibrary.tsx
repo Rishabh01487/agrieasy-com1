@@ -28,6 +28,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const [results, setResults] = useState<Song[]>([])
   const [loading, setLoading] = useState(false)
   const [playingUrl, setPlayingUrl] = useState('')
+  const [error, setError] = useState('')  // visible error message so fetch failures aren't silent
   const audioRef = useRef<HTMLAudioElement>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const [trending, setTrending] = useState<Song[]>([])
@@ -40,12 +41,16 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const searchMusic = async (searchQuery: string, isTrending = false) => {
     if (!searchQuery.trim()) return
     setLoading(true)
+    setError('')
     if (!isTrending) setResults([])
     try {
-      const res = await fetch(
-        `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=50&country=in`,
-        { headers: { 'Accept': 'application/json' } }
-      )
+      // iTunes Search API is CORS-friendly, so we call it directly.
+      // (A CSP rule in middleware.ts explicitly allows itunes.apple.com
+      // in connect-src / media-src / img-src — without that rule the
+      // browser blocks the fetch and songs never appear.)
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=50&country=in`
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       const songs: Song[] = (data.results || []).map((r: any) => ({
         title: r.trackName || 'Unknown',
@@ -60,8 +65,19 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
       } else {
         setResults(songs)
       }
-    } catch (e) {
+      // Surface a helpful message if the API returned 0 songs (rare but possible
+      // for very obscure queries) — distinguishes "no results" from "fetch failed".
+      if (songs.length === 0 && !isTrending) {
+        setError(`No songs found for "${searchQuery}". Try a different spelling or artist name.`)
+      }
+    } catch (e: any) {
       console.error('Music search failed:', e)
+      // Show a visible, actionable error so the user knows the fetch failed
+      // (otherwise the sheet just stays empty and looks broken).
+      setError(
+        'Could not reach the music catalog. This is usually a network or ' +
+        'content-policy block. Tap Retry, or check your connection.'
+      )
     } finally {
       setLoading(false)
     }
@@ -171,6 +187,20 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           <div style={{ textAlign: 'center', padding: 30, color: SOCIAL.muted, fontSize: '0.85rem' }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2.5px solid ${SOCIAL.borderLight}`, borderTopColor: SOCIAL.primary, animation: 'spin 0.7s linear infinite', margin: '0 auto 10px' }} />
             Searching...
+          </div>
+        )}
+
+        {/* Error state — visible so fetch failures aren't silent */}
+        {!loading && error && (
+          <div style={{ textAlign: 'center', padding: 24, color: SOCIAL.text, background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 12, marginBottom: 12 }}>
+            <div style={{ fontSize: '1.6rem', marginBottom: 8 }}>🎵⚠️</div>
+            <p style={{ fontSize: '0.84rem', margin: '0 0 12px', lineHeight: 1.5 }}>{error}</p>
+            <button
+              onClick={() => searchMusic(query.trim() || 'top bollywood songs 2024', !query.trim())}
+              style={{ background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}
+            >
+              Retry
+            </button>
           </div>
         )}
 

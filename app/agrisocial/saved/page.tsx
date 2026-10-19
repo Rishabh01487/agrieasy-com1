@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
+import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
 interface Post { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; type: string }
@@ -144,6 +145,9 @@ export default function AgriSocialSaved() {
                     </div>
                 )}
             </div>
+
+            {/* Instagram-style bottom nav */}
+            <AgriSocialBottomNav active="profile" />
         </div>
     )
 }

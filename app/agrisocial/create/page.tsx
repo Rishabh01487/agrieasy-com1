@@ -395,7 +395,16 @@ function CreateContent() {
                     {mode === 'choose' ? (postType === 'story' ? 'New Story' : postType === 'krishiclip' ? 'New KrishiClip' : 'New Post') : mode === 'camera' ? (isRecording ? '🔴 Recording' : '📷 Camera') : mode === 'preview' ? '✨ Filters' : '📝 Details'}
                 </span>
                 {mode === 'preview' && <button onClick={() => setMode('details')} style={{ background: SOCIAL.primary, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s ease' }}>Next →</button>}
-                {mode === 'details' && <button onClick={handlePost} disabled={submitting} style={{ background: SOCIAL.green, border: 'none', borderRadius: '8px', padding: '8px 16px', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>{submitting ? 'Posting…' : '✓ Share'}</button>}
+                {mode === 'details' && (
+                    <button onClick={handlePost} disabled={submitting} title="Share" aria-label="Share"
+                        style={{ background: SOCIAL.green, border: 'none', borderRadius: '50%', width: 38, height: 38, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease', padding: 0, flexShrink: 0 }}>
+                        {submitting ? (
+                            <div style={{ width: 16, height: 16, borderRadius: '50%', border: '2px solid rgba(255,255,255,0.4)', borderTopColor: '#fff', animation: 'spin 0.7s linear infinite' }} />
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>
+                        )}
+                    </button>
+                )}
             </nav>
 
             {/* ── CHOOSE MODE ── */}
@@ -592,35 +601,44 @@ function CreateContent() {
 
             {/* ── DETAILS MODE ── */}
             {mode === 'details' && (
-                <div style={{ maxWidth: '560px', margin: '0 auto', padding: '20px 16px 60px' }}>
-                    {/* Preview thumbnail */}
+                <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 16px 60px' }}>
+                    {/* Preview thumbnail — BIG full-width hero (like IG create) */}
                     {mediaFile && (
-                        <div style={{ borderRadius: '14px', overflow: 'hidden', marginBottom: '16px', maxHeight: '260px', background: '#000', display: 'flex' }}>
+                        <div style={{
+                            borderRadius: '18px', overflow: 'hidden', marginBottom: '14px',
+                            background: '#000',
+                            width: '100%',
+                            aspectRatio: mediaFile.type === 'image' ? '4 / 5' : '9 / 16',
+                            maxHeight: '70vh',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            boxShadow: '0 8px 28px rgba(49,55,43,0.18)',
+                            position: 'relative',
+                        }}>
                             {mediaFile.type === 'image' ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={mediaFile.url} alt="preview" style={{ width: '100%', objectFit: 'cover', maxHeight: '260px', ...getFilterStyle() }} />
+                                <img src={mediaFile.url} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover', ...getFilterStyle() }} />
                             ) : (
-                                <video src={mediaFile.url} style={{ width: '100%', maxHeight: '260px', objectFit: 'cover', ...getFilterStyle() }} muted />
+                                <video src={mediaFile.url} style={{ width: '100%', height: '100%', objectFit: 'cover', ...getFilterStyle() }} muted autoPlay loop playsInline />
                             )}
                         </div>
                     )}
 
-                    <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: SHARED.shadowMd }}>
-                        {/* Caption */}
+                    <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: SHARED.shadowMd }}>
+                        {/* Caption — COMPACT (2 short rows, smaller padding) */}
                         <div>
-                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caption</label>
-                            <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder={postType === 'krishiclip' ? 'Tell people about this KrishiClip… #farming' : 'What\'s happening on your farm today? #farming'} rows={3}
-                                style={{ ...inp, resize: 'vertical', lineHeight: 1.5 } as React.CSSProperties} />
-                            <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: '3px 0 0', textAlign: 'right' }}>{caption.length}/2200</p>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caption</label>
+                            <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder={postType === 'krishiclip' ? 'About this KrishiClip… #farming' : 'What\'s on your farm? #farming'} rows={2}
+                                style={{ ...inp, padding: '9px 12px', resize: 'none', lineHeight: 1.4, fontSize: '0.85rem', minHeight: 'auto' } as React.CSSProperties} />
+                            <p style={{ color: SOCIAL.muted, fontSize: '0.66rem', margin: '3px 0 0', textAlign: 'right' }}>{caption.length}/2200</p>
                         </div>
 
                         {/* Category */}
                         <div>
-                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</label>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Category</label>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                 {CATEGORIES.map(c => (
                                     <button key={c} onClick={() => setCategory(c)}
-                                        style={{ padding: '5px 12px', borderRadius: '100px', border: `1.5px solid ${category === c ? SOCIAL.primary : SOCIAL.border}`, cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: category === c ? SOCIAL.primary : SOCIAL.white, color: category === c ? '#fff' : SOCIAL.muted, transition: 'all 0.2s ease' }}>
+                                        style={{ padding: '5px 12px', borderRadius: '100px', border: `1.5px solid ${category === c ? SOCIAL.primary : SOCIAL.border}`, cursor: 'pointer', fontSize: '0.73rem', fontWeight: 700, background: category === c ? SOCIAL.primary : SOCIAL.white, color: category === c ? '#fff' : SOCIAL.muted, transition: 'all 0.2s ease' }}>
                                         {c}
                                     </button>
                                 ))}
@@ -629,15 +647,15 @@ function CreateContent() {
 
                         {/* Location */}
                         <div>
-                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Location (optional)</label>
-                            <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g., Nashik, Maharashtra" style={inp} />
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>📍 Location (optional)</label>
+                            <input type="text" value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g., Nashik, Maharashtra" style={{ ...inp, padding: '9px 12px', fontSize: '0.85rem' } as React.CSSProperties} />
                         </div>
 
                         {/* Allow Download toggle */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: SOCIAL.bgSub, borderRadius: 10, border: `1px solid ${SOCIAL.border}` }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: SOCIAL.bgSub, borderRadius: 10, border: `1px solid ${SOCIAL.border}` }}>
                             <div>
-                                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text }}>Allow Download</p>
-                                <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>Let viewers download your {postType === 'krishiclip' ? 'clip' : 'post'}</p>
+                                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text }}>Allow Download</p>
+                                <p style={{ margin: '2px 0 0', fontSize: '0.7rem', color: SOCIAL.muted }}>Let viewers download your {postType === 'krishiclip' ? 'clip' : 'post'}</p>
                             </div>
                             <button
                                 type="button"
@@ -656,17 +674,53 @@ function CreateContent() {
                             </button>
                         </div>
 
-                        {/* Add Music — in-app library + device upload */}
+                        {/* Add Music — Mithila-painting-inspired "now playing" card */}
                         <div>
-                            <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎵 Add Music (optional)</label>
+                            <label style={{ color: SOCIAL.muted, fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎵 Add Music (optional)</label>
                             {audioUrl ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: SOCIAL.primaryLight, borderRadius: 12, padding: '12px 14px', border: `1px solid ${SOCIAL.border}` }}>
-                                    <span style={{ fontSize: '1.3rem' }}>🎵</span>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioTitle || 'Unknown track'}</p>
-                                        {audioArtist && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>{audioArtist}</p>}
+                                <div style={{
+                                    position: 'relative',
+                                    borderRadius: 14,
+                                    overflow: 'hidden',
+                                    border: '2px solid #C8403A',
+                                    background: '#FFF8F0',
+                                    boxShadow: '0 4px 14px rgba(200,64,58,0.15)',
+                                }}>
+                                    {/* Mithila-inspired double-line border motif (top) */}
+                                    <div style={{ height: 6, background: 'repeating-linear-gradient(90deg, #C8403A 0 8px, #F4B942 8px 14px, #2E6E4A 14px 20px, #1F4A6E 20px 26px)', opacity: 0.9 }} />
+                                    <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
+                                        {/* Mithila-style sun/lotus motif disc (SVG, hand-drawn feel) */}
+                                        <svg width="46" height="46" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
+                                            <circle cx="24" cy="24" r="22" fill="#FFF1D6" stroke="#C8403A" strokeWidth="1.5" />
+                                            {/* 8 petal rays around the disc (sun motif — common in Mithila art) */}
+                                            {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+                                                <path key={deg} d="M24 4 L26 12 L22 12 Z" fill="#F4B942" stroke="#C8403A" strokeWidth="0.8" transform={`rotate(${deg} 24 24)`} />
+                                            ))}
+                                            {/* Concentric rings — fish-eye / kohbar motif */}
+                                            <circle cx="24" cy="24" r="13" fill="none" stroke="#C8403A" strokeWidth="1" strokeDasharray="2 2" />
+                                            <circle cx="24" cy="24" r="8" fill="#2E6E4A" stroke="#C8403A" strokeWidth="1" />
+                                            {/* Center music note (the "soul" of the motif) */}
+                                            <path d="M24 19 v6" stroke="#FFF1D6" strokeWidth="1.6" strokeLinecap="round" />
+                                            <ellipse cx="22.4" cy="25.5" rx="2" ry="1.5" fill="#FFF1D6" />
+                                            <path d="M24 19 l3.6 -1.2 v1.8" stroke="#FFF1D6" strokeWidth="1.4" fill="none" strokeLinejoin="round" strokeLinecap="round" />
+                                        </svg>
+                                        {/* Song info */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: '#5A1A18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioTitle || 'Unknown track'}</p>
+                                            {audioArtist && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: '#9A4A48', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioArtist}</p>}
+                                            {/* Animated equalizer bars — signals "music is attached" */}
+                                            <div style={{ display: 'flex', gap: 2, marginTop: 5, alignItems: 'flex-end', height: 10 }}>
+                                                {[3, 7, 5, 8, 4, 6].map((h, i) => (
+                                                    <span key={i} style={{ width: 2.5, height: h, background: '#C8403A', borderRadius: 1, display: 'inline-block', animation: `mithilaEq 0.9s ease-in-out ${i * 0.12}s infinite alternate` }} />
+                                                ))}
+                                            </div>
+                                        </div>
+                                        {/* Remove button */}
+                                        <button onClick={() => { setAudioUrl(''); setAudioTitle(''); setAudioArtist('') }} title="Remove"
+                                            style={{ background: 'rgba(200,64,58,0.12)', border: '1px solid rgba(200,64,58,0.3)', color: '#C8403A', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, fontSize: '0.9rem', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>✕</button>
                                     </div>
-                                    <button onClick={() => { setAudioUrl(''); setAudioTitle(''); setAudioArtist('') }} style={{ background: 'none', border: 'none', color: SOCIAL.red, cursor: 'pointer', fontSize: '1.1rem', padding: 4, flexShrink: 0 }}>✕</button>
+                                    {/* Mithila-inspired double-line border motif (bottom) */}
+                                    <div style={{ height: 6, background: 'repeating-linear-gradient(90deg, #1F4A6E 0 8px, #2E6E4A 8px 14px, #F4B942 14px 20px, #C8403A 20px 26px)', opacity: 0.9 }} />
                                 </div>
                             ) : (
                                 <div style={{ display: 'flex', gap: 8 }}>
@@ -698,9 +752,10 @@ function CreateContent() {
 
                         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
 
+                        {/* Primary share button — clean, no emoji, no "AI-looking" styling */}
                         <button onClick={handlePost} disabled={submitting}
-                            style={{ width: '100%', padding: '14px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease' }}>
-                            {submitting ? '⏳ Sharing…' : postType === 'krishiclip' ? '🎬 Share KrishiClip' : postType === 'story' ? '✨ Share Story' : '📢 Share Post'}
+                            style={{ width: '100%', padding: '13px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease', letterSpacing: '0.02em' }}>
+                            {submitting ? 'Sharing…' : postType === 'krishiclip' ? 'Share KrishiClip' : postType === 'story' ? 'Share Story' : 'Share Post'}
                         </button>
                     </div>
 
@@ -715,6 +770,7 @@ function CreateContent() {
         input[type=range] { height: 4px; border-radius: 2px; }
         textarea:focus, input[type=text]:focus { border-color: ${SOCIAL.primary} !important; }
         ::-webkit-scrollbar { display: none; }
+        @keyframes mithilaEq { from { transform: scaleY(0.4); } to { transform: scaleY(1); } }
       `}</style>
         </div>
     )

@@ -9,6 +9,7 @@ import { useIsMobile } from '@/lib/use-is-mobile'
 import { Icon } from '@/lib/icons'
 import { LoadingScreen, InlineLoader } from '@/app/components/Spinner'
 import { AGRIVERSE_AVATARS, detectAgriVerseAvatar } from '@/lib/agriverse'
+import AgriSocialBottomNav from '../../components/AgriSocialBottomNav'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
 interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number }
@@ -679,6 +680,9 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     </div>
                 </div>
             )}
+
+            {/* Instagram-style bottom nav */}
+            <AgriSocialBottomNav active="profile" />
         </div>
     )
 }

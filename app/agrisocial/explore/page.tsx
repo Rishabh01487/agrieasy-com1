@@ -7,6 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Spinner } from '@/app/components/Spinner'
 import { useIsMobile } from '@/lib/use-is-mobile'
+import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
 const CATEGORIES = [
     { key: 'all', label: 'All', icon: '🌐' }, { key: 'farming', label: 'Farming', icon: '🌾' },
@@ -174,6 +175,9 @@ function AgriSocialExploreInner() {
                     </>
                 )}
             </div>
+
+            {/* Instagram-style bottom nav */}
+            <AgriSocialBottomNav active="home" />
         </div>
     )
 }

@@ -6,6 +6,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { Spinner } from '@/app/components/Spinner'
 import { Icon, type IconName } from '@/lib/icons'
+import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
 interface Post { _id: string; mediaUrl?: string; mediaType?: string; caption?: string }
@@ -220,6 +221,9 @@ export default function AgriSocialNotifications() {
                     ))
                 )}
             </div>
+
+            {/* Instagram-style bottom nav */}
+            <AgriSocialBottomNav active="home" />
         </div>
     )
 }
