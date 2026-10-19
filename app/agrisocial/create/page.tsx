@@ -122,6 +122,12 @@ function CreateContent() {
         canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d')
         if (!ctx) return
+        // Front camera: un-mirror the captured photo (the live preview is
+        // mirrored for natural UX, but the saved photo should NOT be mirrored)
+        if (facingMode === 'user') {
+            ctx.translate(w, 0)
+            ctx.scale(-1, 1)
+        }
         ctx.filter = buildFilterString()
         ctx.drawImage(videoRef.current, 0, 0, w, h)
         canvas.toBlob(blob => {
@@ -410,7 +416,7 @@ function CreateContent() {
             {/* ── CAMERA MODE ── */}
             {mode === 'camera' && (
                 <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString() }} />
+                    <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }} />
 
                     {/* Recording timer */}
                     {isRecording && (
@@ -449,9 +455,14 @@ function CreateContent() {
                             </button>
                         )}
                         <button onClick={flipCamera}
-                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease' }}
+                            style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', padding: 0 }}
                             title="Flip camera">
-                            🔄
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 7v6h6" />
+                                <path d="M21 17v-6h-6" />
+                                <path d="M3 13a9 9 0 0 0 15 6.7L21 13" />
+                                <path d="M21 11A9 9 0 0 0 6 4.3L3 11" />
+                            </svg>
                         </button>
                     </div>
                     <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
