@@ -48,6 +48,7 @@ function CreateContent() {
     const [brightness, setBrightness] = useState(100)
     const [contrast, setContrast] = useState(100)
     const [saturation, setSaturation] = useState(100)
+    const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment')
     const [rotation, setRotation] = useState(0)
 
     const videoRef = useRef<HTMLVideoElement>(null)
@@ -76,7 +77,7 @@ function CreateContent() {
         setMode('camera')
         await new Promise(r => setTimeout(r, 100))
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: postType === 'krishiclip' })
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: postType === 'krishiclip' })
             streamRef.current = stream
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
         } catch (e) {
@@ -84,6 +85,31 @@ function CreateContent() {
             stopCamera()
             setMode('choose')
             setCamError('Camera access denied. Please allow camera permission in your browser settings, or use "Upload from Gallery" instead.')
+        }
+    }
+
+    const flipCamera = async () => {
+        const newFacing = facingMode === 'user' ? 'environment' : 'user'
+        setFacingMode(newFacing)
+        stopCamera()
+        await new Promise(r => setTimeout(r, 200))
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: newFacing } }, audio: postType === 'krishiclip' })
+            streamRef.current = stream
+            if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
+        } catch (e) {
+            console.error('Flip camera failed:', e)
+            // Try the other facing mode as fallback
+            try {
+                const fallback = newFacing === 'user' ? 'environment' : 'user'
+                const stream2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: fallback } }, audio: postType === 'krishiclip' })
+                streamRef.current = stream2
+                setFacingMode(fallback)
+                if (videoRef.current) { videoRef.current.srcObject = stream2; videoRef.current.play() }
+            } catch {
+                setCamError('Could not switch camera. Your device may not support front camera.')
+                startCamera()
+            }
         }
     }
 
@@ -422,7 +448,11 @@ function CreateContent() {
                                 {isRecording ? <span style={{ display: 'block', width: '22px', height: '22px', borderRadius: '4px', background: '#fff' }} /> : null}
                             </button>
                         )}
-                        <div style={{ width: '44px', height: '44px' }} />
+                        <button onClick={flipCamera}
+                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease' }}
+                            title="Flip camera">
+                            🔄
+                        </button>
                     </div>
                     <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
                     <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
