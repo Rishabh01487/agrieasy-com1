@@ -356,7 +356,7 @@ function AgriSocialDMInner() {
                             {/* Chat header */}
                             <div style={{ padding: '12px 16px', background: SOCIAL.white, borderBottom: `1px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
                                 {(() => {
-                                    const other = active.participants.find((p: any) => p._id.toString() !== viewerId) || active.participants[0]
+                                    const other = active.participants.find((p: any) => (p?._id?.toString?.() || '') !== viewerId) || active.participants[0]
                                     const name = other?.farmerName || other?.firmName || 'User'
                                     return (
                                         <>
@@ -398,11 +398,15 @@ function AgriSocialDMInner() {
                                                     // Detect a shared-post URL in the text and render it
                                                     // as a rich preview card (Instagram Direct style) so
                                                     // shared clips/posts are visible inline in the chat.
+                                                    // Wrapped in try/catch so a bad API response can NEVER
+                                                    // crash the whole DM page.
                                                     if (!m.text) return null
-                                                    const sharedId = extractSharedPostId(m.text)
-                                                    if (sharedId) {
-                                                        return <SharedPostCard postId={sharedId} isMine={isMine} />
-                                                    }
+                                                    try {
+                                                        const sharedId = extractSharedPostId(m.text)
+                                                        if (sharedId) {
+                                                            return <SharedPostCard postId={sharedId} isMine={isMine} />
+                                                        }
+                                                    } catch { /* silent — fall through to plain text */ }
                                                     return <p style={{ margin: 0, lineHeight: 1.4 }}>{m.text}</p>
                                                 })()}
                                                 {/* Read receipt for my messages */}

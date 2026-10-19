@@ -557,7 +557,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
             <ShareSheet
                 isOpen={showShareSheet}
                 onClose={() => setShowShareSheet(false)}
-                postUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/agrisocial/clips`}
+                postUrl={`${typeof window !== 'undefined' ? window.location.origin : ''}/agrisocial/post/${clip._id}`}
                 postCaption={clip.caption}
                 mediaUrl={clip.mediaUrl}
                 mediaType={clip.mediaType}

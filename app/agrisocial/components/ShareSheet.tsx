@@ -139,10 +139,32 @@ async function fetchMediaAsFile(mediaUrl: string, fallbackName = 'krishiclip'): 
 
 function canShareFiles(files: File[]): boolean {
   if (typeof navigator === 'undefined') return false
-  if (typeof (navigator as any).canShare !== 'function') return false
+  // Don't rely on navigator.canShare() — it returns false on some Android
+  // browsers even when file sharing actually works. Instead, just check that
+  // the navigator.share function exists. We'll try the share directly and
+  // catch any error.
+  return typeof (navigator as any).share === 'function'
+}
+
+// Try to share a file via the native OS share sheet. Returns true if the
+// share was attempted (whether it succeeded or the user cancelled), false
+// if file sharing isn't available at all.
+async function tryFileShare(file: File, text: string, title: string): Promise<boolean> {
+  if (typeof navigator === 'undefined' || typeof (navigator as any).share !== 'function') {
+    return false
+  }
   try {
-    return (navigator as any).canShare({ files })
-  } catch {
+    await (navigator as any).share({
+      files: [file],
+      title,
+      text,
+    })
+    return true  // share succeeded (or user cancelled — both are "done")
+  } catch (err: any) {
+    // AbortError = user cancelled the share sheet — not a real error
+    if (err?.name === 'AbortError') return true
+    // Any other error = file sharing genuinely failed (e.g. browser doesn't
+    // support files, or the file type is rejected)
     return false
   }
 }
@@ -288,28 +310,24 @@ export default function ShareSheet({
       setSharing(true)
       try {
         const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
-        if (file && canShareFiles([file])) {
-          // Mobile: open OS share sheet with the video file attached.
-          // User picks WhatsApp → WhatsApp receives the playable video.
-          await (navigator as any).share({
-            files: [file],
-            title: 'KrishiClip',
-            text: shareText,
-          })
-          setSharing(false)
-          return
+        if (file) {
+          // Try the native OS share sheet directly — don't pre-check with
+          // canShare (it returns false on some Android browsers even when
+          // file sharing works). tryFileShare catches AbortError (user
+          // cancelled) vs real failures.
+          const shared = await tryFileShare(file, shareText, 'KrishiClip')
+          if (shared) {
+            setSharing(false)
+            return  // OS share sheet opened (user picked WhatsApp or cancelled)
+          }
         }
         // File share not supported (desktop) — download the video first,
         // THEN open WhatsApp Web with the link. The user attaches the
         // downloaded video manually in WhatsApp.
-        if (mobile) {
-          showToast('Download starting — attach the video in WhatsApp')
-        } else {
-          showToast('Video downloading — attach it manually in WhatsApp Web')
-        }
+        showToast('Video downloading — attach it manually in WhatsApp')
         await downloadMediaToDevice(mediaUrl!)
       } catch {
-        // user cancelled the share sheet — silent
+        // silent
       } finally {
         setSharing(false)
       }
@@ -328,22 +346,17 @@ export default function ShareSheet({
       setSharing(true)
       try {
         const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
-        if (file && canShareFiles([file])) {
-          // Mobile: open OS share sheet — user picks Instagram.
-          // Instagram's mobile app accepts video files via the share sheet.
-          await (navigator as any).share({
-            files: [file],
-            title: 'KrishiClip',
-            text: shareText,
-          })
-          setSharing(false)
-          return
+        if (file) {
+          // Try the native OS share sheet directly (mobile).
+          const shared = await tryFileShare(file, shareText, 'KrishiClip')
+          if (shared) {
+            setSharing(false)
+            return  // OS share sheet opened (user picked Instagram or cancelled)
+          }
         }
         // Desktop / unsupported: download the video, then open Instagram.
-        // The user manually creates a post/story with the downloaded video.
         showToast('Video downloading — post it manually on Instagram')
         await downloadMediaToDevice(mediaUrl!)
-        // Try the Instagram app deep link (mobile), fall back to web
         if (mobile) {
           window.location.href = 'instagram://library'
           setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 500)
@@ -371,14 +384,12 @@ export default function ShareSheet({
       setSharing(true)
       try {
         const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
-        if (file && canShareFiles([file])) {
-          await (navigator as any).share({
-            files: [file],
-            title: 'KrishiClip',
-            text: `${shareText} ${postUrl}`,
-          })
-          setSharing(false)
-          return
+        if (file) {
+          const shared = await tryFileShare(file, `${shareText} ${postUrl}`, 'KrishiClip')
+          if (shared) {
+            setSharing(false)
+            return
+          }
         }
       } catch {
         // silent
