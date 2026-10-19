@@ -45,6 +45,20 @@ function CreateContent() {
     const [audioArtist, setAudioArtist] = useState('')
     const [audioUploading, setAudioUploading] = useState(false)
     const audioInputRef = useRef<HTMLInputElement>(null)
+    const [showMusicLibrary, setShowMusicLibrary] = useState(false)
+    const [musicSearch, setMusicSearch] = useState('')
+
+    // ── Built-in music library (royalty-free tracks hosted on Cloudinary) ──
+    // Users can pick from these OR upload their own from device
+    const MUSIC_LIBRARY = [
+        { title: 'Kisan Geet', artist: 'Folk Mix', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/kisan-geet.mp3' },
+        { title: 'Harvest Beat', artist: 'AgriBeats', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/harvest-beat.mp3' },
+        { title: 'Rural Rhythm', artist: 'Desi LoFi', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/rural-rhythm.mp3' },
+        { title: 'Mandi Vibes', artist: 'AgriBeats', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/mandi-vibes.mp3' },
+        { title: 'Tractor Groove', artist: 'Folk Mix', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/tractor-groove.mp3' },
+        { title: 'Field Ambient', artist: 'Nature Sounds', url: 'https://res.cloudinary.com/dbtebwhi9/video/upload/v1710000000/agrieasy/music/field-ambient.mp3' },
+    ]
+
     const [submitting, setSubmitting] = useState(false)
     const [error, setError] = useState('')
     const [camError, setCamError] = useState('')
@@ -477,24 +491,24 @@ function CreateContent() {
                     </div>
 
                     {/* Capture controls */}
-                    <div style={{ position: 'absolute', bottom: '20px', left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px' }}>
+                    <div style={{ position: 'absolute', bottom: '24px', left: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '28px', padding: '0 20px' }}>
                         <button onClick={() => fileInputRef.current?.click()}
-                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease' }}>
+                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', border: '2px solid rgba(255,255,255,0.6)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', transition: 'all 0.2s ease', flexShrink: 0 }}>
                             🖼️
                         </button>
                         {postType === 'post' ? (
                             <button onClick={capturePhoto}
-                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.4)', cursor: 'pointer', boxShadow: `0 0 0 3px ${SOCIAL.primary}b3`, transition: 'all 0.2s ease' }} />
+                                style={{ width: '68px', height: '68px', borderRadius: '50%', background: '#fff', border: '4px solid rgba(255,255,255,0.4)', cursor: 'pointer', boxShadow: `0 0 0 3px ${SOCIAL.primary}b3`, transition: 'all 0.2s ease', flexShrink: 0 }} />
                         ) : (
                             <button onClick={isRecording ? stopRecording : startRecording}
-                                style={{ width: '72px', height: '72px', borderRadius: '50%', background: isRecording ? SOCIAL.red : '#fff', border: `4px solid ${isRecording ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.4)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px ${isRecording ? 'rgba(239,68,68,0.7)' : SOCIAL.primary + 'b3'}`, transition: 'all 0.2s ease' }}>
+                                style={{ width: '68px', height: '68px', borderRadius: '50%', background: isRecording ? SOCIAL.red : '#fff', border: `4px solid ${isRecording ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.4)'}`, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 3px ${isRecording ? 'rgba(239,68,68,0.7)' : SOCIAL.primary + 'b3'}`, transition: 'all 0.2s ease', flexShrink: 0 }}>
                                 {isRecording ? <span style={{ display: 'block', width: '22px', height: '22px', borderRadius: '4px', background: '#fff' }} /> : null}
                             </button>
                         )}
                         <button onClick={flipCamera}
-                            style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', padding: 0 }}
+                            style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', padding: 0, flexShrink: 0 }}
                             title="Flip camera">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M3 7v6h6" />
                                 <path d="M21 17v-6h-6" />
                                 <path d="M3 13a9 9 0 0 0 15 6.7L21 13" />
@@ -652,7 +666,7 @@ function CreateContent() {
                             </button>
                         </div>
 
-                        {/* Add Music */}
+                        {/* Add Music — in-app library + device upload */}
                         <div>
                             <label style={{ color: SOCIAL.muted, fontSize: '0.72rem', fontWeight: 700, display: 'block', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🎵 Add Music (optional)</label>
                             {audioUrl ? (
@@ -662,18 +676,47 @@ function CreateContent() {
                                         <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioTitle || 'Unknown track'}</p>
                                         {audioArtist && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>{audioArtist}</p>}
                                     </div>
-                                    <input value={audioTitle} onChange={e => setAudioTitle(e.target.value)} placeholder="Song name" style={{ width: 100, padding: '4px 8px', border: `1px solid ${SOCIAL.border}`, borderRadius: 6, fontSize: '0.78rem', color: SOCIAL.text, outline: 'none', fontFamily: SHARED.font }} />
-                                    <button onClick={() => { setAudioUrl(''); setAudioTitle(''); setAudioArtist('') }} style={{ background: 'none', border: 'none', color: SOCIAL.red, cursor: 'pointer', fontSize: '1.1rem', padding: 4 }}>✕</button>
+                                    <button onClick={() => { setAudioUrl(''); setAudioTitle(''); setAudioArtist('') }} style={{ background: 'none', border: 'none', color: SOCIAL.red, cursor: 'pointer', fontSize: '1.1rem', padding: 4, flexShrink: 0 }}>✕</button>
                                 </div>
                             ) : (
-                                <button onClick={() => audioInputRef.current?.click()} disabled={audioUploading}
-                                    style={{ width: '100%', padding: '14px', background: SOCIAL.white, border: `1.5px dashed ${SOCIAL.border}`, borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: SOCIAL.muted, fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s' }}>
-                                    {audioUploading ? '⏳ Uploading…' : '🎵 Add a song from your device'}
-                                </button>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button onClick={() => setShowMusicLibrary(true)}
+                                        style={{ flex: 1, padding: '12px', background: SOCIAL.primary, border: 'none', borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#fff', fontSize: '0.82rem', fontWeight: 700, transition: 'all 0.2s' }}>
+                                        🎵 Browse Music
+                                    </button>
+                                    <button onClick={() => audioInputRef.current?.click()} disabled={audioUploading}
+                                        style={{ padding: '12px 16px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, color: SOCIAL.muted, fontSize: '0.82rem', fontWeight: 600, transition: 'all 0.2s', flexShrink: 0 }}>
+                                        {audioUploading ? '⏳' : '📤'}
+                                    </button>
+                                </div>
                             )}
                             <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" style={{ display: 'none' }} onChange={handleAudioUpload} />
-                            <p style={{ margin: '6px 0 0', fontSize: '0.68rem', color: SOCIAL.muted }}>MP3, M4A, WAV up to 15MB</p>
                         </div>
+
+                        {/* Music Library Modal */}
+                        {showMusicLibrary && (
+                            <div onClick={() => setShowMusicLibrary(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                                <div onClick={e => e.stopPropagation()} style={{ background: SOCIAL.white, borderRadius: '20px 20px 0 0', padding: '20px', width: '100%', maxWidth: '500px', maxHeight: '70vh', overflowY: 'auto', boxShadow: SHARED.shadowXl }}>
+                                    <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0E0E0', margin: '0 auto 16px' }} />
+                                    <h3 style={{ margin: '0 0 12px', color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
+                                    <input value={musicSearch} onChange={e => setMusicSearch(e.target.value)} placeholder="Search songs..." style={{ width: '100%', padding: '10px 14px', border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontSize: '0.88rem', color: SOCIAL.text, outline: 'none', boxSizing: 'border-box', fontFamily: SHARED.font, marginBottom: 12 }} />
+                                    {MUSIC_LIBRARY.filter(s => s.title.toLowerCase().includes(musicSearch.toLowerCase()) || s.artist.toLowerCase().includes(musicSearch.toLowerCase())).map((song, i) => (
+                                        <button key={i} onClick={() => { setAudioUrl(song.url); setAudioTitle(song.title); setAudioArtist(song.artist); setShowMusicLibrary(false) }}
+                                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px', background: 'transparent', border: `1px solid ${SOCIAL.borderLight}`, borderRadius: 10, cursor: 'pointer', marginBottom: 8, transition: 'all 0.2s' }}
+                                            onMouseEnter={e => { e.currentTarget.style.background = SOCIAL.primaryLight }}
+                                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}>
+                                            <div style={{ width: 40, height: 40, borderRadius: 8, background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>🎵</div>
+                                            <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                                                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</p>
+                                                <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted }}>{song.artist}</p>
+                                            </div>
+                                            <span style={{ color: SOCIAL.muted, fontSize: '1.2rem', flexShrink: 0 }}>＋</span>
+                                        </button>
+                                    ))}
+                                    <button onClick={() => setShowMusicLibrary(false)} style={{ width: '100%', padding: '12px', background: SOCIAL.bgSub, border: 'none', borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: SOCIAL.textSecondary, cursor: 'pointer', marginTop: 8 }}>Cancel</button>
+                                </div>
+                            </div>
+                        )}
 
                         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
 
