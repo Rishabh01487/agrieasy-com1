@@ -96,6 +96,24 @@ function MoreIcon({ size = 30 }: { size?: number }) {
   )
 }
 
+function StoryIcon({ size = 30 }: { size?: number }) {
+  // Instagram Story gradient ring with a "+" — represents "Add to Story"
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <defs>
+        <linearGradient id="story-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#FFDD55" />
+          <stop offset="0.5" stopColor="#FF543E" />
+          <stop offset="1" stopColor="#C837AB" />
+        </linearGradient>
+      </defs>
+      <circle cx="16" cy="16" r="13" fill="none" stroke="url(#story-grad)" strokeWidth="3" />
+      <circle cx="16" cy="16" r="9" fill="#fff" />
+      <path d="M16 11v10M11 16h10" stroke="url(#story-grad)" strokeWidth="2.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function SendIcon({ size = 30 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
@@ -303,75 +321,131 @@ export default function ShareSheet({
   }
 
   /* ---------------------------------------------------------------- */
-  /* WhatsApp — mobile: native file share; desktop: download + link   */
+  /* WhatsApp — try native app deep link first, then OS share sheet    */
+  /* with the video file attached, then web fallback.                  */
   /* ---------------------------------------------------------------- */
   const handleWhatsApp = async () => {
-    if (isSharableFile && !sharing) {
-      setSharing(true)
-      try {
-        const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
-        if (file) {
-          // Try the native OS share sheet directly — don't pre-check with
-          // canShare (it returns false on some Android browsers even when
-          // file sharing works). tryFileShare catches AbortError (user
-          // cancelled) vs real failures.
-          const shared = await tryFileShare(file, shareText, 'KrishiClip')
-          if (shared) {
-            setSharing(false)
-            return  // OS share sheet opened (user picked WhatsApp or cancelled)
+    // 1. On mobile, try to open the WhatsApp APP directly via deep link.
+    //    whatsapp://send?text=... opens the app with the text prefilled.
+    //    If the app isn't installed, the deep link fails silently and we
+    //    fall through to the OS share sheet / web fallback.
+    if (mobile) {
+      // Try the OS share sheet with the video file attached first — this
+      // is the ONLY way to send an actual video file to WhatsApp on mobile.
+      if (isSharableFile && !sharing) {
+        setSharing(true)
+        try {
+          const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+          if (file) {
+            const shared = await tryFileShare(file, shareText, 'KrishiClip')
+            if (shared) { setSharing(false); return }
           }
-        }
-        // File share not supported (desktop) — download the video first,
-        // THEN open WhatsApp Web with the link. The user attaches the
-        // downloaded video manually in WhatsApp.
-        showToast('Video downloading — attach it manually in WhatsApp')
-        await downloadMediaToDevice(mediaUrl!)
-      } catch {
-        // silent
-      } finally {
-        setSharing(false)
+        } catch { /* silent */ } finally { setSharing(false) }
       }
+      // OS share sheet failed — try the WhatsApp app deep link
+      window.location.href = `whatsapp://send?text=${encodedText}%20${encodedUrl}`
+      // Fallback to wa.me after a short delay (in case the app isn't installed)
+      setTimeout(() => { window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank') }, 800)
+      return
     }
-    // Fallback: open WhatsApp with text + link
+    // Desktop: download the video first, then open WhatsApp Web
+    if (isSharableFile) {
+      showToast('Video downloading — attach it manually in WhatsApp Web')
+      await downloadMediaToDevice(mediaUrl!)
+    }
     window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank')
   }
 
   /* ---------------------------------------------------------------- */
-  /* Instagram — mobile: native file share; fallback: download + app  */
-  /* Instagram's web app blocks direct file shares, so on desktop we   */
-  /* download the video and open Instagram for manual upload.          */
+  /* Instagram — try native app deep link first, then OS share sheet   */
+  /* with the video file, then web fallback.                           */
   /* ---------------------------------------------------------------- */
   const handleInstagram = async () => {
-    if (isSharableFile && !sharing) {
+    // 1. On mobile, try the OS share sheet with the video file attached —
+    //    Instagram's app accepts video files via the OS share sheet.
+    if (mobile && isSharableFile && !sharing) {
       setSharing(true)
       try {
         const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
         if (file) {
-          // Try the native OS share sheet directly (mobile).
           const shared = await tryFileShare(file, shareText, 'KrishiClip')
-          if (shared) {
-            setSharing(false)
-            return  // OS share sheet opened (user picked Instagram or cancelled)
-          }
+          if (shared) { setSharing(false); return }
         }
-        // Desktop / unsupported: download the video, then open Instagram.
-        showToast('Video downloading — post it manually on Instagram')
-        await downloadMediaToDevice(mediaUrl!)
-        if (mobile) {
-          window.location.href = 'instagram://library'
-          setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 500)
-        } else {
-          window.open('https://www.instagram.com/', '_blank')
-        }
-      } catch {
-        // silent
-      } finally {
-        setSharing(false)
-      }
+      } catch { /* silent */ } finally { setSharing(false) }
+      // OS share sheet failed — try the Instagram app deep link
+      window.location.href = 'instagram://library'
+      setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 800)
+      return
     }
-    // Fallback: copy link + open Instagram
-    navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
+    // Desktop / no media: download the video, then open Instagram
+    if (isSharableFile) {
+      showToast('Video downloading — post it manually on Instagram')
+      await downloadMediaToDevice(mediaUrl!)
+    } else {
+      navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
+    }
     window.open('https://www.instagram.com/', '_blank')
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Add to Instagram Story — share the whole clip/post to IG Story    */
+  /* Uses instagram://story deep link on mobile, web fallback on desk.  */
+  /* ---------------------------------------------------------------- */
+  const handleInstagramStory = async () => {
+    if (mobile) {
+      // Try OS share sheet with the video file — Instagram Story accepts
+      // video files via the share sheet on mobile.
+      if (isSharableFile && !sharing) {
+        setSharing(true)
+        try {
+          const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+          if (file) {
+            const shared = await tryFileShare(file, shareText, 'KrishiClip')
+            if (shared) { setSharing(false); return }
+          }
+        } catch { /* silent */ } finally { setSharing(false) }
+      }
+      // Deep link to Instagram Story camera
+      window.location.href = 'instagram://story-camera'
+      setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 800)
+      return
+    }
+    // Desktop: download + open Instagram
+    if (isSharableFile) {
+      showToast('Video downloading — add it to your Story on Instagram')
+      await downloadMediaToDevice(mediaUrl!)
+    }
+    window.open('https://www.instagram.com/', '_blank')
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Add to WhatsApp Status (story) — share the whole clip to WA Status */
+  /* ---------------------------------------------------------------- */
+  const handleWhatsAppStatus = async () => {
+    if (mobile) {
+      // Try OS share sheet with the video file — WhatsApp Status accepts
+      // video files via the share sheet on mobile.
+      if (isSharableFile && !sharing) {
+        setSharing(true)
+        try {
+          const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+          if (file) {
+            const shared = await tryFileShare(file, shareText, 'KrishiClip')
+            if (shared) { setSharing(false); return }
+          }
+        } catch { /* silent */ } finally { setSharing(false) }
+      }
+      // Deep link to WhatsApp Status
+      window.location.href = `whatsapp://send?text=${encodedText}%20${encodedUrl}`
+      setTimeout(() => { window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank') }, 800)
+      return
+    }
+    // Desktop: download + open WhatsApp Web
+    if (isSharableFile) {
+      showToast('Video downloading — add it to your Status on WhatsApp')
+      await downloadMediaToDevice(mediaUrl!)
+    }
+    window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank')
   }
 
   const handleThreads = () => {
@@ -430,6 +504,8 @@ export default function ShareSheet({
   const shareOptions: ShareOption[] = [
     { icon: <WhatsAppIcon />, label: 'WhatsApp', onClick: handleWhatsApp, color: '#25D366' },
     { icon: <InstagramIcon />, label: 'Instagram', onClick: handleInstagram, color: '#E4405F' },
+    { icon: <StoryIcon />, label: 'IG Story', onClick: handleInstagramStory, color: '#E4405F' },
+    { icon: <WhatsAppIcon />, label: 'WA Status', onClick: handleWhatsAppStatus, color: '#25D366' },
     { icon: <ThreadsIcon />, label: 'Threads', onClick: handleThreads, color: '#000000' },
     { icon: <MoreIcon />, label: 'More apps', onClick: handleMore, color: '#6b7280' },
     { icon: <LinkIcon />, label: copied ? 'Copied!' : 'Copy Link', onClick: handleCopyLink, color: SOCIAL.primary },

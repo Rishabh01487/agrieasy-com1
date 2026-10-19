@@ -272,7 +272,15 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 <iframe key={`${ytId}-${isActive ? 'active' : 'inactive'}`} src={`https://www.youtube.com/embed/${ytId}?autoplay=${isActive ? 1 : 0}&mute=0&enablejsapi=1&origin=${typeof window !== 'undefined' ? window.location.origin : 'https://agrieasy.site'}`}
                     style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} allowFullScreen title="KrishiClip" allow="autoplay" />
             ) : clip.mediaUrl && clip.mediaType === 'video' ? (
-                <video ref={videoRef} src={clip.mediaUrl} muted={muted} playsInline controls={false}
+                <video ref={videoRef} src={clip.mediaUrl}
+                    // CRITICAL audio fix:
+                    // - If the clip has EXTERNAL music (clip.audioUrl), mute the video
+                    //   so only the music plays (not the video's recorded audio).
+                    // - If NO external music, the video's own audio plays (muted={muted}).
+                    // - Always muted when the clip is NOT active (safety: prevents the
+                    //   previous clip's audio from bleeding into the next during scroll).
+                    muted={!!clip.audioUrl || muted || !isActive}
+                    playsInline controls={false}
                     onClick={handleVideoTap}
                     onEnded={() => setEnded(true)}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0, cursor: 'pointer' }} />
@@ -734,17 +742,26 @@ export default function KrishiClips() {
             if (bestIdx >= 0 && bestRatio >= 0.4) {
                 setActiveIdx(bestIdx)
             }
-            // Force-pause videos on any clip that is NOT the most-visible one.
-            // Belt-and-suspenders safety net so audio from a previous clip
-            // can never bleed into the next one during a fast scroll.
+            // Force-pause videos + audio on any clip that is NOT the most-visible one.
+            // Belt-and-suspenders safety net so audio from a previous clip can NEVER
+            // bleed into the next one during a fast scroll. Pauses BOTH the <video>
+            // element (recorded audio) AND any <audio> element (external music).
             ratios.forEach((ratio, idx) => {
                 if (idx !== bestIdx) {
                     const el = container.querySelector(`.clip-item[data-idx="${idx}"]`) as HTMLElement | null
-                    const video = el?.querySelector('video')
-                    if (video && !video.paused) {
+                    if (!el) return
+                    // Pause + reset the video (recorded audio)
+                    const video = el.querySelector('video')
+                    if (video) {
                         video.pause()
                         video.currentTime = 0
+                        video.muted = true  // extra safety: mute the video too
                     }
+                    // Pause + reset any audio elements (external music from MusicSticker)
+                    el.querySelectorAll('audio').forEach(a => {
+                        a.pause()
+                        a.currentTime = 0
+                    })
                 }
             })
         }, { root: container, threshold: [0, 0.1, 0.25, 0.4, 0.5, 0.75, 1] })

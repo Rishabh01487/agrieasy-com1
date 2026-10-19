@@ -7,7 +7,7 @@ import { authFetch } from '@/lib/auth-fetch'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
-interface User { _id: string; farmerName?: string; firmName?: string; role?: string }
+interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Conversation {
     _id: string
     other: User | null
@@ -47,8 +47,41 @@ function timeAgo(iso: string) {
     return new Date(iso).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
 }
 
-function Avatar({ name, size = 44 }: { name: string; size?: number }) {
-    return <div style={{ width: size, height: size, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: size * 0.4, flexShrink: 0 }}>{name?.[0]?.toUpperCase() || 'U'}</div>
+/* Instagram-style preview text for the conversation list.
+   Replaces raw shared-post / shared-story URLs with clean copy
+   ("You shared a post" / "X shared a Reel") so the list never shows
+   raw links — matches Instagram Direct's "X shared a Reel" previews. */
+function previewFor(text: string, senderName: string, isMine: boolean): string {
+    if (!text) return '📷 Photo'
+    if (/\/agrisocial\/post\//i.test(text)) return isMine ? 'You shared a post' : `${senderName.split(' ')[0]} shared a post`
+    if (/\/agrisocial\/stories\//i.test(text)) return isMine ? 'You shared a story' : `${senderName.split(' ')[0]} shared a Reel`
+    return text
+}
+
+/* Verified-badge heuristic — show the blue check next to "verified"
+   service-provider accounts (transporters / drivers) in the agri network. */
+function isVerifiedUser(u: User | null | undefined): boolean {
+    if (!u) return false
+    return u.role === 'transporter' || u.role === 'driver'
+}
+
+function VerifiedBadge({ size = 13 }: { size?: number }) {
+    return (
+        <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: 4, flexShrink: 0 }} aria-label="Verified">
+            <path fill="#0095F6" d="M12 1.5l2.6 2.1 3.3-.3 1 3.2 2.9 1.6-.9 3.2 1.6 2.9-2.4 2.3.3 3.3-3.2 1-1.6 2.9-3.2-.9-2.9 1.6-2.3-2.4-3.3.3-1-3.2L1 14.6l.9-3.2L.3 8.5l2.4-2.3-.3-3.3 3.2-1L7.1.5l3.2.9L12 1.5z" />
+            <path fill="#fff" d="M10.5 14.6L8 12.1l-1.4 1.4 3.9 3.9 7-7-1.4-1.4z" />
+        </svg>
+    )
+}
+
+function Avatar({ name, size = 44, src }: { name: string; size?: number; src?: string }) {
+    if (src) {
+        return (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={src} alt={name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, background: SOCIAL.bgSub }} />
+        )
+    }
+    return <div style={{ width: size, height: size, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: size * 0.4, flexShrink: 0, fontFamily: SHARED.font }}>{name?.[0]?.toUpperCase() || 'U'}</div>
 }
 
 /* ------------------------------------------------------------------ */
@@ -161,9 +194,16 @@ function AgriSocialDMInner() {
     const [sending, setSending] = useState(false)
     const [loading, setLoading] = useState(true)
     const [viewerId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
+    // Viewer profile (name + pic) for the Instagram-style top bar ("username ▾").
+    const [viewerName, setViewerName] = useState<string>('')
+    const [viewerPic, setViewerPic] = useState<string>('')
     const [shareMode, setShareMode] = useState<string | null>(sharePostId || shareStoryId)
     const [otherTyping, setOtherTyping] = useState(false)
     const [messageReactions, setMessageReactions] = useState<Record<string, string>>({}) // messageId → emoji
+    // Mobile navigation: when true, the chat panel replaces the list on mobile.
+    const [mobileChatOpen, setMobileChatOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [activeTab, setActiveTab] = useState<'all' | 'primary' | 'general' | 'requests'>('primary')
     const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
@@ -188,6 +228,24 @@ function AgriSocialDMInner() {
         } catch {}
     }, [])
 
+    // Fetch the viewer's profile (name + pic) so the top bar can show
+    // "username ▾" Instagram-style instead of a generic label.
+    useEffect(() => {
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await authFetch('/api/social/profile')
+                if (cancelled || !res.ok) return
+                const d = await res.json()
+                const u = d.user || d.data?.user
+                if (u?.farmerName) setViewerName(u.farmerName)
+                else if (u?.firmName) setViewerName(u.firmName)
+                if (u?.profilePic) setViewerPic(u.profilePic)
+            } catch {}
+        })()
+        return () => { cancelled = true }
+    }, [])
+
     useEffect(() => {
         if (!targetUserId) return
         (async () => {
@@ -200,6 +258,7 @@ function AgriSocialDMInner() {
                     const d = await res.json()
                     const conv = d.conversation
                     setActiveId(conv._id)
+                    setMobileChatOpen(true)
                     fetchConversations()
                 }
             } catch {}
@@ -207,7 +266,7 @@ function AgriSocialDMInner() {
     }, [targetUserId, fetchConversations])
 
     useEffect(() => { fetchConversations() }, [fetchConversations])
-    useEffect(() => { if (activeId) fetchActive(activeId) }, [activeId, fetchActive])
+    useEffect(() => { if (activeId) { fetchActive(activeId); setMobileChatOpen(true) } }, [activeId, fetchActive])
 
     const prevMsgCountRef = useRef(0)
     useEffect(() => {
@@ -248,6 +307,7 @@ function AgriSocialDMInner() {
                 readBy: [viewerId],
                 createdAt: new Date().toISOString(),
             }
+
             setActive(a => a ? { ...a, messages: [...(a.messages || []), optimistic] } : a)
 
             const convId = activeId
@@ -269,46 +329,191 @@ function AgriSocialDMInner() {
     }
     const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 
-    return (
-        <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font, display: 'flex', flexDirection: 'column' }}>
-            {/* Top nav */}
-            <nav style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '0 20px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
-                <Link href="/agrisocial" style={{ color: SOCIAL.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem' }}>← AgriSocial</Link>
-                <span style={{ color: SOCIAL.muted }}>›</span>
-                <span style={{ fontWeight: 700, color: SOCIAL.text, marginLeft: 'auto', marginRight: 'auto' }}>✈️ Direct Messages</span>
-            </nav>
+    const tabs: Array<{ key: typeof activeTab; label: string }> = [
+        { key: 'all', label: 'All' },
+        { key: 'primary', label: 'Primary' },
+        { key: 'general', label: 'General' },
+        { key: 'requests', label: 'Requests' },
+    ]
 
-            {/* Share overlay — appears when sharing a post/story via DM */}
+    // Search filters the conversation list by name (Instagram-style).
+    const filteredConversations = conversations.filter(c => {
+        if (!searchQuery) return true
+        const name = (c.other?.farmerName || c.other?.firmName || 'User').toLowerCase()
+        return name.includes(searchQuery.toLowerCase())
+    })
+
+    // Notes/Stories row — first item is "Your note", others are top conversations.
+    const storyItems = conversations.slice(0, 8)
+
+    return (
+        <div className="ig-dm-root" style={{ background: SOCIAL.bg, fontFamily: SHARED.font }}>
+            <style>{`
+                .ig-dm-root {
+                    min-height: 100vh;
+                    height: 100vh;
+                    height: 100dvh;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                }
+                /* Mobile-first: list and chat stack — only one visible at a time */
+                .ig-dm-body { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+                .ig-dm-list { width: 100%; height: 100%; overflow-y: auto; overflow-x: hidden; background: ${SOCIAL.white}; }
+                .ig-dm-chat { display: none; width: 100%; height: 100%; flex-direction: column; background: ${SOCIAL.bg}; }
+
+                /* Mobile: when a chat is open, hide the list and show the chat */
+                .ig-dm-body.mobile-chat-open .ig-dm-list { display: none; }
+                .ig-dm-body.mobile-chat-open .ig-dm-chat { display: flex; }
+
+                /* Desktop (≥768px): side-by-side, both panels always visible */
+                @media (min-width: 768px) {
+                    .ig-dm-body { flex-direction: row; max-width: 1100px; margin: 0 auto; width: 100%; }
+                    .ig-dm-list { width: min(350px, 40%); flex-shrink: 0; border-right: 1px solid ${SOCIAL.border}; }
+                    .ig-dm-body.mobile-chat-open .ig-dm-list { display: block; }
+                    .ig-dm-chat { display: flex; flex: 1; min-width: 0; }
+                    /* Hide the chat back-arrow on desktop (both panels are visible) */
+                    .ig-chat-back { display: none !important; }
+                }
+
+                /* Hide scrollbars on the notes row for a cleaner Instagram look */
+                .ig-notes-row::-webkit-scrollbar { display: none; }
+                .ig-notes-row { -ms-overflow-style: none; scrollbar-width: none; }
+                .ig-tabs-row::-webkit-scrollbar { display: none; }
+                .ig-tabs-row { -ms-overflow-style: none; scrollbar-width: none; }
+
+                /* Typing indicator animation */
+                @keyframes typing {
+                    0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+                    30% { opacity: 1; transform: translateY(-3px); }
+                }
+            `}</style>
+
+            {/* Share overlay banner — appears when sharing a post/story via DM */}
             {shareMode && (
-                <div style={{ background: SOCIAL.primaryLight, borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ background: SOCIAL.primaryLight, borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span style={{ fontSize: '1.1rem' }}>📤</span>
                     <span style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.84rem', flex: 1 }}>Sharing a {sharePostId ? 'post' : 'story'} — pick a conversation below to send it</span>
                     <button onClick={() => { setShareMode(null); window.history.replaceState({}, '', '/agrisocial/dm') }} style={{ background: 'none', border: 'none', color: SOCIAL.muted, cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
                 </div>
             )}
 
-            <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '320px 1fr', maxWidth: '1100px', margin: '0 auto', width: '100%', minHeight: 'calc(100vh - 56px)' }}>
-                {/* Conversation list */}
-                <div style={{ borderRight: `1px solid ${SOCIAL.border}`, background: SOCIAL.white, overflowY: 'auto' }}>
-                    <div style={{ padding: '14px 16px', borderBottom: `1px solid ${SOCIAL.border}` }}>
-                        <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1rem' }}>Messages</h3>
-                        <p style={{ margin: '4px 0 0', color: SOCIAL.muted, fontSize: '0.78rem' }}>{conversations.filter(c => c.unread).length} unread</p>
-                    </div>
+            <div className={`ig-dm-body ${mobileChatOpen ? 'mobile-chat-open' : ''}`}>
+                {/* ============================ LIST PANEL ============================ */}
+                <div className="ig-dm-list">
+                    {/* Top bar — Instagram-style: back arrow | username ▾ | new-message icon */}
+                    <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: `1px solid ${SOCIAL.borderLight}`, paddingTop: 'env(safe-area-inset-top)', flexShrink: 0 }}>
+                        <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 14, padding: '0 12px' }}>
+                            <Link href="/agrisocial" aria-label="Back to AgriSocial" style={{ color: SOCIAL.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0 }}>
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                            </Link>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: SOCIAL.text, fontWeight: 800, fontSize: '1.05rem', fontFamily: SHARED.font, flex: 1, minWidth: 0, cursor: 'pointer' }}>
+                                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewerName || 'Messages'}</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="6 9 12 15 18 9" /></svg>
+                            </div>
+                            <Link href="/agrisocial/search" aria-label="New message" style={{ color: SOCIAL.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0 }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
+                            </Link>
+                        </div>
+                        {/* Search bar */}
+                        <div style={{ padding: '0 12px 10px' }}>
+                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={SOCIAL.muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 12, pointerEvents: 'none' }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+                                <input
+                                    value={searchQuery}
+                                    onChange={e => setSearchQuery(e.target.value)}
+                                    placeholder="Search"
+                                    style={{ width: '100%', padding: '9px 12px 9px 32px', background: SOCIAL.bgSub, border: 'none', borderRadius: 10, fontSize: '0.86rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }}
+                                />
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Notes / Stories horizontal scroll — hidden while searching */}
+                    {!searchQuery && (
+                        <div className="ig-notes-row" style={{ display: 'flex', gap: 14, overflowX: 'auto', padding: '14px 12px', borderBottom: `1px solid ${SOCIAL.borderLight}` }}>
+                            {/* "Your note" — first item, with a "+" badge to add a note */}
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64, flexShrink: 0 }}>
+                                <div style={{ position: 'relative', width: 56, height: 56 }}>
+                                    <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.bgSub, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px dashed ${SOCIAL.border}`, overflow: 'hidden' }}>
+                                        {viewerPic ? (
+                                            // eslint-disable-next-line @next/next/no-img-element
+                                            <img src={viewerPic} alt="You" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <Avatar name={viewerName || 'U'} size={52} />
+                                        )}
+                                    </div>
+                                    <div style={{ position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: '50%', background: SOCIAL.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.95rem', fontWeight: 700, border: `2px solid ${SOCIAL.white}`, lineHeight: 1 }}>＋</div>
+                                </div>
+                                <span style={{ fontSize: '0.66rem', color: SOCIAL.muted, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>Your note</span>
+                            </div>
+                            {/* Friends' avatars with gradient rings (colored ring = unread) */}
+                            {storyItems.map(c => {
+                                const name = c.other?.farmerName || c.other?.firmName || 'User'
+                                return (
+                                    <button key={c._id} onClick={() => { setActiveId(c._id); setMobileChatOpen(true) }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: 64, flexShrink: 0, fontFamily: SHARED.font }}>
+                                        <div style={{ width: 60, height: 60, borderRadius: '50%', padding: 2, background: c.unread ? SOCIAL.gradientRing : SOCIAL.borderLight }}>
+                                            <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: SOCIAL.white }}>
+                                                <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
+                                                    <Avatar name={name} size={52} src={c.other?.profilePic} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span style={{ fontSize: '0.66rem', color: SOCIAL.text, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', width: '100%' }}>{name.split(' ')[0]}</span>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
+
+                    {/* Tabs row — All | Primary | General | Requests (visual only; "Primary" is the default) */}
+                    {!searchQuery && (
+                        <div className="ig-tabs-row" style={{ display: 'flex', gap: 6, padding: '10px 12px', borderBottom: `1px solid ${SOCIAL.borderLight}`, overflowX: 'auto' }}>
+                            {tabs.map(t => (
+                                <button
+                                    key={t.key}
+                                    onClick={() => setActiveTab(t.key)}
+                                    style={{
+                                        padding: '7px 14px',
+                                        borderRadius: 10,
+                                        border: 'none',
+                                        background: activeTab === t.key ? SOCIAL.text : SOCIAL.bgSub,
+                                        color: activeTab === t.key ? '#fff' : SOCIAL.muted,
+                                        fontWeight: 700,
+                                        fontSize: '0.8rem',
+                                        cursor: 'pointer',
+                                        fontFamily: SHARED.font,
+                                        flexShrink: 0,
+                                        whiteSpace: 'nowrap',
+                                    }}
+                                >
+                                    {t.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Conversation list (filtered by search) */}
                     {loading ? (
-                        <div style={{ padding: 24, textAlign: 'center', color: SOCIAL.muted, fontSize: '0.84rem' }}>Loading…</div>
-                    ) : conversations.length === 0 ? (
-                        <div style={{ padding: 32, textAlign: 'center', color: SOCIAL.muted }}>
+                        <div style={{ padding: 32, textAlign: 'center', color: SOCIAL.muted, fontSize: '0.86rem' }}>Loading…</div>
+                    ) : filteredConversations.length === 0 ? (
+                        <div style={{ padding: 40, textAlign: 'center', color: SOCIAL.muted }}>
                             <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>✈️</div>
-                            <p style={{ fontSize: '0.86rem', margin: 0 }}>No conversations yet.</p>
-                            <p style={{ fontSize: '0.78rem', margin: '6px 0 12px' }}>Find people to message on the search page.</p>
-                            <Link href="/agrisocial/search" style={{ color: SOCIAL.primary, fontWeight: 700, textDecoration: 'none', fontSize: '0.84rem' }}>🔍 Search users</Link>
+                            <p style={{ fontSize: '0.92rem', margin: 0, fontWeight: 700, color: SOCIAL.text }}>No conversations</p>
+                            <p style={{ fontSize: '0.8rem', margin: '8px 0 14px' }}>{searchQuery ? 'No results for your search.' : 'Find people to message on the search page.'}</p>
+                            {!searchQuery && (
+                                <Link href="/agrisocial/search" style={{ display: 'inline-block', padding: '8px 18px', background: SOCIAL.primary, color: '#fff', borderRadius: 8, fontWeight: 700, textDecoration: 'none', fontSize: '0.84rem' }}>🔍 Search users</Link>
+                            )}
                         </div>
                     ) : (
-                        conversations.map(c => {
+                        filteredConversations.map(c => {
                             const name = c.other?.farmerName || c.other?.firmName || 'User'
+                            const preview = previewFor(c.lastMessageText, name, false)
+                            const verified = isVerifiedUser(c.other)
                             return (
                                 <button key={c._id} onClick={async () => {
                                     setActiveId(c._id)
+                                    setMobileChatOpen(true)
                                     if (shareMode) {
                                         const shareUrl = sharePostId
                                             ? `${window.location.origin}/agrisocial/post/${sharePostId}`
@@ -324,54 +529,80 @@ function AgriSocialDMInner() {
                                         window.history.replaceState({}, '', '/agrisocial/dm')
                                     }
                                 }}
-                                    style={{ width: '100%', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12, background: activeId === c._id ? SOCIAL.primaryLight : 'transparent', border: 'none', borderBottom: `1px solid ${SOCIAL.borderLight}`, cursor: 'pointer', textAlign: 'left' }}>
-                                    <Avatar name={name} size={44} />
+                                    style={{ width: '100%', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 12, background: 'transparent', border: 'none', borderBottom: `1px solid ${SOCIAL.borderLight}`, cursor: 'pointer', textAlign: 'left', fontFamily: SHARED.font }}>
+                                    {/* Unread blue dot — Instagram style (left of avatar) */}
+                                    {c.unread ? <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#0095F6', flexShrink: 0 }} /> : <div style={{ width: 8, flexShrink: 0 }} />}
+                                    <Avatar name={name} size={56} src={c.other?.profilePic} />
                                     <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                                            <p style={{ color: SOCIAL.text, fontWeight: c.unread ? 800 : 700, fontSize: '0.86rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</p>
-                                            <span style={{ color: SOCIAL.muted, fontSize: '0.7rem', flexShrink: 0 }}>{timeAgo(c.lastMessageAt)}</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                                            <span style={{ color: SOCIAL.text, fontWeight: c.unread ? 800 : 600, fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', maxWidth: 'calc(100% - 50px)' }}>
+                                                {name}
+                                                {verified && <VerifiedBadge size={13} />}
+                                            </span>
+                                            <span style={{ color: SOCIAL.muted, fontSize: '0.74rem', flexShrink: 0 }}>{timeAgo(c.lastMessageAt)}</span>
                                         </div>
-                                        <p style={{ color: c.unread ? SOCIAL.text : SOCIAL.muted, fontWeight: c.unread ? 600 : 400, fontSize: '0.78rem', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {c.lastMessageText || 'Start chatting'}
+                                        <p style={{ color: c.unread ? SOCIAL.text : SOCIAL.muted, fontWeight: c.unread ? 600 : 400, fontSize: '0.82rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {preview}
                                         </p>
                                     </div>
-                                    {c.unread && <div style={{ width: 8, height: 8, borderRadius: '50%', background: SOCIAL.primary, flexShrink: 0 }} />}
                                 </button>
                             )
                         })
                     )}
                 </div>
 
-                {/* Chat panel */}
-                <div style={{ display: 'flex', flexDirection: 'column', background: SOCIAL.bgSub }}>
+                {/* ============================ CHAT PANEL ============================ */}
+                <div className="ig-dm-chat">
                     {!activeId || !active ? (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: SOCIAL.muted, padding: 24, textAlign: 'center' }}>
                             <div style={{ fontSize: '3rem', marginBottom: 12 }}>✈️</div>
-                            <h3 style={{ color: SOCIAL.text, fontWeight: 700, margin: '0 0 6px' }}>Your messages</h3>
+                            <h3 style={{ color: SOCIAL.text, fontWeight: 700, margin: '0 0 6px', fontSize: '1.1rem' }}>Your messages</h3>
                             <p style={{ fontSize: '0.86rem', margin: '0 0 16px' }}>Pick a conversation or start a new one.</p>
-                            <Link href="/agrisocial/search" style={{ padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 8, fontWeight: 700, textDecoration: 'none', fontSize: '0.86rem' }}>🔍 Find someone to message</Link>
+                            <Link href="/agrisocial/search" style={{ padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', fontSize: '0.86rem' }}>🔍 Find someone to message</Link>
                         </div>
                     ) : (
                         <>
-                            {/* Chat header */}
-                            <div style={{ padding: '12px 16px', background: SOCIAL.white, borderBottom: `1px solid ${SOCIAL.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                                {(() => {
-                                    const other = active.participants.find((p: any) => (p?._id?.toString?.() || '') !== viewerId) || active.participants[0]
-                                    const name = other?.farmerName || other?.firmName || 'User'
-                                    return (
-                                        <>
-                                            <Link href={`/agrisocial/profile/${other?._id}`}><Avatar name={name} size={40} /></Link>
-                                            <div>
-                                                <Link href={`/agrisocial/profile/${other?._id}`} style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.88rem', textDecoration: 'none' }}>{name}</Link>
-                                                <p style={{ color: SOCIAL.muted, fontSize: '0.72rem', margin: 0 }}>{roleLabel[other?.role || ''] || 'User'}</p>
-                                            </div>
-                                        </>
-                                    )
-                                })()}
+                            {/* Chat header — Instagram style: back (mobile) | avatar | name | video | call | info */}
+                            <div style={{ paddingTop: 'env(safe-area-inset-top)', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: `1px solid ${SOCIAL.borderLight}`, flexShrink: 0, position: 'relative', zIndex: 10 }}>
+                                <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px' }}>
+                                    {/* Back arrow — mobile only (returns to the list) */}
+                                    <button onClick={() => setMobileChatOpen(false)} className="ig-chat-back" aria-label="Back to messages" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0, color: SOCIAL.text }}>
+                                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                                    </button>
+                                    {(() => {
+                                        const other = active.participants.find((p: any) => (p?._id?.toString?.() || '') !== viewerId) || active.participants[0]
+                                        const name = other?.farmerName || other?.firmName || 'User'
+                                        const verified = isVerifiedUser(other)
+                                        return (
+                                            <>
+                                                <Link href={`/agrisocial/profile/${other?._id}`} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}>
+                                                    <Avatar name={name} size={36} src={other?.profilePic} />
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <span style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                                            {name}
+                                                            {verified && <VerifiedBadge size={12} />}
+                                                        </span>
+                                                        <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: 0 }}>{roleLabel[other?.role || ''] || 'AgriSocial'}</p>
+                                                    </div>
+                                                </Link>
+                                                {/* Video / Call / Info icons (Instagram-style header actions) */}
+                                                <button aria-label="Video call" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0, color: SOCIAL.text }}>
+                                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
+                                                </button>
+                                                <button aria-label="Voice call" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0, color: SOCIAL.text }}>
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>
+                                                </button>
+                                                <Link href={`/agrisocial/profile/${other?._id}`} aria-label="Profile info" style={{ color: SOCIAL.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0 }}>
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></svg>
+                                                </Link>
+                                            </>
+                                        )
+                                    })()}
+                                </div>
                             </div>
 
                             {/* Messages */}
-                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+                            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: SOCIAL.bg, minHeight: 0 }}>
                                 {active.messages?.length === 0 && (
                                     <div style={{ textAlign: 'center', color: SOCIAL.muted, padding: 24, fontSize: '0.86rem' }}>
                                         Say hello 👋
@@ -437,7 +668,7 @@ function AgriSocialDMInner() {
                             </div>
 
                             {/* Composer */}
-                            <div style={{ padding: '12px 16px', background: SOCIAL.white, borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div style={{ padding: '10px 12px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom))', background: SOCIAL.white, borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
                                 {/* Photo attach button */}
                                 <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '50%', background: SOCIAL.primaryLight, flexShrink: 0, transition: 'background 0.2s' }} title="Send photo">
                                     <span style={{ fontSize: '1.1rem' }}>📷</span>
@@ -484,9 +715,9 @@ function AgriSocialDMInner() {
                                 </label>
                                 <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
                                     placeholder="Message…"
-                                    style={{ flex: 1, padding: '10px 14px', background: SOCIAL.bg, border: `1px solid ${SOCIAL.border}`, borderRadius: '100px', fontSize: '0.88rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font }} />
+                                    style={{ flex: 1, padding: '10px 16px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.borderLight}`, borderRadius: '100px', fontSize: '0.88rem', outline: 'none', color: SOCIAL.text, fontFamily: SHARED.font, minWidth: 0 }} />
                                 <button onClick={handleSend} disabled={!text.trim() || sending}
-                                    style={{ background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '100px', padding: '0 18px', fontWeight: 700, fontSize: '0.86rem', cursor: 'pointer', opacity: !text.trim() || sending ? 0.5 : 1 }}>
+                                    style={{ background: 'transparent', color: SOCIAL.primary, border: 'none', borderRadius: 100, padding: '0 12px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer', opacity: !text.trim() || sending ? 0.4 : 1, fontFamily: SHARED.font, flexShrink: 0 }}>
                                     Send
                                 </button>
                             </div>
@@ -495,7 +726,13 @@ function AgriSocialDMInner() {
                 </div>
             </div>
 
-            {/* Instagram-style bottom nav */}
+            {/* Extra safe-area spacer so the fixed bottom nav never overlaps the
+                chat composer on devices with a home indicator (e.g. iPhone X+).
+                AgriSocialBottomNav renders its own 56px spacer + the fixed bar,
+                but that spacer doesn't account for env(safe-area-inset-bottom). */}
+            <div style={{ height: 'env(safe-area-inset-bottom)', flexShrink: 0 }} aria-hidden />
+
+            {/* Instagram-style bottom nav (renders its own 56px spacer + fixed bar) */}
             <AgriSocialBottomNav active="send" />
         </div>
     )
