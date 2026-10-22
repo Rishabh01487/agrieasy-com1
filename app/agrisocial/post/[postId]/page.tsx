@@ -8,6 +8,7 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Icon, IconButton } from '@/lib/icons'
 import { shareContent } from '@/lib/share'
 import ShareSheet from '../../components/ShareSheet'
+import MusicSticker from '../../components/MusicSticker'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
@@ -19,6 +20,7 @@ interface Post {
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments: Comment[]; createdAt: string; location?: string; views?: number
     savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean
+    audioUrl?: string; audioTitle?: string; audioArtist?: string; audioStartTime?: number
 }
 
 function timeAgo(iso: string) {
@@ -187,6 +189,13 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                         <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '85vh', display: 'block' }} />
                     ) : (
                         <div style={{ height: '100%', minHeight: 400, background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '4rem' }}>📢</div>
+                    )}
+
+                    {/* Music Sticker — shows if post has audio */}
+                    {post.audioUrl && (
+                        <div style={{ padding: '10px 16px', background: SOCIAL.white, borderBottom: `1px solid ${SOCIAL.border}` }}>
+                            <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} startTime={post.audioStartTime} autoPlay={false} compact />
+                        </div>
                     )}
                 </div>
 

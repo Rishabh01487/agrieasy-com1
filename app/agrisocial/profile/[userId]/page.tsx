@@ -12,7 +12,7 @@ import { AGRIVERSE_AVATARS, detectAgriVerseAvatar } from '@/lib/agriverse'
 import AgriSocialBottomNav from '../../components/AgriSocialBottomNav'
 
 interface UserInfo { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; address?: string; email?: string; createdAt?: string; profilePic?: string; bio?: string; upiId?: string }
-interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number }
+interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: string; caption: string; category: string; likesCount: number; commentsCount: number; createdAt: string; savedBy?: string[]; views?: number; audioUrl?: string; audioTitle?: string; audioStartTime?: number }
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 
@@ -372,6 +372,13 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                             <svg width="9" height="9" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}>
                                                 <path d="M8 5v14l11-7z" />
                                             </svg>
+                                        </div>
+                                    )}
+                                    {/* Music note badge — shows on tiles that have a song attached */}
+                                    {p.audioUrl && (
+                                        <div style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(0,0,0,0.6)', borderRadius: 100, padding: '2px 7px', display: 'flex', alignItems: 'center', gap: 3, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
+                                            <span style={{ fontSize: '0.6rem' }}>🎵</span>
+                                            <span style={{ color: '#fff', fontSize: '0.55rem', fontWeight: 700, maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.audioTitle || 'Music'}</span>
                                         </div>
                                     )}
                                     {/* Likes + comments + views footer */}

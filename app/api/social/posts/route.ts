@@ -90,6 +90,16 @@ export async function GET(req: NextRequest) {
                 if (latest[i]) merged.push(latest[i])
             }
             posts = await safePopulate(merged)
+
+            // FALLBACK: if the following feed returned 0 posts (user follows no one
+            // and has no posts), fall back to the latest feed so the page isn't empty.
+            // This fixes the "posts not showing on feed" issue for new users.
+            if (posts.length === 0) {
+                const raw = await Post.find({ isActive: { $ne: false } })
+                    .sort({ createdAt: -1 })
+                    .skip(skip).limit(limit).lean()
+                posts = await safePopulate(raw)
+            }
         } else if (feedParam === 'ranked') {
             const raw = await Post.find(query)
                 .sort({ rankScore: -1, createdAt: -1 })

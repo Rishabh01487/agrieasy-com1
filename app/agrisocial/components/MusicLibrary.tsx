@@ -219,8 +219,11 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
         <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0E0E0', margin: '0 auto 16px', flexShrink: 0 }} />
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexShrink: 0 }}>
-          <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
+          <div>
+            <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
+            <p style={{ margin: '2px 0 0', fontSize: '0.66rem', color: SOCIAL.muted }}>30-sec preview clips · loops in your post (like Instagram)</p>
+          </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: SOCIAL.muted, fontSize: '1.3rem', cursor: 'pointer', padding: 4 }}>✕</button>
         </div>
 
