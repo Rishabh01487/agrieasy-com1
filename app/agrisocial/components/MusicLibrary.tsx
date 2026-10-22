@@ -31,6 +31,8 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const [previewProgress, setPreviewProgress] = useState(0)  // current playback position (seconds)
   const [previewDuration, setPreviewDuration] = useState(30)  // total duration (seconds)
   const [seekStartTime, setSeekStartTime] = useState(0)  // the start time the user picked for the currently-playing song
+  const [isScrubbing, setIsScrubbing] = useState(false)  // true while the user is dragging the scrubber handle
+  const scrubberRef = useRef<HTMLDivElement>(null)  // the scrubber bar element (for drag math)
   const [error, setError] = useState('')  // visible error message so fetch failures aren't silent
   const audioRef = useRef<HTMLAudioElement>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -134,6 +136,41 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     audioRef.current.currentTime = newTime
     setPreviewProgress(newTime)
     setSeekStartTime(newTime)
+  }
+
+  // Instagram-style scrubber: pointer-based drag on a custom bar.
+  // The user touches/clicks anywhere on the bar to jump to that point,
+  // and can drag the handle to scrub through the preview.
+  const handleScrubberPointerDown = (e: React.PointerEvent) => {
+    if (!audioRef.current || !scrubberRef.current) return
+    e.preventDefault()
+    setIsScrubbing(true)
+    // Pause while scrubbing so the audio doesn't fight the drag
+    audioRef.current.pause()
+
+    const updateFromPointer = (clientX: number) => {
+      const rect = scrubberRef.current!.getBoundingClientRect()
+      const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width))
+      const newTime = ratio * (previewDuration || 30)
+      audioRef.current!.currentTime = newTime
+      setPreviewProgress(newTime)
+      setSeekStartTime(newTime)
+    }
+
+    // Jump to the tap position immediately
+    updateFromPointer(e.clientX)
+
+    // Track the drag
+    const onPointerMove = (ev: PointerEvent) => updateFromPointer(ev.clientX)
+    const onPointerUp = () => {
+      setIsScrubbing(false)
+      // Resume playback from the new position
+      audioRef.current?.play().catch(() => {})
+      window.removeEventListener('pointermove', onPointerMove)
+      window.removeEventListener('pointerup', onPointerUp)
+    }
+    window.addEventListener('pointermove', onPointerMove)
+    window.addEventListener('pointerup', onPointerUp)
   }
 
   const formatTime = (s: number) => {
@@ -304,38 +341,107 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* Seek slider — appears when a song is playing.
-            Lets the user pick any start point in the song (not just 0:00).
+        {/* Instagram-style scrubber bar — appears when a song is selected.
+            Sticky at the bottom of the sheet. Lets the user:
+            - Play/pause the preview
+            - Drag to any point in the 30s clip to set the start time
+            - See elapsed / total time
             The selected start time is passed to the post when they tap "Use". */}
         {playingUrl && (
           <div style={{
-            background: SOCIAL.primaryLight, borderRadius: 12, padding: '12px 14px',
-            marginBottom: 12, flexShrink: 0, border: `1px solid ${SOCIAL.border}`,
+            position: 'sticky', bottom: 0, left: 0, right: 0,
+            background: SOCIAL.white,
+            borderTop: `1px solid ${SOCIAL.border}`,
+            padding: '14px 16px calc(14px + env(safe-area-inset-bottom))',
+            boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
+            flexShrink: 0, zIndex: 10,
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: SOCIAL.primary }}>
-                ✂️ Start from: {formatTime(seekStartTime)}
-              </span>
-              <span style={{ fontSize: '0.68rem', color: SOCIAL.muted }}>
+            {/* Top row: play/pause + song info + time */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+              {/* Play/Pause button — Instagram style (circular, filled) */}
+              <button
+                onClick={() => playingUrl && togglePreview(playingUrl)}
+                style={{
+                  width: 40, height: 40, borderRadius: '50%',
+                  background: SOCIAL.primary, border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0, padding: 0,
+                }}
+              >
+                {/* Show pause icon when preview is playing, play icon when paused */}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
+              </button>
+
+              {/* Song title + "Start from" label */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {displaySongs.find(s => s.previewUrl === playingUrl)?.title || 'Preview'}
+                </p>
+                <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: SOCIAL.primary, fontWeight: 600 }}>
+                  Drag to set start: {formatTime(seekStartTime)}
+                </p>
+              </div>
+
+              {/* Time display */}
+              <span style={{ fontSize: '0.7rem', color: SOCIAL.muted, fontWeight: 600, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                 {formatTime(previewProgress)} / {formatTime(previewDuration)}
               </span>
             </div>
-            <input
-              type="range"
-              min={0}
-              max={previewDuration || 30}
-              step={0.1}
-              value={previewProgress}
-              onChange={handleSeek}
-              style={{
-                width: '100%', height: 6, borderRadius: 3,
-                background: `linear-gradient(to right, ${SOCIAL.primary} ${(previewProgress / (previewDuration || 30)) * 100}%, ${SOCIAL.border} ${(previewProgress / (previewDuration || 30)) * 100}%)`,
-                appearance: 'none', WebkitAppearance: 'none', outline: 'none', cursor: 'pointer',
+
+            {/* Scrubber bar — Instagram style.
+                A custom draggable bar (not a native range input) so we can
+                style it exactly like IG: thin track, filled portion in brand
+                color, large draggable handle. */}
+            <div
+              ref={(el) => {
+                // Store the scrubber element for drag math
+                (scrubberRef as any).current = el
               }}
-            />
-            <p style={{ fontSize: '0.66rem', color: SOCIAL.muted, margin: '6px 0 0', textAlign: 'center' }}>
-              Drag to choose where the song starts in your post
-            </p>
+              onPointerDown={handleScrubberPointerDown}
+              style={{
+                position: 'relative', width: '100%', height: 24,
+                display: 'flex', alignItems: 'center', cursor: 'pointer',
+                touchAction: 'none',  // prevent scroll while dragging
+              }}
+            >
+              {/* Track (background) */}
+              <div style={{
+                position: 'absolute', left: 0, right: 0, height: 4,
+                borderRadius: 2, background: SOCIAL.border,
+              }} />
+              {/* Filled portion */}
+              <div style={{
+                position: 'absolute', left: 0, height: 4, borderRadius: 2,
+                background: SOCIAL.primary,
+                width: `${(previewProgress / (previewDuration || 30)) * 100}%`,
+              }} />
+              {/* Draggable handle — Instagram style (large, white with shadow) */}
+              <div style={{
+                position: 'absolute',
+                left: `calc(${(previewProgress / (previewDuration || 30)) * 100}% - 10px)`,
+                width: 20, height: 20, borderRadius: '50%',
+                background: '#fff', border: `2px solid ${SOCIAL.primary}`,
+                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                transition: 'transform 0.1s ease',
+                transform: isScrubbing ? 'scale(1.2)' : 'scale(1)',
+              }} />
+            </div>
+
+            {/* "Use this song" button — Instagram style */}
+            <button
+              onClick={() => {
+                const song = displaySongs.find(s => s.previewUrl === playingUrl)
+                if (song) handleSelect(song)
+              }}
+              style={{
+                width: '100%', marginTop: 14, padding: '12px',
+                background: SOCIAL.primary, color: '#fff', border: 'none',
+                borderRadius: 10, fontWeight: 800, fontSize: '0.88rem',
+                cursor: 'pointer',
+              }}
+            >
+              Use this song • Start at {formatTime(seekStartTime)}
+            </button>
           </div>
         )}
 

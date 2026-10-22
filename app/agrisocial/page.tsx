@@ -541,7 +541,8 @@ export default function AgriSocialFeed() {
             setLoading(false)
             setLoadingMore(false)
         }
-    }, [posts.length, feed])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [feed])  // Removed posts.length from deps — it caused a re-render loop
 
     const fetchStories = useCallback(async () => {
         if (!userId) return
