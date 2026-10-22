@@ -283,16 +283,97 @@ export default function NewHomePage() {
         padding: '16px 16px 120px',
         display: 'flex', flexDirection: 'column', alignItems: 'center',
       }}>
-        {/* Logo */}
+        {/* Logo — with Maithili painting background */}
         <div style={{
-          width: 72, height: 72, borderRadius: 18,
+          width: 110, height: 110, borderRadius: 24,
           background: 'linear-gradient(135deg, #ffffff, #F5F1E8)',
           border: '2px solid #31372B',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: '0 8px 24px rgba(49,55,43,0.12)',
           marginBottom: 8,
+          position: 'relative', overflow: 'hidden',
         }}>
-          <img src="/agrieasy-logo-main-5.png" alt="AgriEasy" width={44} height={44} style={{ borderRadius: 10 }} />
+          {/* Maithili painting background — 4 quadrants representing the 4 pillars:
+              Farmer (top-left), Buyer (top-right), Transporter (bottom-left), Payment (bottom-right).
+              Uses classic Mithila art motifs: kohbar sun, fish, peacock, lotus, double-line borders. */}
+          <svg width="110" height="110" viewBox="0 0 120 120" style={{ position: 'absolute', inset: 0, opacity: 0.22 }} fill="none">
+            {/* Background wash — warm cream like Mithila paper */}
+            <rect width="120" height="120" fill="#FFF8E7" />
+
+            {/* Double-line border (Mithila kohbar convention) */}
+            <rect x="3" y="3" width="114" height="114" rx="20" stroke="#C8403A" strokeWidth="1.5" fill="none" />
+            <rect x="7" y="7" width="106" height="106" rx="16" stroke="#C8403A" strokeWidth="0.8" fill="none" />
+
+            {/* Corner sun/lotus motifs (Mithila mandala) */}
+            {[[14, 14], [106, 14], [14, 106], [106, 106]].map(([cx, cy], i) => (
+              <g key={i}>
+                {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
+                  <line key={deg} x1={cx} y1={cy} x2={cx + Math.cos(deg * Math.PI / 180) * 7} y2={cy + Math.sin(deg * Math.PI / 180) * 7} stroke="#F4B942" strokeWidth="0.8" />
+                ))}
+                <circle cx={cx} cy={cy} r="2.5" fill="#C8403A" />
+              </g>
+            ))}
+
+            {/* TOP-LEFT: Farmer — wheat stalks + sun */}
+            <g transform="translate(30, 30)">
+              <circle cx="0" cy="0" r="6" fill="none" stroke="#C8403A" strokeWidth="1" />
+              <circle cx="0" cy="0" r="3.5" fill="#F4B942" />
+              <line x1="0" y1="0" x2="-9" y2="-12" stroke="#D4A574" strokeWidth="1.2" />
+              <line x1="0" y1="0" x2="0" y2="-14" stroke="#D4A574" strokeWidth="1.2" />
+              <line x1="0" y1="0" x2="9" y2="-12" stroke="#D4A574" strokeWidth="1.2" />
+              <circle cx="-9" cy="-12" r="1" fill="#D4A574" />
+              <circle cx="0" cy="-14" r="1" fill="#D4A574" />
+              <circle cx="9" cy="-12" r="1" fill="#D4A574" />
+            </g>
+
+            {/* TOP-RIGHT: Buyer — weighing scale + coins (trade) */}
+            <g transform="translate(90, 30)">
+              <line x1="0" y1="-10" x2="0" y2="8" stroke="#1F4A6E" strokeWidth="1.2" />
+              <line x1="-7" y1="-7" x2="7" y2="-7" stroke="#1F4A6E" strokeWidth="1.2" />
+              <circle cx="-7" cy="-3" r="2.5" fill="none" stroke="#1F4A6E" strokeWidth="1" />
+              <circle cx="7" cy="-3" r="2.5" fill="none" stroke="#1F4A6E" strokeWidth="1" />
+              <circle cx="-3" cy="8" r="1.5" fill="#F4B942" />
+              <circle cx="3" cy="8" r="1.5" fill="#F4B942" />
+            </g>
+
+            {/* BOTTOM-LEFT: Transporter — truck + wheels (Mithila line art) */}
+            <g transform="translate(30, 90)">
+              <rect x="-9" y="-3" width="12" height="5" fill="none" stroke="#2E6E4A" strokeWidth="1.2" rx="1" />
+              <path d="M3,-3 L7,-3 L7,2 L3,2 Z" fill="none" stroke="#2E6E4A" strokeWidth="1.2" />
+              <circle cx="-4" cy="4" r="2.2" fill="none" stroke="#2E6E4A" strokeWidth="1" />
+              <circle cx="4" cy="4" r="2.2" fill="none" stroke="#2E6E4A" strokeWidth="1" />
+              <circle cx="-4" cy="4" r="0.8" fill="#2E6E4A" />
+              <circle cx="4" cy="4" r="0.8" fill="#2E6E4A" />
+            </g>
+
+            {/* BOTTOM-RIGHT: Payment — rupee + lotus (Mithila 8-petal) */}
+            <g transform="translate(90, 90)">
+              {[0, 45, 90, 135, 180, 225, 270, 315].map(deg => (
+                <ellipse key={deg} cx="0" cy="-5" rx="1.8" ry="4.5" fill="none" stroke="#C8403A" strokeWidth="0.8" transform={`rotate(${deg})`} />
+              ))}
+              <text x="0" y="3" textAnchor="middle" fontSize="8" fontWeight="900" fill="#C8403A" fontFamily="serif">₹</text>
+            </g>
+
+            {/* Connecting vines (Mithila creeping vine motif) */}
+              <path d="M 40 60 Q 50 55, 60 60 T 80 60" stroke="#2E6E4A" strokeWidth="0.6" fill="none" strokeDasharray="2 2" />
+              <path d="M 60 30 Q 55 40, 60 50" stroke="#2E6E4A" strokeWidth="0.6" fill="none" strokeDasharray="2 2" />
+              <path d="M 60 70 Q 55 80, 60 90" stroke="#2E6E4A" strokeWidth="0.6" fill="none" strokeDasharray="2 2" />
+
+            {/* Fish motifs (Mithila — prosperity, top + bottom centers) */}
+            <g transform="translate(60, 14)">
+              <ellipse cx="0" cy="0" rx="5" ry="1.8" fill="none" stroke="#1F4A6E" strokeWidth="0.8" />
+              <path d="M5,0 L8,-1.5 L8,1.5 Z" fill="#1F4A6E" />
+              <circle cx="-1.5" cy="0" r="0.7" fill="#1F4A6E" />
+            </g>
+            <g transform="translate(60, 106)">
+              <ellipse cx="0" cy="0" rx="5" ry="1.8" fill="none" stroke="#1F4A6E" strokeWidth="0.8" />
+              <path d="M5,0 L8,-1.5 L8,1.5 Z" fill="#1F4A6E" />
+              <circle cx="-1.5" cy="0" r="0.7" fill="#1F4A6E" />
+            </g>
+          </svg>
+
+          {/* Logo image on top of the Maithili background */}
+          <img src="/agrieasy-logo-main-5.png" alt="AgriEasy" width={44} height={44} style={{ borderRadius: 10, position: 'relative', zIndex: 1, boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }} />
         </div>
 
         {/* Subtitle */}

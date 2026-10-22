@@ -29,7 +29,7 @@ interface Post {
     _id: string; userId: User; type: string; mediaUrl?: string; mediaUrls?: string[]; mediaType?: string
     caption: string; hashtags: string[]; category: string; likes: string[]
     likesCount: number; commentsCount: number; comments?: Comment[]; createdAt: string; location?: string
-    savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean; audioUrl?: string; audioTitle?: string; audioArtist?: string
+    savedBy?: string[]; savedCount?: number; sharedCount?: number; allowDownload?: boolean; audioUrl?: string; audioTitle?: string; audioArtist?: string; audioStartTime?: number
 }
 
 interface StoryItem { _id: string; mediaUrl: string; mediaType: string; caption?: string; duration?: number; viewed: boolean; likesCount?: number; createdAt: string }
@@ -241,7 +241,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
             {post.audioUrl && (
                 <div style={{ position: 'relative' }}>
                     <div style={{ position: 'absolute', bottom: 8, left: 8, zIndex: 5 }}>
-                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} autoPlay={false} compact />
+                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} startTime={post.audioStartTime} autoPlay={false} compact />
                     </div>
                 </div>
             )}

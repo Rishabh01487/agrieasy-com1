@@ -12,7 +12,7 @@ interface Song {
 }
 
 interface MusicLibraryProps {
-  onSelect: (song: { url: string; title: string; artist: string }) => void
+  onSelect: (song: { url: string; title: string; artist: string; startTime?: number }) => void
   onClose: () => void
 }
 
@@ -28,6 +28,9 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const [results, setResults] = useState<Song[]>([])
   const [loading, setLoading] = useState(false)
   const [playingUrl, setPlayingUrl] = useState('')
+  const [previewProgress, setPreviewProgress] = useState(0)  // current playback position (seconds)
+  const [previewDuration, setPreviewDuration] = useState(30)  // total duration (seconds)
+  const [seekStartTime, setSeekStartTime] = useState(0)  // the start time the user picked for the currently-playing song
   const [error, setError] = useState('')  // visible error message so fetch failures aren't silent
   const audioRef = useRef<HTMLAudioElement>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
@@ -102,15 +105,50 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
       setPlayingUrl('')
     } else {
       audioRef.current.src = url
+      audioRef.current.currentTime = 0
+      setSeekStartTime(0)
       audioRef.current.volume = 0.5
       audioRef.current.play().catch(() => {})
       setPlayingUrl(url)
     }
   }
 
+  // Track playback position for the seek slider
+  useEffect(() => {
+    const audio = audioRef.current
+    if (!audio) return
+    const onTimeUpdate = () => setPreviewProgress(audio.currentTime)
+    const onLoadedMetadata = () => setPreviewDuration(audio.duration || 30)
+    audio.addEventListener('timeupdate', onTimeUpdate)
+    audio.addEventListener('loadedmetadata', onLoadedMetadata)
+    return () => {
+      audio.removeEventListener('timeupdate', onTimeUpdate)
+      audio.removeEventListener('loadedmetadata', onLoadedMetadata)
+    }
+  }, [playingUrl])
+
+  // Seek handler — user drags the slider to pick the song's start point
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!audioRef.current) return
+    const newTime = parseFloat(e.target.value)
+    audioRef.current.currentTime = newTime
+    setPreviewProgress(newTime)
+    setSeekStartTime(newTime)
+  }
+
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60)
+    const sec = Math.floor(s % 60)
+    return `${m}:${sec.toString().padStart(2, '0')}`
+  }
+
   const handleSelect = (song: Song) => {
     if (audioRef.current) audioRef.current.pause()
-    onSelect({ url: song.previewUrl, title: song.title, artist: song.artist })
+    // Pass the seekStartTime so the post plays from the user's chosen point
+    // (not always from 0:00). Only pass it if the user actually previewed
+    // this song and moved the slider; otherwise default to 0.
+    const startTime = playingUrl === song.previewUrl ? seekStartTime : 0
+    onSelect({ url: song.previewUrl, title: song.title, artist: song.artist, startTime })
   }
 
   const displaySongs = query.trim() ? results : trending
@@ -263,6 +301,41 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Seek slider — appears when a song is playing.
+            Lets the user pick any start point in the song (not just 0:00).
+            The selected start time is passed to the post when they tap "Use". */}
+        {playingUrl && (
+          <div style={{
+            background: SOCIAL.primaryLight, borderRadius: 12, padding: '12px 14px',
+            marginBottom: 12, flexShrink: 0, border: `1px solid ${SOCIAL.border}`,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: SOCIAL.primary }}>
+                ✂️ Start from: {formatTime(seekStartTime)}
+              </span>
+              <span style={{ fontSize: '0.68rem', color: SOCIAL.muted }}>
+                {formatTime(previewProgress)} / {formatTime(previewDuration)}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={previewDuration || 30}
+              step={0.1}
+              value={previewProgress}
+              onChange={handleSeek}
+              style={{
+                width: '100%', height: 6, borderRadius: 3,
+                background: `linear-gradient(to right, ${SOCIAL.primary} ${(previewProgress / (previewDuration || 30)) * 100}%, ${SOCIAL.border} ${(previewProgress / (previewDuration || 30)) * 100}%)`,
+                appearance: 'none', WebkitAppearance: 'none', outline: 'none', cursor: 'pointer',
+              }}
+            />
+            <p style={{ fontSize: '0.66rem', color: SOCIAL.muted, margin: '6px 0 0', textAlign: 'center' }}>
+              Drag to choose where the song starts in your post
+            </p>
           </div>
         )}
 

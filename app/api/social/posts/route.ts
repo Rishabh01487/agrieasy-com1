@@ -152,6 +152,7 @@ export async function POST(req: NextRequest) {
             audioUrl: body.audioUrl || '',
             audioTitle: body.audioTitle || '',
             audioArtist: body.audioArtist || '',
+            audioStartTime: typeof body.audioStartTime === 'number' ? body.audioStartTime : 0,
         })
 
         await logAudit({

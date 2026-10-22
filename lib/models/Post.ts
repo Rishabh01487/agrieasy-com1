@@ -43,6 +43,7 @@ const PostSchema = new mongoose.Schema({
     audioUrl: { type: String, default: '' },           // music track URL (Cloudinary)
     audioTitle: { type: String, default: '' },          // song name
     audioArtist: { type: String, default: '' },         // artist name
+    audioStartTime: { type: Number, default: 0 },       // seconds into the track to start playback (user-chosen)
     // Ranked-feed scoring helpers
     rankScore: { type: Number, default: 0 },
 }, { timestamps: true })

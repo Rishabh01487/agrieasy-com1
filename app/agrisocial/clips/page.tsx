@@ -19,7 +19,7 @@ const CATEGORIES = [
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string }
-interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number; allowDownload?: boolean; audioUrl?: string; audioTitle?: string; audioArtist?: string }
+interface Clip { _id: string; userId: User; mediaUrl?: string; mediaType?: string; caption: string; hashtags: string[]; category: string; likes: string[]; likesCount: number; commentsCount?: number; views: number; createdAt: string; savedBy?: string[]; savedCount?: number; sharedBy?: string[]; sharedCount?: number; allowDownload?: boolean; audioUrl?: string; audioTitle?: string; audioArtist?: string; audioStartTime?: number }
 
 function timeAgo(iso: string) {
     const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
@@ -301,9 +301,20 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 <div className="heart-burst" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', fontSize: '5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))', zIndex: 10 }}>❤️</div>
             )}
 
-            {/* Pause indicator */}
+            {/* Pause indicator — dark red, not yellow */}
             {paused && !ended && (
-                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: '#fff', fontSize: '3rem', opacity: 0.8, pointerEvents: 'none', zIndex: 10 }}>⏸</div>
+                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{
+                        width: 72, height: 72, borderRadius: '50%',
+                        background: 'rgba(139,10,20,0.85)',
+                        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                        border: '2px solid rgba(255,255,255,0.25)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 20px rgba(139,10,20,0.5)',
+                    }}>
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1.5" /><rect x="14" y="5" width="4" height="14" rx="1.5" /></svg>
+                    </div>
+                </div>
             )}
 
             {/* End screen — AgriSocial branding when clip finishes.
@@ -502,7 +513,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 {clip.hashtags?.length > 0 && <p style={{ color: SOCIAL.clips.muted, fontSize: '0.78rem', margin: 0 }}>{clip.hashtags.slice(0, 4).map(h => `${h.startsWith('#') ? h : '#' + h}`).join(' ')}</p>}
                 {clip.audioUrl && (
                     <div style={{ marginTop: 8 }}>
-                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} autoPlay={isActive} isActive={isActive} userInteracted={userInteracted} compact />
+                        <MusicSticker audioUrl={clip.audioUrl} audioTitle={clip.audioTitle || ''} audioArtist={clip.audioArtist} startTime={clip.audioStartTime} autoPlay={isActive} isActive={isActive} userInteracted={userInteracted} compact />
                     </div>
                 )}
             </div>

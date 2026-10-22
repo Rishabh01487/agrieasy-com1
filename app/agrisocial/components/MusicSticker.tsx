@@ -6,6 +6,7 @@ interface MusicStickerProps {
   audioUrl: string
   audioTitle: string
   audioArtist?: string
+  startTime?: number         // seconds into the track to start playback (user-chosen)
   autoPlay?: boolean       // auto-play when component mounts (for clips when active)
   isActive?: boolean       // whether this clip is currently in view (stops audio when false)
   userInteracted?: boolean // whether the user has interacted with the page (gates autoplay on app open)
@@ -38,6 +39,7 @@ export default function MusicSticker({
   audioUrl,
   audioTitle,
   audioArtist,
+  startTime = 0,
   autoPlay = false,
   isActive = true,
   userInteracted = true,
@@ -52,6 +54,11 @@ export default function MusicSticker({
   // Helper: actually start playback + claim the audio slot
   const startPlayback = () => {
     if (!audioRef.current) return
+    // Seek to the user-chosen start time (if any) before playing.
+    // This lets users pick any point in the song — not just 0:00.
+    if (startTime > 0 && audioRef.current.currentTime < startTime) {
+      try { audioRef.current.currentTime = startTime } catch { /* may fail before metadata loads */ }
+    }
     audioRef.current.volume = 0.5
     const p = audioRef.current.play()
     if (p && typeof p.then === 'function') {

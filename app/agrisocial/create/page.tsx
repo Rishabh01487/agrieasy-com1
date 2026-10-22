@@ -44,6 +44,7 @@ function CreateContent() {
     const [audioUrl, setAudioUrl] = useState('')
     const [audioTitle, setAudioTitle] = useState('')
     const [audioArtist, setAudioArtist] = useState('')
+    const [audioStartTime, setAudioStartTime] = useState(0)
     const [audioUploading, setAudioUploading] = useState(false)
     const audioInputRef = useRef<HTMLInputElement>(null)
     // ── Music library state (powered by iTunes Search API — millions of songs) ──
@@ -371,6 +372,7 @@ function CreateContent() {
                 audioUrl,
                 audioTitle,
                 audioArtist,
+                audioStartTime,
             }),
         })
         const d = await res.json()
@@ -740,10 +742,11 @@ function CreateContent() {
                         {/* Music Library Modal — powered by iTunes Search API (millions of songs) */}
                         {showMusicLibrary && (
                             <MusicLibrary
-                                onSelect={(song: { url: string; title: string; artist: string }) => {
+                                onSelect={(song: { url: string; title: string; artist: string; startTime?: number }) => {
                                     setAudioUrl(song.url)
                                     setAudioTitle(song.title)
                                     setAudioArtist(song.artist)
+                                    setAudioStartTime(song.startTime || 0)
                                     setShowMusicLibrary(false)
                                 }}
                                 onClose={() => setShowMusicLibrary(false)}
