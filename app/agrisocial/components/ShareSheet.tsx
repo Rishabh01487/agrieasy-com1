@@ -321,48 +321,73 @@ export default function ShareSheet({
   }
 
   /* ---------------------------------------------------------------- */
-  /* WhatsApp — try native app deep link first, then OS share sheet    */
-  /* with the video file attached, then web fallback.                  */
+  /* Helper: try a deep link and detect if the app opened.             */
+  /* If the app opens, the page becomes hidden (visibilitychange).     */
+  /* If it doesn't open within 1.5s, show a toast — NO web fallback.   */
   /* ---------------------------------------------------------------- */
-  const handleWhatsApp = async () => {
-    // 1. On mobile, try to open the WhatsApp APP directly via deep link.
-    //    whatsapp://send?text=... opens the app with the text prefilled.
-    //    If the app isn't installed, the deep link fails silently and we
-    //    fall through to the OS share sheet / web fallback.
-    if (mobile) {
-      // Try the OS share sheet with the video file attached first — this
-      // is the ONLY way to send an actual video file to WhatsApp on mobile.
-      if (isSharableFile && !sharing) {
-        setSharing(true)
-        try {
-          const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
-          if (file) {
-            const shared = await tryFileShare(file, shareText, 'KrishiClip')
-            if (shared) { setSharing(false); return }
-          }
-        } catch { /* silent */ } finally { setSharing(false) }
+  const tryDeepLink = (url: string, appName: string) => {
+    // Set a timeout to check if the app opened. If the page is still
+    // visible after 1.5s, the app isn't installed — show a toast.
+    // We do NOT open the browser/web version — that's what causes the
+    // "download/login" prompt the user complained about.
+    const timeout = setTimeout(() => {
+      if (!document.hidden) {
+        showToast(`${appName} app not found — please install it from the Play Store / App Store`)
       }
-      // OS share sheet failed — try the WhatsApp app deep link
-      window.location.href = `whatsapp://send?text=${encodedText}%20${encodedUrl}`
-      // Fallback to wa.me after a short delay (in case the app isn't installed)
-      setTimeout(() => { window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank') }, 800)
-      return
+    }, 1500)
+    // If the page becomes hidden, the app opened — clear the timeout
+    const onVisChange = () => {
+      if (document.hidden) clearTimeout(timeout)
+      document.removeEventListener('visibilitychange', onVisChange)
     }
-    // Desktop: download the video first, then open WhatsApp Web
-    if (isSharableFile) {
-      showToast('Video downloading — attach it manually in WhatsApp Web')
-      await downloadMediaToDevice(mediaUrl!)
-    }
-    window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank')
+    document.addEventListener('visibilitychange', onVisChange)
+    // Fire the deep link
+    window.location.href = url
   }
 
   /* ---------------------------------------------------------------- */
-  /* Instagram — try native app deep link first, then OS share sheet   */
-  /* with the video file, then web fallback.                           */
+  /* WhatsApp — mobile: OS share sheet with video file OR deep link.   */
+  /* NO web fallback (no wa.me — that's what causes download/login).   */
+  /* ---------------------------------------------------------------- */
+  const handleWhatsApp = async () => {
+    // Mobile + video file: use navigator.share({files}) — opens the OS
+    // share sheet where the user picks WhatsApp directly. The app opens
+    // with the video attached. This is the ONLY way to send a video file.
+    if (mobile && isSharableFile && !sharing) {
+      setSharing(true)
+      try {
+        const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+        if (file) {
+          const shared = await tryFileShare(file, shareText, 'KrishiClip')
+          if (shared) { setSharing(false); return }  // OS sheet opened — done
+        }
+      } catch { /* silent */ } finally { setSharing(false) }
+    }
+    // Mobile + text/link only, OR video share failed: use the deep link
+    // to open the WhatsApp app directly. NO wa.me web fallback.
+    if (mobile) {
+      tryDeepLink(`whatsapp://send?text=${encodedText}%20${encodedUrl}`, 'WhatsApp')
+      return
+    }
+    // Desktop: download the video (browsers can't send files to WhatsApp).
+    // Do NOT open wa.me — it asks to download/login. Just download + toast.
+    if (isSharableFile) {
+      showToast('Video saved to your device — open WhatsApp and attach it manually')
+      await downloadMediaToDevice(mediaUrl!)
+    } else {
+      // Text-only on desktop: copy to clipboard + toast
+      navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
+      showToast('Link copied — paste it in WhatsApp')
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Instagram — mobile: OS share sheet with video file OR deep link.  */
+  /* NO web fallback (no instagram.com — that causes login prompts).    */
   /* ---------------------------------------------------------------- */
   const handleInstagram = async () => {
-    // 1. On mobile, try the OS share sheet with the video file attached —
-    //    Instagram's app accepts video files via the OS share sheet.
+    // Mobile + video file: use navigator.share({files}) — opens the OS
+    // share sheet where the user picks Instagram directly.
     if (mobile && isSharableFile && !sharing) {
       setSharing(true)
       try {
@@ -372,29 +397,31 @@ export default function ShareSheet({
           if (shared) { setSharing(false); return }
         }
       } catch { /* silent */ } finally { setSharing(false) }
-      // OS share sheet failed — try the Instagram app deep link
-      window.location.href = 'instagram://library'
-      setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 800)
+    }
+    // Mobile: deep link to Instagram app directly. NO instagram.com fallback.
+    if (mobile) {
+      tryDeepLink('instagram://library', 'Instagram')
       return
     }
-    // Desktop / no media: download the video, then open Instagram
+    // Desktop: download the video. Do NOT open instagram.com (login prompt).
     if (isSharableFile) {
-      showToast('Video downloading — post it manually on Instagram')
+      showToast('Video saved to your device — open Instagram and post it manually')
       await downloadMediaToDevice(mediaUrl!)
     } else {
       navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
+      showToast('Link copied — paste it in Instagram')
     }
-    window.open('https://www.instagram.com/', '_blank')
   }
 
   /* ---------------------------------------------------------------- */
-  /* Add to Instagram Story — share the whole clip/post to IG Story    */
-  /* Uses instagram://story deep link on mobile, web fallback on desk.  */
+  /* Add to Instagram Story — opens Instagram story camera directly.   */
+  /* Downloads the video first so the user can pick it from their lib.  */
+  /* NO web fallback (no instagram.com — causes login prompt).          */
   /* ---------------------------------------------------------------- */
   const handleInstagramStory = async () => {
     if (mobile) {
-      // Try OS share sheet with the video file — Instagram Story accepts
-      // video files via the share sheet on mobile.
+      // Mobile + video: try OS share sheet with file first (Instagram Story
+      // accepts video files via the share sheet on some Android devices).
       if (isSharableFile && !sharing) {
         setSharing(true)
         try {
@@ -405,26 +432,35 @@ export default function ShareSheet({
           }
         } catch { /* silent */ } finally { setSharing(false) }
       }
-      // Deep link to Instagram Story camera
-      window.location.href = 'instagram://story-camera'
-      setTimeout(() => { window.open('https://www.instagram.com/', '_blank') }, 800)
+      // Download the video to the device first, THEN open Instagram story
+      // camera. The user picks the downloaded video from their library.
+      if (isSharableFile) {
+        showToast('Video saved — pick it from your library in Instagram Story')
+        await downloadMediaToDevice(mediaUrl!)
+      }
+      // Deep link to Instagram Story camera directly. NO web fallback.
+      tryDeepLink('instagram://story-camera', 'Instagram')
       return
     }
-    // Desktop: download + open Instagram
+    // Desktop: download the video. Do NOT open instagram.com (login prompt).
     if (isSharableFile) {
-      showToast('Video downloading — add it to your Story on Instagram')
+      showToast('Video saved — add it to your Story in the Instagram app')
       await downloadMediaToDevice(mediaUrl!)
+    } else {
+      navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
+      showToast('Link copied')
     }
-    window.open('https://www.instagram.com/', '_blank')
   }
 
   /* ---------------------------------------------------------------- */
-  /* Add to WhatsApp Status (story) — share the whole clip to WA Status */
+  /* Add to WhatsApp Status (story) — opens WhatsApp directly.          */
+  /* Downloads the video first so the user can attach it to Status.     */
+  /* NO web fallback (no wa.me — causes download/login prompt).         */
   /* ---------------------------------------------------------------- */
   const handleWhatsAppStatus = async () => {
     if (mobile) {
-      // Try OS share sheet with the video file — WhatsApp Status accepts
-      // video files via the share sheet on mobile.
+      // Mobile + video: try OS share sheet with file first (WhatsApp Status
+      // accepts video files via the share sheet on some Android devices).
       if (isSharableFile && !sharing) {
         setSharing(true)
         try {
@@ -435,17 +471,24 @@ export default function ShareSheet({
           }
         } catch { /* silent */ } finally { setSharing(false) }
       }
-      // Deep link to WhatsApp Status
-      window.location.href = `whatsapp://send?text=${encodedText}%20${encodedUrl}`
-      setTimeout(() => { window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank') }, 800)
+      // Download the video to the device first, THEN open WhatsApp.
+      // The user attaches the downloaded video to their Status.
+      if (isSharableFile) {
+        showToast('Video saved — attach it to your Status in WhatsApp')
+        await downloadMediaToDevice(mediaUrl!)
+      }
+      // Deep link to WhatsApp directly. NO wa.me web fallback.
+      tryDeepLink(`whatsapp://send?text=${encodedText}%20${encodedUrl}`, 'WhatsApp')
       return
     }
-    // Desktop: download + open WhatsApp Web
+    // Desktop: download the video. Do NOT open wa.me (download/login prompt).
     if (isSharableFile) {
-      showToast('Video downloading — add it to your Status on WhatsApp')
+      showToast('Video saved — add it to your Status in the WhatsApp app')
       await downloadMediaToDevice(mediaUrl!)
+    } else {
+      navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
+      showToast('Link copied')
     }
-    window.open(`https://wa.me/?text=${encodedText}%20${encodedUrl}`, '_blank')
   }
 
   const handleThreads = () => {
