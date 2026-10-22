@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { SOCIAL } from '@/lib/styles'
 import { shareContent } from '@/lib/share'
 import { authFetch } from '@/lib/auth-fetch'
+import { watermarkVideo } from '@/lib/video-watermark'
 
 interface ShareSheetProps {
   isOpen: boolean
@@ -13,6 +14,7 @@ interface ShareSheetProps {
   mediaUrl?: string
   mediaType?: string
   allowDownload?: boolean
+  username?: string  // the post author's @username — for watermarking
 }
 
 /* ------------------------------------------------------------------ */
@@ -231,6 +233,7 @@ export default function ShareSheet({
   mediaUrl,
   mediaType,
   allowDownload = true,
+  username = 'agrieasy',
 }: ShareSheetProps) {
   const [copied, setCopied] = useState(false)
   const [downloading, setDownloading] = useState(false)
@@ -310,7 +313,74 @@ export default function ShareSheet({
   }
 
   /* ---------------------------------------------------------------- */
-  /* Copy link                                                         */
+  /* Watermarked download — burns AgriSocial logo + @username +        */
+  /* agrieasy.site into the video before saving. This way when the     */
+  /* video is shared to Instagram Story / WhatsApp Status, viewers     */
+  /* see the branding and can visit agrieasy.site.                     */
+  /* ---------------------------------------------------------------- */
+  const downloadWatermarked = async (url: string): Promise<boolean> => {
+    const isVideo = mediaType === 'video' || url.match(/\.(mp4|webm|mov|mkv)$/i)
+    if (isVideo) {
+      // Try watermarking the video (takes a few seconds — shows a toast)
+      showToast('Adding AgriSocial watermark...')
+      try {
+        const watermarked = await watermarkVideo(url, { username }, (progress) => {
+          if (progress > 0) {
+            setToast(`Adding watermark... ${Math.round(progress * 100)}%`)
+          }
+        })
+        if (watermarked) {
+          const downloadUrl = URL.createObjectURL(watermarked)
+          const a = document.createElement('a')
+          a.href = downloadUrl
+          a.download = `agrieasy-${username}.webm`
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(downloadUrl)
+          showToast('Video saved with AgriSocial watermark ✓')
+          return true
+        }
+      } catch {
+        // Watermarking failed — fall through to plain download
+      }
+    }
+    // Fallback: download the original file without watermark
+    try {
+      const response = await fetch(url)
+      const blob = await response.blob()
+      const downloadUrl = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = url.split('/').pop() || 'agrieasy-download'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(downloadUrl)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Watermarked file share — returns a watermarked File for           */
+  /* navigator.share({files}). Falls back to the original if           */
+  /* watermarking fails.                                               */
+  /* ---------------------------------------------------------------- */
+  const fetchWatermarkedFile = async (url: string, fallbackName = 'krishiclip'): Promise<File | null> => {
+    const isVideo = mediaType === 'video' || url.match(/\.(mp4|webm|mov|mkv)$/i)
+    if (isVideo) {
+      try {
+        const watermarked = await watermarkVideo(url, { username })
+        if (watermarked) return watermarked
+      } catch {
+        // fall through to plain fetch
+      }
+    }
+    // Fallback: fetch the original file
+    return fetchMediaAsFile(url, fallbackName)
+  }
   /* ---------------------------------------------------------------- */
   const handleCopyLink = async () => {
     const result = await shareContent(postUrl, 'AgriEasy Post', postCaption)
@@ -354,7 +424,7 @@ export default function ShareSheet({
     if (mobile && isSharableFile && !sharing) {
       setSharing(true)
       try {
-        const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+        const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
         if (file) {
           // navigator.share({files}) opens the OS share sheet. On Android,
           // this shows ALL WhatsApp instances (including cloned apps). The
@@ -367,7 +437,7 @@ export default function ShareSheet({
         // WhatsApp via deep link. The user attaches the downloaded video
         // manually. Do NOT fall through to a text-only link.
         showToast('Video saved — attach it in WhatsApp from your gallery')
-        await downloadMediaToDevice(mediaUrl!)
+        await downloadWatermarked(mediaUrl!)
         tryDeepLink(`whatsapp://send?text=${encodedText}%20${encodedUrl}`, 'WhatsApp')
         return
       } catch { /* silent */ } finally { setSharing(false) }
@@ -380,7 +450,7 @@ export default function ShareSheet({
     // Desktop: download the video + toast
     if (isSharableFile) {
       showToast('Video saved to your device — open WhatsApp and attach it manually')
-      await downloadMediaToDevice(mediaUrl!)
+      await downloadWatermarked(mediaUrl!)
     } else {
       navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
       showToast('Link copied — paste it in WhatsApp')
@@ -395,14 +465,14 @@ export default function ShareSheet({
     if (mobile && isSharableFile && !sharing) {
       setSharing(true)
       try {
-        const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+        const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
         if (file) {
           const shared = await tryFileShare(file, shareText, 'KrishiClip')
           if (shared) { setSharing(false); return }
         }
         // File share failed — download + open Instagram camera
         showToast('Video saved — post it from your gallery in Instagram')
-        await downloadMediaToDevice(mediaUrl!)
+        await downloadWatermarked(mediaUrl!)
         tryDeepLink('instagram://camera', 'Instagram')
         return
       } catch { /* silent */ } finally { setSharing(false) }
@@ -415,7 +485,7 @@ export default function ShareSheet({
     // Desktop: download + toast
     if (isSharableFile) {
       showToast('Video saved to your device — open Instagram and post it manually')
-      await downloadMediaToDevice(mediaUrl!)
+      await downloadWatermarked(mediaUrl!)
     } else {
       navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
       showToast('Link copied — paste it in Instagram')
@@ -437,7 +507,7 @@ export default function ShareSheet({
       if (isSharableFile && !sharing) {
         setSharing(true)
         try {
-          const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+          const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
           if (file) {
             const shared = await tryFileShare(file, shareText, 'KrishiClip')
             if (shared) { setSharing(false); return }
@@ -446,7 +516,7 @@ export default function ShareSheet({
           // then open Instagram camera. The user swipes to Story and
           // picks the downloaded video from their gallery.
           showToast('Video saved — open Story and select it from your gallery')
-          await downloadMediaToDevice(mediaUrl!)
+          await downloadWatermarked(mediaUrl!)
           // Use instagram://camera (widely supported) instead of
           // instagram://story-camera (doesn't work on all versions).
           tryDeepLink('instagram://camera', 'Instagram')
@@ -460,7 +530,7 @@ export default function ShareSheet({
     // Desktop: download the video. Do NOT open instagram.com (login prompt).
     if (isSharableFile) {
       showToast('Video saved — add it to your Story in the Instagram app')
-      await downloadMediaToDevice(mediaUrl!)
+      await downloadWatermarked(mediaUrl!)
     } else {
       navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
       showToast('Link copied')
@@ -480,7 +550,7 @@ export default function ShareSheet({
       if (isSharableFile && !sharing) {
         setSharing(true)
         try {
-          const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+          const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
           if (file) {
             const shared = await tryFileShare(file, shareText, 'KrishiClip')
             if (shared) { setSharing(false); return }
@@ -489,7 +559,7 @@ export default function ShareSheet({
           // then open WhatsApp. The user goes to Status and attaches the
           // downloaded video from their gallery.
           showToast('Video saved — add it to your Status from your gallery')
-          await downloadMediaToDevice(mediaUrl!)
+          await downloadWatermarked(mediaUrl!)
           tryDeepLink('whatsapp://', 'WhatsApp')
           return
         } catch { /* silent */ } finally { setSharing(false) }
@@ -501,7 +571,7 @@ export default function ShareSheet({
     // Desktop: download the video. Do NOT open wa.me (download/login prompt).
     if (isSharableFile) {
       showToast('Video saved — add it to your Status in the WhatsApp app')
-      await downloadMediaToDevice(mediaUrl!)
+      await downloadWatermarked(mediaUrl!)
     } else {
       navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
       showToast('Link copied')
@@ -517,7 +587,7 @@ export default function ShareSheet({
     if (isSharableFile && !sharing) {
       setSharing(true)
       try {
-        const file = await fetchMediaAsFile(mediaUrl!, 'krishiclip')
+        const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
         if (file) {
           const shared = await tryFileShare(file, `${shareText} ${postUrl}`, 'KrishiClip')
           if (shared) {
@@ -543,7 +613,7 @@ export default function ShareSheet({
     if (mediaType === 'youtube' || mediaType === 'text') return
     setDownloading(true)
     try {
-      await downloadMediaToDevice(mediaUrl)
+      await downloadWatermarked(mediaUrl)
     } catch {
       window.open(mediaUrl, '_blank')
     } finally {

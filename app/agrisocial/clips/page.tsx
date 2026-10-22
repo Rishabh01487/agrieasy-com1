@@ -296,6 +296,14 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
             {/* Overlay gradient */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', pointerEvents: 'none' }} />
 
+            {/* AgriSocial watermark — visible on the clip (like Instagram's @username overlay) */}
+            <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 100, padding: '4px 10px 4px 4px', pointerEvents: 'none', zIndex: 5 }}>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}><path d="M8 5v14l11-7z" /></svg>
+                </div>
+                <span style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 700, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>AgriSocial</span>
+            </div>
+
             {/* Heart burst on double-tap */}
             {heartBurst && (
                 <div className="heart-burst" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', fontSize: '5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))', zIndex: 10 }}>❤️</div>
@@ -581,6 +589,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 mediaUrl={clip.mediaUrl}
                 mediaType={clip.mediaType}
                 allowDownload={clip.allowDownload !== false}
+                username={authorName.toLowerCase().replace(/[^a-z0-9]/g, '')}
             />
         </div>
     )

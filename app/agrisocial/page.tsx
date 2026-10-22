@@ -363,6 +363,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 mediaUrl={post.mediaUrl || post.mediaUrls?.[0]}
                 mediaType={post.mediaType}
                 allowDownload={post.allowDownload !== false}
+                username={authorName.toLowerCase().replace(/[^a-z0-9]/g, '')}
             />
         </div>
     )
