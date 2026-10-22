@@ -79,6 +79,49 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const [shareCopied, setShareCopied] = useState(false)
     const [showShareSheet, setShowShareSheet] = useState(false)
     const lastTapRef = useRef<number>(0)
+    const videoRef = useRef<HTMLVideoElement>(null)
+
+    // Pause the feed video when it scrolls out of view.
+    // Also listen for the single-audio-source coordinator event so that
+    // when a MusicSticker starts playing, this video pauses (and vice versa).
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        // IntersectionObserver — pause when the video scrolls out of view
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((e) => {
+                    if (!e.isIntersecting && !video.paused) {
+                        video.pause()
+                    }
+                })
+            },
+            { threshold: 0.25 }
+        )
+        observer.observe(video)
+
+        // When this video starts playing, broadcast the PLAY_EVENT so
+        // MusicStickers pause their audio (single-audio-source coordinator)
+        const onPlay = () => {
+            window.dispatchEvent(new CustomEvent('agrieasy-music-play', { detail: { id: `feed-video-${post._id}` } }))
+        }
+        video.addEventListener('play', onPlay)
+
+        // When a MusicSticker starts playing, pause this video
+        const onMusicPlay = (e: Event) => {
+            const detail = (e as CustomEvent).detail
+            if (!detail || detail.id === `feed-video-${post._id}`) return
+            if (!video.paused) video.pause()
+        }
+        window.addEventListener('agrieasy-music-play', onMusicPlay as EventListener)
+
+        return () => {
+            observer.disconnect()
+            video.removeEventListener('play', onPlay)
+            window.removeEventListener('agrieasy-music-play', onMusicPlay as EventListener)
+        }
+    }, [post._id])
 
     const isDeletedUser = !post.userId || typeof post.userId !== 'object'
     const authorName = isDeletedUser ? 'Unknown User' : (post.userId.farmerName || post.userId.firmName || 'User')
@@ -234,7 +277,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     )}
                 </div>
             ) : post.mediaUrl && post.mediaType === 'video' ? (
-                <video src={post.mediaUrl} controls style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
+                <video ref={videoRef} src={post.mediaUrl} controls playsInline style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
             ) : null}
 
             {/* Music Sticker — shows if post has audio */}
