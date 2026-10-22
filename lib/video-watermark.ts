@@ -52,7 +52,8 @@ export async function watermarkVideo(
     const video = document.createElement('video')
     video.crossOrigin = 'anonymous'
     video.src = videoUrl
-    video.muted = true  // mute so autoplay works
+    video.muted = false  // UNMUTED — we need the audio track for capture
+    video.volume = 0     // but volume=0 so the user doesn't hear it during processing
     video.playsInline = true
     video.preload = 'auto'
 
@@ -67,26 +68,31 @@ export async function watermarkVideo(
       const ctx = canvas.getContext('2d')
       if (!ctx) { resolve(null); return }
 
-      // Set up MediaRecorder to capture the canvas stream
-      const stream = (canvas as any).captureStream(30) as MediaStream
-      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
-        ? 'video/webm;codecs=vp9'
-        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
-          ? 'video/webm;codecs=vp8'
-          : 'video/webm'
+      // Build the output stream: canvas VIDEO track + original video's AUDIO track.
+      // canvas.captureStream() only gives video — we must add the audio track
+      // separately from the video element, otherwise the watermarked output
+      // has no sound (the bug the user reported).
+      const canvasStream = (canvas as any).captureStream(30) as MediaStream
+      const outputStream = new MediaStream()
+
+      // Add the canvas video tracks
+      canvasStream.getVideoTracks().forEach(t => outputStream.addTrack(t))
+
+      // We'll add the audio tracks AFTER playback starts (in onplay) because
+      // captureStream() on a <video> needs the audio to be actively decoding.
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus'
+        : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+          ? 'video/webm;codecs=vp8,opus'
+          : MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+            ? 'video/webm;codecs=vp9'
+            : MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+              ? 'video/webm;codecs=vp8'
+              : 'video/webm'
 
       const chunks: Blob[] = []
-      const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5_000_000 })
-
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunks.push(e.data)
-      }
-
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'video/webm' })
-        const file = new File([blob], `krishiclip-watermarked.webm`, { type: 'video/webm' })
-        resolve(file)
-      }
+      let recorder: MediaRecorder
 
       // Draw function — called on each animation frame
       let rafId: number
@@ -108,6 +114,30 @@ export async function watermarkVideo(
       }
 
       video.onplay = () => {
+        // Capture the audio track from the video element NOW (after playback
+        // has started and audio is decoding). Add it to the output stream.
+        try {
+          const videoStream: MediaStream = (video as any).captureStream
+            ? (video as any).captureStream()
+            : (video as any).mozCaptureStream()
+          if (videoStream) {
+            const audioTracks = videoStream.getAudioTracks()
+            audioTracks.forEach(t => outputStream.addTrack(t))
+          }
+        } catch {
+          // If audio capture fails, continue with video-only
+        }
+
+        // Create the recorder with the combined stream (video + audio)
+        recorder = new MediaRecorder(outputStream, { mimeType, videoBitsPerSecond: 5_000_000 })
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunks.push(e.data)
+        }
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'video/webm' })
+          const file = new File([blob], `krishiclip-watermarked.webm`, { type: 'video/webm' })
+          resolve(file)
+        }
         recorder.start()
         draw()
       }
@@ -117,11 +147,23 @@ export async function watermarkVideo(
         // Draw one final frame with the watermark
         ctx.drawImage(video, 0, 0, w, h)
         drawWatermark(ctx, w, h, username, logoText, siteUrl)
-        setTimeout(() => recorder.stop(), 200)
+        setTimeout(() => { if (recorder && recorder.state !== 'inactive') recorder.stop() }, 300)
       }
 
-      // Start playing (muted so autoplay is allowed)
-      video.play().catch(() => resolve(null))
+      // Start playing. Browsers block autoplay of unmuted videos, so we
+      // start muted (to satisfy autoplay policy), then immediately un-mute
+      // after playback begins so the audio track is available for capture.
+      // volume stays at 0 so the user doesn't hear anything during processing.
+      video.muted = true
+      video.play().then(() => {
+        // Playback started — un-mute so the audio track activates for capture
+        video.muted = false
+        video.volume = 0
+      }).catch(() => {
+        // Autoplay blocked entirely — can't watermark. Return null so the
+        // caller falls back to downloading the original file.
+        resolve(null)
+      })
     }
 
     video.onerror = () => resolve(null)
