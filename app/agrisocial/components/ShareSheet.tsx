@@ -515,10 +515,12 @@ export default function ShareSheet({
           // File share failed — download the video to the device FIRST,
           // then open Instagram camera. The user swipes to Story and
           // picks the downloaded video from their gallery.
-          showToast('Video saved — open Story and select it from your gallery')
+          // ALSO copy the post URL to clipboard so the user can add a
+          // Link Sticker to their Story (Instagram allows ALL users to
+          // add link stickers now). Viewers tap the sticker to visit.
           await downloadWatermarked(mediaUrl!)
-          // Use instagram://camera (widely supported) instead of
-          // instagram://story-camera (doesn't work on all versions).
+          navigator.clipboard?.writeText(postUrl).catch(() => {})
+          showToast('Video saved! In Instagram Story: add a Link sticker → paste the URL → viewers can tap it')
           tryDeepLink('instagram://camera', 'Instagram')
           return
         } catch { /* silent */ } finally { setSharing(false) }
@@ -529,8 +531,9 @@ export default function ShareSheet({
     }
     // Desktop: download the video. Do NOT open instagram.com (login prompt).
     if (isSharableFile) {
-      showToast('Video saved — add it to your Story in the Instagram app')
       await downloadWatermarked(mediaUrl!)
+      navigator.clipboard?.writeText(postUrl).catch(() => {})
+      showToast('Video saved! In Instagram Story: add a Link sticker → paste the URL → viewers can tap it')
     } else {
       navigator.clipboard?.writeText(`${shareText} ${postUrl}`).catch(() => {})
       showToast('Link copied')

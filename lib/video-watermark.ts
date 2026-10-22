@@ -186,22 +186,30 @@ function drawWatermark(
   ctx.font = `600 ${smallFontSize}px Arial, sans-serif`
   ctx.fillText(`@${username}`, logoX + logoSize / 2 + 6 * scale, logoY + fontSize * 0.45)
 
-  // ── Bottom-right: agrieasy.site pill ──
+  // ── Bottom-right: agrieasy.site pill (larger, more prominent) ──
   const siteText = siteUrl
-  ctx.font = `700 ${smallFontSize}px Arial, sans-serif`
+  ctx.font = `800 ${smallFontSize * 1.1}px Arial, sans-serif`
   const siteMetrics = ctx.measureText(siteText)
-  const sitePillWidth = siteMetrics.width + 20 * scale
-  const sitePillHeight = smallFontSize + 12 * scale
+  const sitePillWidth = siteMetrics.width + 24 * scale
+  const sitePillHeight = smallFontSize + 16 * scale
   const sitePillX = w - sitePillWidth - padding
   const sitePillY = h - sitePillHeight - padding
 
-  ctx.fillStyle = 'rgba(217, 83, 79, 0.85)'
-  roundRect(ctx, sitePillX, sitePillY, sitePillWidth, sitePillHeight, 6 * scale)
+  // Red background pill — stands out so viewers notice it
+  ctx.fillStyle = 'rgba(217, 83, 79, 0.9)'
+  roundRect(ctx, sitePillX, sitePillY, sitePillWidth, sitePillHeight, 8 * scale)
   ctx.fill()
 
   ctx.fillStyle = '#fff'
   ctx.textBaseline = 'middle'
-  ctx.fillText(siteText, sitePillX + 10 * scale, sitePillY + sitePillHeight / 2)
+  ctx.fillText(siteText, sitePillX + 12 * scale, sitePillY + sitePillHeight / 2)
+
+  // ── Top-right: "Visit" call-to-action text ──
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+  ctx.font = `600 ${smallFontSize * 0.9}px Arial, sans-serif`
+  ctx.textAlign = 'right'
+  ctx.fillText('▶ Watch more on', w - padding, padding + smallFontSize)
+  ctx.textAlign = 'left'  // reset
 
   ctx.restore()
 }
