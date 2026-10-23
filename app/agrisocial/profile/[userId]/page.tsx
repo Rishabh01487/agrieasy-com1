@@ -16,6 +16,144 @@ interface Post { _id: string; type: string; mediaUrl?: string; mediaType?: strin
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 
+/* Madhubani painting palette (reference image — navy → pink → gold on cream) */
+const MH = {
+  navy: '#1A1A3E',
+  pink: '#D45D7E',
+  gold: '#D4A574',
+  cream: '#FFF8F0',
+  deepPink: '#B83A5C',
+}
+
+/* Gold diamond (◇) divider — like the reference image's motif between two thin lines */
+function MadhubaniDiamondDivider({ width = 80 }: { width?: number }) {
+  return (
+    <svg width={width} height="10" viewBox="0 0 80 10" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ display: 'block', margin: '8px auto 4px' }}>
+      <line x1="0" y1="5" x2="32" y2="5" stroke={MH.gold} strokeWidth="0.8" />
+      <line x1="48" y1="5" x2="80" y2="5" stroke={MH.gold} strokeWidth="0.8" />
+      <polygon points="40,1 45,5 40,9 35,5" fill={MH.gold} stroke={MH.navy} strokeWidth="0.5" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+/* Posts empty state — Madhubani sun + 3 wheat stalks in navy + gold + pink */
+function MadhubaniPostsIllustration({ size = 90 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+      {/* Sun (8 triangular rays + navy center) */}
+      <g fill={MH.gold} stroke={MH.navy} strokeWidth="0.5" strokeLinejoin="round">
+        <polygon points="45,4 42,12 48,12" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(45 45 20)" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(90 45 20)" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(135 45 20)" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(180 45 20)" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(225 45 20)" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(270 45 20)" />
+        <polygon points="45,4 42,12 48,12" transform="rotate(315 45 20)" />
+      </g>
+      <circle cx="45" cy="20" r="8" fill={MH.navy} stroke={MH.pink} strokeWidth="0.8" />
+      <circle cx="45" cy="20" r="3" fill={MH.gold} />
+
+      {/* 3 wheat stalks rising from the dotted ground */}
+      <g stroke={MH.navy} strokeWidth="1" fill="none" strokeLinecap="round">
+        <line x1="45" y1="32" x2="45" y2="78" />
+        <line x1="30" y1="42" x2="30" y2="78" />
+        <line x1="60" y1="42" x2="60" y2="78" />
+      </g>
+      {/* Wheat grains (pink ellipses) */}
+      <g fill={MH.pink} stroke={MH.navy} strokeWidth="0.4">
+        <ellipse cx="45" cy="42" rx="2" ry="3" />
+        <ellipse cx="45" cy="50" rx="2" ry="3" />
+        <ellipse cx="45" cy="58" rx="2" ry="3" />
+        <ellipse cx="30" cy="52" rx="1.8" ry="2.5" />
+        <ellipse cx="30" cy="60" rx="1.8" ry="2.5" />
+        <ellipse cx="30" cy="68" rx="1.8" ry="2.5" />
+        <ellipse cx="60" cy="52" rx="1.8" ry="2.5" />
+        <ellipse cx="60" cy="60" rx="1.8" ry="2.5" />
+        <ellipse cx="60" cy="68" rx="1.8" ry="2.5" />
+      </g>
+      {/* Gold leaves beside the stalks */}
+      <g fill={MH.gold} stroke={MH.navy} strokeWidth="0.4">
+        <ellipse cx="42" cy="46" rx="2" ry="1" transform="rotate(-30 42 46)" />
+        <ellipse cx="48" cy="46" rx="2" ry="1" transform="rotate(30 48 46)" />
+        <ellipse cx="27" cy="56" rx="1.8" ry="0.9" transform="rotate(-30 27 56)" />
+        <ellipse cx="63" cy="56" rx="1.8" ry="0.9" transform="rotate(30 63 56)" />
+      </g>
+      {/* Dotted ground line (creeping-vine motif) */}
+      <line x1="20" y1="82" x2="70" y2="82" stroke={MH.navy} strokeWidth="0.6" strokeDasharray="2 1.5" />
+    </svg>
+  )
+}
+
+/* Clips empty state — Madhubani sun-mandala with a cream play triangle */
+function MadhubaniClipsIllustration({ size = 90 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+      {/* Outer double-line ring (kohbar convention) */}
+      <circle cx="45" cy="45" r="42" fill="none" stroke={MH.gold} strokeWidth="1" />
+      <circle cx="45" cy="45" r="39" fill="none" stroke={MH.gold} strokeWidth="0.4" strokeDasharray="1.5 1.5" />
+
+      {/* 8 sun rays */}
+      <g fill={MH.gold} stroke={MH.navy} strokeWidth="0.5" strokeLinejoin="round">
+        <polygon points="45,8 41,18 49,18" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(45 45 45)" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(90 45 45)" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(135 45 45)" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(180 45 45)" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(225 45 45)" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(270 45 45)" />
+        <polygon points="45,8 41,18 49,18" transform="rotate(315 45 45)" />
+      </g>
+
+      {/* Navy center circle with pink border */}
+      <circle cx="45" cy="45" r="22" fill={MH.navy} stroke={MH.pink} strokeWidth="1" />
+      {/* Cream play triangle (KrishiClip video play symbol) */}
+      <polygon points="38,33 38,57 58,45" fill={MH.cream} />
+
+      {/* Gold accent dots at the 4 cardinal points */}
+      <g fill={MH.gold}>
+        <circle cx="45" cy="22" r="1" />
+        <circle cx="45" cy="68" r="1" />
+        <circle cx="22" cy="45" r="1" />
+        <circle cx="68" cy="45" r="1" />
+      </g>
+    </svg>
+  )
+}
+
+/* Saved empty state — Madhubani bookmark with a 5-petal lotus inside */
+function MadhubaniSavedIllustration({ size = 90 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 90 90" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
+      {/* Bookmark outline (Madhubani-styled double-line) */}
+      <path d="M28 10 L62 10 L62 80 L45 67 L28 80 Z" fill={MH.cream} stroke={MH.gold} strokeWidth="1.2" strokeLinejoin="round" />
+      <path d="M30 12 L60 12 L60 76 L45 64 L30 76 Z" fill="none" stroke={MH.gold} strokeWidth="0.5" strokeDasharray="1.5 1.5" />
+
+      {/* 5-petal lotus centered on the bookmark */}
+      <g transform="translate(45 42)">
+        <g fill={MH.pink} stroke={MH.navy} strokeWidth="0.5">
+          <ellipse cx="0" cy="-12" rx="5" ry="10" />
+          <ellipse cx="0" cy="-12" rx="5" ry="10" transform="rotate(-72)" />
+          <ellipse cx="0" cy="-12" rx="5" ry="10" transform="rotate(-144)" />
+          <ellipse cx="0" cy="-12" rx="5" ry="10" transform="rotate(72)" />
+          <ellipse cx="0" cy="-12" rx="5" ry="10" transform="rotate(144)" />
+        </g>
+        {/* Center pistil */}
+        <circle cx="0" cy="0" r="3.5" fill={MH.gold} stroke={MH.navy} strokeWidth="0.5" />
+        <circle cx="0" cy="0" r="1.5" fill={MH.navy} />
+      </g>
+
+      {/* Gold corner dots */}
+      <g fill={MH.gold}>
+        <circle cx="20" cy="20" r="1" />
+        <circle cx="70" cy="20" r="1" />
+        <circle cx="20" cy="60" r="1" />
+        <circle cx="70" cy="60" r="1" />
+      </g>
+    </svg>
+  )
+}
+
 export default function AgriSocialProfile({ params }: { params: Promise<{ userId: string }> }) {
     const { userId: profileId } = use(params)
     const router = useRouter()
@@ -328,10 +466,16 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 {/* Grid — with swipe-to-switch-tab (Fix: Issue 5) */}
                 <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
                 {displayPosts.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: 60 }}>
-                        <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>{tab === 'posts' ? '📷' : tab === 'clips' ? '🎬' : <Icon name="bookmark" size={36} color={SOCIAL.muted} />}</div>
-                        <p style={{ color: SOCIAL.muted }}>{isOwn ? (tab === 'saved' ? 'Save posts to see them here' : 'Share your first post!') : 'No posts yet'}</p>
-                        {isOwn && tab !== 'saved' && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 22px', background: SOCIAL.primary, color: '#fff', borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 12, fontSize: '0.86rem' }}>+ Create</Link>}
+                    <div style={{
+                        textAlign: 'center', padding: '50px 20px', margin: '8px 0', borderRadius: 12,
+                        border: `1px solid ${MH.gold}`,
+                        background: MH.cream,
+                        backgroundImage: 'repeating-linear-gradient(45deg, rgba(26,26,62,0.04) 0 1px, transparent 1px 10px), repeating-linear-gradient(-45deg, rgba(212,93,126,0.04) 0 1px, transparent 1px 10px)',
+                    }}>
+                        {tab === 'posts' ? <MadhubaniPostsIllustration size={90} /> : tab === 'clips' ? <MadhubaniClipsIllustration size={90} /> : <MadhubaniSavedIllustration size={90} />}
+                        <MadhubaniDiamondDivider width={80} />
+                        <p style={{ color: MH.navy, fontWeight: 600, margin: '8px 0 0' }}>{isOwn ? (tab === 'saved' ? 'Save posts to see them here' : 'Share your first post!') : 'No posts yet'}</p>
+                        {isOwn && tab !== 'saved' && <Link href={`/agrisocial/create?type=${tab === 'clips' ? 'krishiclip' : 'post'}`} style={{ display: 'inline-block', padding: '10px 22px', background: `linear-gradient(135deg, ${MH.navy}, ${MH.pink})`, color: MH.cream, border: `1px solid ${MH.gold}`, borderRadius: 10, fontWeight: 700, textDecoration: 'none', marginTop: 14, fontSize: '0.86rem' }}>+ Create</Link>}
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 2 : 4 }}>
