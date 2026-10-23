@@ -428,14 +428,22 @@ function StoryTray({ stories, viewerId, viewerProfilePic }: { stories: StoryGrou
                         {(ownStory?.user?.profilePic || viewerProfilePic) ? (
                             <img src={ownStory?.user?.profilePic || viewerProfilePic} alt="You" style={{ width: 56, height: 56, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff' }} />
                         ) : (
-                            <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem', border: '2px solid #fff' }}>
-                                You
+                            /* No profile pic — show a proper person SVG icon (not text "You") */
+                            <div style={{ width: 56, height: 56, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff' }}>
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                                    <circle cx="12" cy="7" r="4" />
+                                </svg>
                             </div>
                         )}
                     </div>
                     {!ownStory && (
-                        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: '50%', background: SOCIAL.primary, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', fontWeight: 800, border: '2px solid #fff', lineHeight: 1 }}>
-                            +
+                        /* Add-story "+" badge — proper SVG plus icon (not text "+") */
+                        <div style={{ position: 'absolute', bottom: -2, right: -2, width: 22, height: 22, borderRadius: '50%', background: SOCIAL.primary, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #fff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
                         </div>
                     )}
                 </div>
@@ -745,9 +753,9 @@ export default function AgriSocialFeed() {
                         style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', boxShadow: SHARED.shadowMd }}>
                         <Avatar name={userId || '🌾'} size={36} />
                         <div style={{ flex: 1, padding: '9px 14px', background: SOCIAL.bg, borderRadius: '100px', color: SOCIAL.muted, fontSize: '0.86rem' }}>What&apos;s happening on your farm today?</div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                            <span style={{ fontSize: '1.1rem' }}>📸</span>
-                            <span style={{ fontSize: '1.1rem' }}>🎬</span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={SOCIAL.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="4" /></svg>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={SOCIAL.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
                         </div>
                     </div>
 
