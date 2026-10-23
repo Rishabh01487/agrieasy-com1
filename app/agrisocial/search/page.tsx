@@ -86,7 +86,7 @@ function AgriSocialSearchInner() {
             <nav style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '0 20px', height: '56px', display: 'flex', alignItems: 'center', gap: 12, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', position: 'sticky', top: 0, zIndex: 50 }}>
                 <Link href="/agrisocial" style={{ color: SOCIAL.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.9rem' }}>← AgriSocial</Link>
                 <span style={{ color: SOCIAL.muted }}>›</span>
-                <span style={{ fontWeight: 700, color: SOCIAL.text }}>🔍 Search</span>
+                <span style={{ fontWeight: 700, color: SOCIAL.text, display: 'flex', alignItems: 'center', gap: 6 }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg> Search</span>
             </nav>
 
             <div style={{ maxWidth: '720px', margin: '0 auto', padding: '16px 14px 80px' }}>
@@ -99,7 +99,7 @@ function AgriSocialSearchInner() {
                         placeholder="Search people, buyers, farmers, #hashtags…"
                         style={{ width: '100%', padding: '12px 16px 12px 42px', background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 12, fontSize: '0.92rem', color: SOCIAL.text, outline: 'none', fontFamily: SHARED.font, boxSizing: 'border-box' }}
                     />
-                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', fontSize: '1rem' }}>🔍</span>
+                    <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={SOCIAL.muted} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg></span>
                     {query && (
                         <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: SOCIAL.muted }}>✕</button>
                     )}
@@ -142,7 +142,7 @@ function AgriSocialSearchInner() {
                             <h3 style={{ color: SOCIAL.muted, fontSize: '0.78rem', fontWeight: 700, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Suggested for you</h3>
                             <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 12px' }}>Try searching for:</p>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                                {['#farming', '#wheat', '#organic', '#tractor', '#harvest', '#market', '#rice', '#livestock'].map(tag => (
+                                {['farming', 'wheat', 'organic', 'tractor', 'harvest', 'market', 'rice', 'livestock'].map(tag => (
                                     <button key={tag} onClick={() => setQuery(tag)} style={{ padding: '6px 14px', background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, color: SOCIAL.primary, borderRadius: 100, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}>{tag}</button>
                                 ))}
                             </div>

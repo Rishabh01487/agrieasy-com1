@@ -709,48 +709,34 @@ export default function KrishiClips() {
         }
     }, [])
 
-    // Track the MOST-VISIBLE clip and set it as active. The old single
-    // (0.6) threshold had a timing gap: when clip A dropped below 60% and
-    // clip B hadn't reached 60%, activeIdx stayed on A — so A's music kept
-    // playing during the scroll. Tracking the highest intersection ratio
-    // across ALL clips with multiple thresholds eliminates that gap.
+    // Track the most-visible clip. Uses 2 thresholds to minimize callbacks.
     useEffect(() => {
         const container = containerRef.current
         if (!container) return
-        const ratios = new Map<number, number>()
+        let lastActiveIdx = -1
         const observer = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                const idx = parseInt((e.target as HTMLElement).dataset.idx || '0')
-                ratios.set(idx, e.intersectionRatio)
-            })
             let bestIdx = -1
             let bestRatio = 0
-            ratios.forEach((ratio, idx) => {
-                if (ratio > bestRatio) { bestRatio = ratio; bestIdx = idx }
-            })
-            if (bestIdx >= 0 && bestRatio >= 0.4) {
-                setActiveIdx(bestIdx)
-            }
-            // Belt-and-suspenders safety net: force-pause video + audio on
-            // any clip that isn't the most-visible, so audio from a previous
-            // clip can NEVER bleed into the next during a fast scroll.
-            ratios.forEach((ratio, idx) => {
-                if (idx !== bestIdx) {
-                    const el = container.querySelector(`.clip-item[data-idx="${idx}"]`) as HTMLElement | null
-                    if (!el) return
-                    const video = el.querySelector('video')
-                    if (video) {
-                        video.pause()
-                        video.currentTime = 0
-                        video.muted = true
-                    }
-                    el.querySelectorAll('audio').forEach(a => {
-                        a.pause()
-                        a.currentTime = 0
-                    })
+            for (const e of entries) {
+                if (e.intersectionRatio > bestRatio) {
+                    bestRatio = e.intersectionRatio
+                    bestIdx = parseInt((e.target as HTMLElement).dataset.idx || '0')
                 }
-            })
-        }, { root: container, threshold: [0, 0.1, 0.25, 0.4, 0.5, 0.75, 1] })
+            }
+            if (bestIdx < 0 || bestRatio < 0.4) return
+            if (bestIdx === lastActiveIdx) return
+            const prevIdx = lastActiveIdx
+            lastActiveIdx = bestIdx
+            setActiveIdx(bestIdx)
+            if (prevIdx >= 0) {
+                const prevEl = container.querySelector(`.clip-item[data-idx="${prevIdx}"]`) as HTMLElement | null
+                if (prevEl) {
+                    const v = prevEl.querySelector('video')
+                    if (v) { v.pause(); v.currentTime = 0 }
+                    prevEl.querySelectorAll('audio').forEach(a => { a.pause(); a.currentTime = 0 })
+                }
+            }
+        }, { root: container, threshold: [0, 0.5] })
         container.querySelectorAll('.clip-item').forEach(el => observer.observe(el))
         return () => observer.disconnect()
     }, [clips])
