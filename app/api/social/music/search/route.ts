@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createDecipheriv } from 'crypto'
+import CryptoJS from 'crypto-js'
 
 const DES_KEY = '38346591'
 
 function decryptMediaUrl(encrypted: string): string {
   try {
-    const key = Buffer.from(DES_KEY, 'utf8')
-    const decipher = createDecipheriv('des-ecb', key, Buffer.alloc(0))
-    decipher.setAutoPadding(true)
-    const raw = Buffer.from(encrypted, 'base64')
-    const decrypted = Buffer.concat([decipher.update(raw), decipher.final()])
-    return decrypted.toString('utf8')
+    const key = CryptoJS.enc.Utf8.parse(DES_KEY)
+    const decrypted = CryptoJS.DES.decrypt(
+      { ciphertext: CryptoJS.enc.Base64.parse(encrypted) } as any,
+      key,
+      { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 }
+    )
+    return decrypted.toString(CryptoJS.enc.Utf8)
   } catch {
     return ''
   }
