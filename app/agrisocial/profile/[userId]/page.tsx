@@ -145,7 +145,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 {/* Header — Instagram mobile: pic+stats in row, name/bio below, buttons full width */}
                 {isMobile ? (
                     <>
-                        {/* Row 1: profile pic + stats */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
                             <div className="story-ring" style={{ width: 82, height: 82, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }}
                                 onClick={handlePicClick}
@@ -178,7 +177,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                 </button>
                             </div>
                         </div>
-                        {/* Row 2: name + bio */}
                         <div style={{ marginBottom: 12 }}>
                             <p style={{ color: SOCIAL.text, fontWeight: 700, fontSize: '0.9rem', margin: 0, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                                 {name}
@@ -203,7 +201,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                             {user.address && <p style={{ color: SOCIAL.muted, fontSize: '0.78rem', margin: '2px 0 0' }}>📍 {user.address}</p>}
                             <p style={{ color: SOCIAL.primary, fontSize: '0.78rem', margin: '4px 0 0', fontWeight: 600 }}>❤️ {s.totalLikes || 0} likes · 🎬 {s.clipsCount || 0} clips</p>
                         </div>
-                        {/* Row 3: action buttons — full width */}
                         {isOwn ? (
                             <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
                                 <button onClick={() => { setEditBio(user.bio || ''); setEditPic(''); setEditUpiId(user.upiId || ''); setEditError(''); setShowAgriVersePicker(false); setShowEditModal(true) }} style={{ flex: 1, padding: '8px', background: SOCIAL.bgSub, border: `1px solid ${SOCIAL.border}`, borderRadius: 8, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, cursor: 'pointer' }}>Edit Profile</button>
@@ -314,7 +311,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                     )}
                 </div>
 
-                {/* Tabs */}
                 <div style={{ display: 'flex', borderBottom: `1px solid ${SOCIAL.border}`, marginBottom: 6 }}>
                     {([
                         ['posts', '📷', 'Posts'],
@@ -366,7 +362,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                             <p style={{ color: '#fff', fontSize: '0.62rem', margin: '4px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{p.caption}</p>
                                         </div>
                                     )}
-                                    {/* Play icon overlay for video clips (YouTube-style red circle) */}
                                     {isVideo && (
                                         <div style={{ position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.4)' }}>
                                             <svg width="9" height="9" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}>
@@ -374,14 +369,12 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                             </svg>
                                         </div>
                                     )}
-                                    {/* Music note badge — shows on tiles that have a song attached */}
                                     {p.audioUrl && (
                                         <div style={{ position: 'absolute', top: 6, left: 6, background: 'rgba(0,0,0,0.6)', borderRadius: 100, padding: '2px 7px', display: 'flex', alignItems: 'center', gap: 3, backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)' }}>
                                             <span style={{ fontSize: '0.6rem' }}>🎵</span>
                                             <span style={{ color: '#fff', fontSize: '0.55rem', fontWeight: 700, maxWidth: 60, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.audioTitle || 'Music'}</span>
                                         </div>
                                     )}
-                                    {/* Likes + comments + views footer */}
                                     <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)', padding: '6px 6px 4px', display: 'flex', gap: 8, alignItems: 'center' }}>
                                         <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>❤️ {p.likesCount}</span>
                                         <span style={{ color: '#fff', fontSize: '0.65rem', fontWeight: 700 }}>💬 {p.commentsCount}</span>
@@ -424,7 +417,7 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 @keyframes agrieasyScaleIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
             `}</style>
 
-            {/* Followers/Following List Modal */}
+            {/* Followers/Following list */}
             {listModal && (
                 <div onClick={() => setListModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
                     <div onClick={async (e) => {
@@ -474,13 +467,12 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                 </div>
             )}
 
-            {/* Edit Profile Modal */}
+            {/* Edit Profile */}
             {showEditModal && (
                 <div onClick={() => setShowEditModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
                     <div onClick={e => e.stopPropagation()} style={{ background: SOCIAL.white, borderRadius: 16, padding: 28, maxWidth: 420, width: '100%', boxShadow: SHARED.shadowXl }}>
                         <h3 style={{ margin: '0 0 20px', color: SOCIAL.text, fontWeight: 800, fontSize: '1.2rem', textAlign: 'center' }}>Edit Profile</h3>
 
-                        {/* Profile pic preview + upload */}
                         <div style={{ textAlign: 'center', marginBottom: 20 }}>
                             <div style={{ position: 'relative', display: 'inline-block' }}>
                                 {editPic || user.profilePic ? (
@@ -499,7 +491,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                         setUploading(true)
                                         setEditError('')
                                         try {
-                                            // Compress image
                                             const img = new Image()
                                             const url = URL.createObjectURL(file)
                                             await new Promise<void>((resolve, reject) => { img.onload = () => resolve(); img.onerror = reject; img.src = url })
@@ -511,7 +502,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                             const ctx = canvas.getContext('2d')!
                                             ctx.drawImage(img, 0, 0, w, h)
                                             const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
-                                            // Upload to Cloudinary
                                             const sigRes = await authFetch('/api/social/upload-signature?kind=image')
                                             const sig = await sigRes.json()
                                             if (!sig.available) { setEditError('Cloudinary not configured'); return }
@@ -651,7 +641,6 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
 
                         {editError && <p style={{ color: SOCIAL.red, fontSize: '0.82rem', margin: '0 0 12px', textAlign: 'center' }}>{editError}</p>}
 
-                        {/* Actions */}
                         <div style={{ display: 'flex', gap: 10 }}>
                             <button onClick={() => { setShowEditModal(false); setEditError(''); setEditPic('') }} style={{ flex: 1, padding: '11px', background: SOCIAL.bg, border: `1.5px solid ${SOCIAL.border}`, borderRadius: 10, fontWeight: 700, fontSize: '0.88rem', color: SOCIAL.textSecondary, cursor: 'pointer' }}>Cancel</button>
                             <button onClick={async () => {

@@ -10,7 +10,6 @@ import { useIsMobile } from '@/lib/use-is-mobile'
 import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 import { CATEGORIES as SHARED_CATEGORIES, catIconMap, mithilaPillBackground, LivestockIcon } from '@/lib/category-icons'
 
-// Use shared categories + add weather (explore has it)
 const CATEGORIES = [...SHARED_CATEGORIES, { key: 'weather', label: 'Weather', icon: <LivestockIcon /> }]
 
 const FILTERS = [{ key: 'all', label: 'All' }, { key: 'post', label: '📷 Posts' }, { key: 'krishiclip', label: '🎬 KrishiClips' }]
@@ -67,7 +66,7 @@ function AgriSocialExploreInner() {
         void loadPage(1, false)
     }, [category, typeFilter, tag])
 
-    // Infinite scroll
+    // Infinite scroll sentinel observer.
     useEffect(() => {
         const sentinel = sentinelRef.current
         if (!sentinel) return
@@ -89,13 +88,11 @@ function AgriSocialExploreInner() {
             </nav>
 
             <div style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 60px' }}>
-                {/* Header */}
                 <div style={{ marginBottom: 20, textAlign: 'center' }}>
                     <h1 style={{ color: SOCIAL.text, fontWeight: 900, fontSize: '1.6rem', margin: '0 0 4px' }}>🔥 Explore</h1>
                     <p style={{ color: SOCIAL.muted, fontSize: '0.86rem', margin: 0 }}>Trending posts from farmers, buyers & agriinfluencers</p>
                 </div>
 
-                {/* Tag filter banner */}
                 {tag && (
                     <div style={{ background: SOCIAL.primaryLight, border: `1px solid ${SOCIAL.border}`, borderRadius: 10, padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ color: SOCIAL.primary, fontWeight: 700, fontSize: '0.86rem' }}>#{tag}</span>
@@ -103,7 +100,6 @@ function AgriSocialExploreInner() {
                     </div>
                 )}
 
-                {/* Type filter */}
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                     {FILTERS.map(f => (
                         <button key={f.key} onClick={() => setTypeFilter(f.key)}
@@ -113,7 +109,6 @@ function AgriSocialExploreInner() {
                     ))}
                 </div>
 
-                {/* Category pills */}
                 <div className="no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 4 }}>
                     {CATEGORIES.map(c => (
                         <button key={c.key} onClick={() => setCategory(c.key)}
@@ -123,7 +118,6 @@ function AgriSocialExploreInner() {
                     ))}
                 </div>
 
-                {/* Grid */}
                 {loading ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: isMobile ? 2 : 4 }}>
                         {[...Array(9)].map((_, i) => <div key={i} style={{ aspectRatio: '1', background: SOCIAL.bgSub, borderRadius: 4 }} />)}

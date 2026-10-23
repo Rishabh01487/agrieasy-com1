@@ -6,8 +6,8 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 interface Song {
   title: string
   artist: string
-  previewUrl: string  // 30-second preview clip (m4a)
-  artworkUrl: string   // album art
+  previewUrl: string
+  artworkUrl: string
   genre: string
 }
 
@@ -28,17 +28,16 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const [results, setResults] = useState<Song[]>([])
   const [loading, setLoading] = useState(false)
   const [playingUrl, setPlayingUrl] = useState('')
-  const [previewProgress, setPreviewProgress] = useState(0)  // current playback position (seconds)
-  const [previewDuration, setPreviewDuration] = useState(30)  // total duration (seconds)
-  const [seekStartTime, setSeekStartTime] = useState(0)  // the start time the user picked for the currently-playing song
-  const [isScrubbing, setIsScrubbing] = useState(false)  // true while the user is dragging the scrubber handle
-  const scrubberRef = useRef<HTMLDivElement>(null)  // the scrubber bar element (for drag math)
-  const [error, setError] = useState('')  // visible error message so fetch failures aren't silent
+  const [previewProgress, setPreviewProgress] = useState(0)
+  const [previewDuration, setPreviewDuration] = useState(30)
+  const [seekStartTime, setSeekStartTime] = useState(0)
+  const [isScrubbing, setIsScrubbing] = useState(false)
+  const scrubberRef = useRef<HTMLDivElement>(null)
+  const [error, setError] = useState('')
   const audioRef = useRef<HTMLAudioElement>(null)
   const debounceRef = useRef<NodeJS.Timeout | null>(null)
   const [trending, setTrending] = useState<Song[]>([])
 
-  // Load trending songs on mount
   useEffect(() => {
     searchMusic('top bollywood songs 2024', true)
   }, [])
@@ -49,10 +48,9 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     setError('')
     if (!isTrending) setResults([])
     try {
-      // iTunes Search API is CORS-friendly, so we call it directly.
-      // (A CSP rule in middleware.ts explicitly allows itunes.apple.com
-      // in connect-src / media-src / img-src — without that rule the
-      // browser blocks the fetch and songs never appear.)
+      // iTunes Search API is CORS-friendly, but a CSP rule in middleware.ts
+      // must explicitly allow itunes.apple.com in connect-src / media-src /
+      // img-src — otherwise the browser blocks the fetch and songs never appear.
       const url = `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=50&country=in`
       const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -63,22 +61,21 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
         previewUrl: r.previewUrl || '',
         artworkUrl: (r.artworkUrl100 || '').replace('100x100', '200x200'),
         genre: r.primaryGenreName || 'Music',
-      })).filter((s: Song) => s.previewUrl) // only songs with preview clips
+      })).filter((s: Song) => s.previewUrl)
 
       if (isTrending) {
         setTrending(songs)
       } else {
         setResults(songs)
       }
-      // Surface a helpful message if the API returned 0 songs (rare but possible
-      // for very obscure queries) — distinguishes "no results" from "fetch failed".
+      // Distinguish "no results" from "fetch failed" for obscure queries.
       if (songs.length === 0 && !isTrending) {
         setError(`No songs found for "${searchQuery}". Try a different spelling or artist name.`)
       }
     } catch (e: any) {
       console.error('Music search failed:', e)
-      // Show a visible, actionable error so the user knows the fetch failed
-      // (otherwise the sheet just stays empty and looks broken).
+      // Visible error so the user knows the fetch failed (otherwise the
+      // sheet just stays empty and looks broken).
       setError(
         'Could not reach the music catalog. This is usually a network or ' +
         'content-policy block. Tap Retry, or check your connection.'
@@ -115,7 +112,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     }
   }
 
-  // Track playback position for the seek slider
+  // Track playback position for the seek slider.
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
@@ -129,7 +126,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     }
   }, [playingUrl])
 
-  // Seek handler — user drags the slider to pick the song's start point
+  // Seek handler — user drags the slider to pick the song's start point.
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!audioRef.current) return
     const newTime = parseFloat(e.target.value)
@@ -138,9 +135,9 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     setSeekStartTime(newTime)
   }
 
-  // Instagram-style scrubber: pointer-based drag on a custom bar.
-  // The user touches/clicks anywhere on the bar to jump to that point,
-  // and can drag the handle to scrub through the preview.
+  // Instagram-style scrubber: pointer-based drag on a custom bar (not a
+  // native range input) so we can match IG's look — thin track, brand-color
+  // filled portion, large draggable handle.
   const handleScrubberPointerDown = (e: React.PointerEvent) => {
     if (!audioRef.current || !scrubberRef.current) return
     e.preventDefault()
@@ -160,7 +157,6 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     // Jump to the tap position immediately
     updateFromPointer(e.clientX)
 
-    // Track the drag
     const onPointerMove = (ev: PointerEvent) => updateFromPointer(ev.clientX)
     const onPointerUp = () => {
       setIsScrubbing(false)
@@ -181,9 +177,8 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
 
   const handleSelect = (song: Song) => {
     if (audioRef.current) audioRef.current.pause()
-    // Pass the seekStartTime so the post plays from the user's chosen point
-    // (not always from 0:00). Only pass it if the user actually previewed
-    // this song and moved the slider; otherwise default to 0.
+    // Pass seekStartTime so the post plays from the user's chosen point —
+    // only if they actually previewed this song and moved the slider.
     const startTime = playingUrl === song.previewUrl ? seekStartTime : 0
     onSelect({ url: song.previewUrl, title: song.title, artist: song.artist, startTime })
   }
@@ -215,10 +210,8 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           display: 'flex', flexDirection: 'column',
         }}
       >
-        {/* Handle bar */}
         <div style={{ width: 40, height: 4, borderRadius: 2, background: '#E0E0E0', margin: '0 auto 16px', flexShrink: 0 }} />
 
-        {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
           <div>
             <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
@@ -260,7 +253,6 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* Loading */}
         {loading && (
           <div style={{ textAlign: 'center', padding: 30, color: SOCIAL.muted, fontSize: '0.85rem' }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', border: `2.5px solid ${SOCIAL.borderLight}`, borderTopColor: SOCIAL.primary, animation: 'spin 0.7s linear infinite', margin: '0 auto 10px' }} />
@@ -268,7 +260,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* Error state — visible so fetch failures aren't silent */}
+        {/* Error state */}
         {!loading && error && (
           <div style={{ textAlign: 'center', padding: 24, color: SOCIAL.text, background: '#FEF2F2', border: `1px solid #FECACA`, borderRadius: 12, marginBottom: 12 }}>
             <div style={{ fontSize: '1.6rem', marginBottom: 8 }}>🎵⚠️</div>
@@ -282,7 +274,6 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* Results */}
         {!loading && displaySongs.length > 0 && (
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {!query.trim() && (
@@ -324,13 +315,11 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
                   </div>
                 </div>
 
-                {/* Song info */}
                 <div style={{ flex: 1, minWidth: 0, cursor: 'pointer' }} onClick={() => handleSelect(song)}>
                   <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.title}</p>
                   <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: SOCIAL.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{song.artist} · {song.genre}</p>
                 </div>
 
-                {/* Select button */}
                 <button onClick={() => handleSelect(song)} style={{
                   background: SOCIAL.primary, color: '#fff', border: 'none',
                   borderRadius: 8, padding: '6px 14px', fontSize: '0.74rem',
@@ -344,12 +333,10 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* Instagram-style scrubber bar — appears when a song is selected.
-            Sticky at the bottom of the sheet. Lets the user:
-            - Play/pause the preview
-            - Drag to any point in the 30s clip to set the start time
-            - See elapsed / total time
-            The selected start time is passed to the post when they tap "Use". */}
+        {/* Sticky scrubber bar — appears when a song is selected. Lets
+            the user play/pause, drag to set the start time, and see
+            elapsed/total time. The chosen start time is passed to the post
+            when they tap "Use". */}
         {playingUrl && (
           <div style={{
             position: 'sticky', bottom: 0, left: 0, right: 0,
@@ -359,9 +346,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
             boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
             flexShrink: 0, zIndex: 10,
           }}>
-            {/* Top row: play/pause + song info + time */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              {/* Play/Pause button — Instagram style (circular, filled) */}
               <button
                 onClick={() => playingUrl && togglePreview(playingUrl)}
                 style={{
@@ -371,11 +356,9 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
                   flexShrink: 0, padding: 0,
                 }}
               >
-                {/* Show pause icon when preview is playing, play icon when paused */}
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
               </button>
 
-              {/* Song title + "Start from" label */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {displaySongs.find(s => s.previewUrl === playingUrl)?.title || 'Preview'}
@@ -385,19 +368,13 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
                 </p>
               </div>
 
-              {/* Time display */}
               <span style={{ fontSize: '0.7rem', color: SOCIAL.muted, fontWeight: 600, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                 {formatTime(previewProgress)} / {formatTime(previewDuration)}
               </span>
             </div>
 
-            {/* Scrubber bar — Instagram style.
-                A custom draggable bar (not a native range input) so we can
-                style it exactly like IG: thin track, filled portion in brand
-                color, large draggable handle. */}
             <div
               ref={(el) => {
-                // Store the scrubber element for drag math
                 (scrubberRef as any).current = el
               }}
               onPointerDown={handleScrubberPointerDown}
@@ -407,18 +384,15 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
                 touchAction: 'none',  // prevent scroll while dragging
               }}
             >
-              {/* Track (background) */}
               <div style={{
                 position: 'absolute', left: 0, right: 0, height: 4,
                 borderRadius: 2, background: SOCIAL.border,
               }} />
-              {/* Filled portion */}
               <div style={{
                 position: 'absolute', left: 0, height: 4, borderRadius: 2,
                 background: SOCIAL.primary,
                 width: `${(previewProgress / (previewDuration || 30)) * 100}%`,
               }} />
-              {/* Draggable handle — Instagram style (large, white with shadow) */}
               <div style={{
                 position: 'absolute',
                 left: `calc(${(previewProgress / (previewDuration || 30)) * 100}% - 10px)`,
@@ -430,7 +404,6 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
               }} />
             </div>
 
-            {/* "Use this song" button — Instagram style */}
             <button
               onClick={() => {
                 const song = displaySongs.find(s => s.previewUrl === playingUrl)
@@ -448,7 +421,6 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* No results */}
         {!loading && query.trim() && displaySongs.length === 0 && (
           <div style={{ textAlign: 'center', padding: 30, color: SOCIAL.muted }}>
             <p style={{ fontSize: '0.85rem', margin: 0 }}>No songs found for &quot;{query}&quot;</p>

@@ -35,9 +35,8 @@ export default function AgriSocialBottomNav({ active }: Props) {
     setUserId(id)
     if (!id) return
 
-    // Fetch viewer profile pic + unread DM count in parallel.
-    // Reuses the same endpoints as the main feed's top nav so counts stay
-    // consistent across the app.
+    // Fetch viewer profile pic + unread DM count in parallel — same endpoints
+    // as the main feed's top nav, so counts stay consistent across the app.
     (async () => {
       try {
         const [profRes, convRes] = await Promise.all([
@@ -58,8 +57,7 @@ export default function AgriSocialBottomNav({ active }: Props) {
       } catch {}
     })()
 
-    // Refresh unread count every 60s so the badge stays fresh while the
-    // user lingers on a page.
+    // Refresh unread count every 60s so the badge stays fresh.
     const i = setInterval(async () => {
       try {
         const r = await authFetch('/api/social/dm/conversations')
@@ -109,7 +107,6 @@ export default function AgriSocialBottomNav({ active }: Props) {
 
   return (
     <>
-      {/* Spacer so content above isn't hidden behind the fixed bar */}
       <div style={{ height: 56 }} aria-hidden />
       <nav
         className="agrisocial-bottom-nav"
@@ -148,7 +145,7 @@ export default function AgriSocialBottomNav({ active }: Props) {
                 padding: '6px 0',
               }}
             >
-              {/* Pill background on the active icon — Instagram-style */}
+              {/* Pill background on the active icon (Instagram-style) */}
               <div style={{
                 padding: '7px 11px',
                 borderRadius: 14,
@@ -190,12 +187,9 @@ export default function AgriSocialBottomNav({ active }: Props) {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* Icons — Instagram-style line icons (24x24, stroke = currentColor)   */
-/* ------------------------------------------------------------------ */
+/* Icons — Instagram-style line icons (24x24, stroke = currentColor) */
 
 function HomeIcon({ filled }: { filled: boolean }) {
-  // Filled house when active, outline house when not — exactly like IG
   if (filled) {
     return (
       <svg width="27" height="27" viewBox="0 0 24 24" fill="#000" stroke="#000" strokeWidth="1.5" strokeLinejoin="round">
@@ -211,7 +205,6 @@ function HomeIcon({ filled }: { filled: boolean }) {
 }
 
 function ReelsIcon({ filled }: { filled: boolean }) {
-  // Rounded rectangle with a play triangle — the IG Reels glyph
   return (
     <svg width="27" height="27" viewBox="0 0 24 24" fill={filled ? '#000' : 'none'} stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" />
@@ -222,7 +215,6 @@ function ReelsIcon({ filled }: { filled: boolean }) {
 }
 
 function SendIcon({ filled }: { filled: boolean }) {
-  // Paper-plane triangle — the IG Direct glyph. Filled when active.
   return (
     <svg width="27" height="27" viewBox="0 0 24 24" fill={filled ? '#000' : 'none'} stroke="#000" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <line x1="22" y1="2" x2="11" y2="13" />
@@ -232,7 +224,6 @@ function SendIcon({ filled }: { filled: boolean }) {
 }
 
 function SearchIcon({ filled }: { filled: boolean }) {
-  // Magnifying glass — thick stroke when active
   return (
     <svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth={filled ? 2.4 : 1.8} strokeLinecap="round" strokeLinejoin="round">
       <circle cx="11" cy="11" r="8" />
@@ -242,8 +233,7 @@ function SearchIcon({ filled }: { filled: boolean }) {
 }
 
 function ProfileAvatarIcon({ profilePic, active }: { profilePic: string; active: boolean }) {
-  // Circular avatar with a ring when active. Falls back to a person
-  // silhouette when no profile pic is set.
+  // Falls back to a person silhouette when no profile pic is set.
   if (profilePic) {
     return (
       <div style={{

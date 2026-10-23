@@ -145,8 +145,8 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
     const carouselImages = (post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls : (post.mediaUrl ? [post.mediaUrl] : []))
         .filter(u => u && (u.startsWith('http') || u.startsWith('/')))
 
-    // Build a threaded comment view (top-level + their replies)
-    // Sort top-level comments by relevance (Instagram-style):
+    // Build a threaded comment view — sort top-level by likes then recency
+    // (Instagram-style relevance).
     const topLevel = comments.filter(c => !c.parentId).sort((a, b) => {
         const aLikes = a.likesCount || 0
         const bLikes = b.likesCount || 0
@@ -164,7 +164,6 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
             </nav>
 
             <div className="ig-post-layout" style={{ maxWidth: '960px', margin: '0 auto', padding: '20px 16px 60px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 360px', gap: 0, background: SOCIAL.white, borderRadius: 12, boxShadow: SHARED.shadowMd, overflow: 'hidden' }}>
-                {/* Media */}
                 <div style={{ background: '#000', position: 'relative', minHeight: 400 }}>
                     {ytId ? (
                         <div style={{ position: 'relative', paddingBottom: '100%', height: 0 }}>
@@ -193,7 +192,6 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                         <div style={{ height: '100%', minHeight: 400, background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '4rem' }}>📢</div>
                     )}
 
-                    {/* Music Sticker — shows if post has audio */}
                     {post.audioUrl && (
                         <div style={{ padding: '10px 16px', background: SOCIAL.white, borderBottom: `1px solid ${SOCIAL.border}` }}>
                             <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} startTime={post.audioStartTime} autoPlay={false} compact />
@@ -203,7 +201,6 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
 
                 {/* Right panel: author + actions + comments */}
                 <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '85vh', borderLeft: `1px solid ${SOCIAL.border}` }}>
-                    {/* Author */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderBottom: `1px solid ${SOCIAL.border}` }}>
                         <Link href={`/agrisocial/profile/${authorId}`} style={{ textDecoration: 'none', flexShrink: 0 }}>
                             {post.userId && typeof post.userId === 'object' && (post.userId as User).profilePic ? (
@@ -379,7 +376,7 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                 </div>
             </div>
 
-            {/* Likes modal — shows who liked this post */}
+            {/* Likes modal */}
             {showLikesModal && (
                 <div onClick={() => setShowLikesModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, backdropFilter: 'blur(4px)' }}>
                     <div onClick={e => e.stopPropagation()} style={{ background: SOCIAL.white, borderRadius: 16, padding: 0, maxWidth: 400, width: '100%', maxHeight: '70vh', overflowY: 'auto', boxShadow: SHARED.shadowXl }}>
@@ -407,7 +404,6 @@ export default function PostDetail({ params }: { params: Promise<{ postId: strin
                 </div>
             )}
 
-            {/* Share Sheet */}
             {post && (
                 <ShareSheet
                     isOpen={showShareSheet}

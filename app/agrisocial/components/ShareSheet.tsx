@@ -14,12 +14,8 @@ interface ShareSheetProps {
   mediaUrl?: string
   mediaType?: string
   allowDownload?: boolean
-  username?: string  // the post author's @username — for watermarking
+  username?: string
 }
-
-/* ------------------------------------------------------------------ */
-/* Types                                                               */
-/* ------------------------------------------------------------------ */
 
 interface Conversation {
   _id: string
@@ -27,10 +23,6 @@ interface Conversation {
   lastMessageText: string
   unread: boolean
 }
-
-/* ------------------------------------------------------------------ */
-/* Brand SVG icons                                                     */
-/* ------------------------------------------------------------------ */
 
 function WhatsAppIcon({ size = 30 }: { size?: number }) {
   return (
@@ -99,7 +91,6 @@ function MoreIcon({ size = 30 }: { size?: number }) {
 }
 
 function StoryIcon({ size = 30 }: { size?: number }) {
-  // Instagram Story gradient ring with a "+" — represents "Add to Story"
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
       <defs>
@@ -125,17 +116,11 @@ function SendIcon({ size = 30 }: { size?: number }) {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/* Helpers                                                             */
-/* ------------------------------------------------------------------ */
-
-// Detect mobile browser — file sharing only works on mobile
 function isMobile(): boolean {
   if (typeof navigator === 'undefined') return false
   return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent)
 }
 
-// Fetch a media URL as a File (for native file share)
 async function fetchMediaAsFile(mediaUrl: string, fallbackName = 'krishiclip'): Promise<File | null> {
   try {
     const response = await fetch(mediaUrl, { mode: 'cors' })
@@ -159,16 +144,13 @@ async function fetchMediaAsFile(mediaUrl: string, fallbackName = 'krishiclip'): 
 
 function canShareFiles(files: File[]): boolean {
   if (typeof navigator === 'undefined') return false
-  // Don't rely on navigator.canShare() — it returns false on some Android
-  // browsers even when file sharing actually works. Instead, just check that
-  // the navigator.share function exists. We'll try the share directly and
-  // catch any error.
+  // navigator.canShare() returns false on some Android browsers even when file
+  // sharing actually works, so we just check for navigator.share and try directly.
   return typeof (navigator as any).share === 'function'
 }
 
-// Try to share a file via the native OS share sheet. Returns true if the
-// share was attempted (whether it succeeded or the user cancelled), false
-// if file sharing isn't available at all.
+// Try to share a file via the native OS share sheet. Returns true if the share
+// was attempted (success or user cancel), false if file sharing isn't available.
 async function tryFileShare(file: File, text: string, title: string): Promise<boolean> {
   if (typeof navigator === 'undefined' || typeof (navigator as any).share !== 'function') {
     return false
@@ -179,18 +161,16 @@ async function tryFileShare(file: File, text: string, title: string): Promise<bo
       title,
       text,
     })
-    return true  // share succeeded (or user cancelled — both are "done")
+    return true
   } catch (err: any) {
     // AbortError = user cancelled the share sheet — not a real error
     if (err?.name === 'AbortError') return true
-    // Any other error = file sharing genuinely failed (e.g. browser doesn't
-    // support files, or the file type is rejected)
     return false
   }
 }
 
-// Download a media file to the device (used as a fallback when file-share
-// isn't supported — user then manually attaches it in the target app)
+// Download a media file to the device — fallback when file-share isn't supported,
+// so the user can manually attach it in the target app.
 async function downloadMediaToDevice(mediaUrl: string): Promise<boolean> {
   try {
     const response = await fetch(mediaUrl)
@@ -209,7 +189,6 @@ async function downloadMediaToDevice(mediaUrl: string): Promise<boolean> {
   }
 }
 
-// Simple avatar — first letter on a gradient circle
 function AvatarInitial({ name, size = 48 }: { name: string; size?: number }) {
   return (
     <div style={{
@@ -220,10 +199,6 @@ function AvatarInitial({ name, size = 48 }: { name: string; size?: number }) {
     }}>{name?.[0]?.toUpperCase() || 'U'}</div>
   )
 }
-
-/* ------------------------------------------------------------------ */
-/* Main component                                                      */
-/* ------------------------------------------------------------------ */
 
 export default function ShareSheet({
   isOpen,
@@ -244,7 +219,6 @@ export default function ShareSheet({
   const [sendingTo, setSendingTo] = useState<string | null>(null)
   const toastTimer = useRef<NodeJS.Timeout | null>(null)
 
-  // Fetch DM conversations when the sheet opens — for the "Send to" friends row
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
@@ -263,7 +237,6 @@ export default function ShareSheet({
     return () => { cancelled = true }
   }, [isOpen])
 
-  // Clean up toast timer on unmount
   useEffect(() => {
     return () => { if (toastTimer.current) clearTimeout(toastTimer.current) }
   }, [])
@@ -286,14 +259,11 @@ export default function ShareSheet({
   const isVideo = mediaType === 'video' || (mediaUrl?.match(/\.(mp4|webm|mov|mkv)$/i) ? true : false)
   const mobile = isMobile()
 
-  /* ---------------------------------------------------------------- */
-  /* Send to a DM friend — Instagram Direct style                     */
-  /* ---------------------------------------------------------------- */
+  /* Send to a DM friend (Instagram Direct style) */
   const handleSendToFriend = async (conv: Conversation) => {
     if (!conv.other?._id) return
     setSendingTo(conv._id)
     try {
-      // POST the post URL as a DM message to this conversation
       const shareMsg = `${shareText} ${postUrl}`
       const res = await authFetch('/api/social/dm/messages', {
         method: 'POST',
@@ -312,16 +282,11 @@ export default function ShareSheet({
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Watermarked download — burns AgriSocial logo + @username +        */
-  /* agrieasy.site into the video before saving. This way when the     */
-  /* video is shared to Instagram Story / WhatsApp Status, viewers     */
-  /* see the branding and can visit agrieasy.site.                     */
-  /* ---------------------------------------------------------------- */
+  /* Watermarked download — burns AgriSocial branding into the video so
+     viewers on Instagram/WhatsApp Status can find the original post. */
   const downloadWatermarked = async (url: string): Promise<boolean> => {
     const isVideo = mediaType === 'video' || url.match(/\.(mp4|webm|mov|mkv)$/i)
     if (isVideo) {
-      // Try watermarking the video (takes a few seconds — shows a toast)
       showToast('Adding AgriSocial watermark...')
       try {
         const watermarked = await watermarkVideo(url, { username }, (progress) => {
@@ -345,7 +310,6 @@ export default function ShareSheet({
         // Watermarking failed — fall through to plain download
       }
     }
-    // Fallback: download the original file without watermark
     try {
       const response = await fetch(url)
       const blob = await response.blob()
@@ -363,11 +327,9 @@ export default function ShareSheet({
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Watermarked file share — returns a watermarked File for           */
-  /* navigator.share({files}). Falls back to the original if           */
-  /* watermarking fails.                                               */
-  /* ---------------------------------------------------------------- */
+  /* Watermarked file share — returns a watermarked File for
+     navigator.share({files}). Falls back to the original if
+     watermarking fails. */
   const fetchWatermarkedFile = async (url: string, fallbackName = 'krishiclip'): Promise<File | null> => {
     const isVideo = mediaType === 'video' || url.match(/\.(mp4|webm|mov|mkv)$/i)
     if (isVideo) {
@@ -378,10 +340,9 @@ export default function ShareSheet({
         // fall through to plain fetch
       }
     }
-    // Fallback: fetch the original file
     return fetchMediaAsFile(url, fallbackName)
   }
-  /* ---------------------------------------------------------------- */
+
   const handleCopyLink = async () => {
     const result = await shareContent(postUrl, 'AgriEasy Post', postCaption)
     if (result === 'copied' || result === 'shared') {
@@ -390,64 +351,52 @@ export default function ShareSheet({
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Helper: try a deep link and detect if the app opened.             */
-  /* If the app opens, the page becomes hidden (visibilitychange).     */
-  /* If it doesn't open within 1.5s, show a toast — NO web fallback.   */
-  /* ---------------------------------------------------------------- */
+  /* Helper: try a deep link and detect if the app opened. If the app
+     opens, the page becomes hidden (visibilitychange). If it doesn't
+     open within 1.5s, show a toast — NO web fallback (web login prompt
+     is what the user previously complained about). */
   const tryDeepLink = (url: string, appName: string) => {
-    // Set a timeout to check if the app opened. If the page is still
-    // visible after 1.5s, the app isn't installed — show a toast.
-    // We do NOT open the browser/web version — that's what causes the
-    // "download/login" prompt the user complained about.
     const timeout = setTimeout(() => {
       if (!document.hidden) {
         showToast(`${appName} app not found — please install it from the Play Store / App Store`)
       }
     }, 1500)
-    // If the page becomes hidden, the app opened — clear the timeout
     const onVisChange = () => {
       if (document.hidden) clearTimeout(timeout)
       document.removeEventListener('visibilitychange', onVisChange)
     }
     document.addEventListener('visibilitychange', onVisChange)
-    // Fire the deep link
     window.location.href = url
   }
 
-  /* ---------------------------------------------------------------- */
-  /* WhatsApp — mobile: OS share sheet with video file.                */
-  /* If file share fails, DOWNLOAD the video first, then open WhatsApp.  */
-  /* NEVER send as text-only link (that's the bug the user reported).    */
-  /* ---------------------------------------------------------------- */
+  /* WhatsApp — mobile: OS share sheet with video file. If file share
+     fails, DOWNLOAD the video first, then open WhatsApp. NEVER send as
+     text-only link (that's the bug the user reported). */
   const handleWhatsApp = async () => {
     if (mobile && isSharableFile && !sharing) {
       setSharing(true)
       try {
         const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
         if (file) {
-          // navigator.share({files}) opens the OS share sheet. On Android,
-          // this shows ALL WhatsApp instances (including cloned apps). The
-          // user picks one, and WhatsApp opens WITH the video attached.
+          // navigator.share({files}) shows ALL WhatsApp instances on Android
+          // (including cloned apps); the user picks one and WhatsApp opens
+          // WITH the video attached.
           const shared = await tryFileShare(file, shareText, 'KrishiClip')
-          if (shared) { setSharing(false); return }  // OS sheet opened — done
+          if (shared) { setSharing(false); return }
         }
         // File share failed (CSP blocked fetch, or browser doesn't support
-        // file sharing). DOWNLOAD the video to the device first, THEN open
-        // WhatsApp via deep link. The user attaches the downloaded video
-        // manually. Do NOT fall through to a text-only link.
+        // file sharing). DOWNLOAD the video first, THEN open WhatsApp via
+        // deep link — do NOT fall through to a text-only link.
         showToast('Video saved — attach it in WhatsApp from your gallery')
         await downloadWatermarked(mediaUrl!)
         tryDeepLink(`whatsapp://send?text=${encodedText}%20${encodedUrl}`, 'WhatsApp')
         return
       } catch { /* silent */ } finally { setSharing(false) }
     }
-    // Mobile + text/link only (no video to share): deep link to WhatsApp
     if (mobile) {
       tryDeepLink(`whatsapp://send?text=${encodedText}%20${encodedUrl}`, 'WhatsApp')
       return
     }
-    // Desktop: download the video + toast
     if (isSharableFile) {
       showToast('Video saved to your device — open WhatsApp and attach it manually')
       await downloadWatermarked(mediaUrl!)
@@ -457,10 +406,8 @@ export default function ShareSheet({
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Instagram — mobile: OS share sheet with video file.                */
-  /* If file share fails, DOWNLOAD the video first, then open Instagram.  */
-  /* ---------------------------------------------------------------- */
+  /* Instagram — mobile: OS share sheet with video file. If file share
+     fails, DOWNLOAD the video first, then open Instagram. */
   const handleInstagram = async () => {
     if (mobile && isSharableFile && !sharing) {
       setSharing(true)
@@ -477,12 +424,10 @@ export default function ShareSheet({
         return
       } catch { /* silent */ } finally { setSharing(false) }
     }
-    // Mobile + text/link only: deep link to Instagram
     if (mobile) {
       tryDeepLink('instagram://camera', 'Instagram')
       return
     }
-    // Desktop: download + toast
     if (isSharableFile) {
       showToast('Video saved to your device — open Instagram and post it manually')
       await downloadWatermarked(mediaUrl!)
@@ -492,19 +437,14 @@ export default function ShareSheet({
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Add to Instagram Story — opens Instagram camera directly.           */
-  /* Downloads the video first so the user can pick it from their gallery. */
-  /* Uses instagram://camera (not story-camera which doesn't work on    */
-  /* all Instagram versions).                                           */
-  /* ---------------------------------------------------------------- */
+  /* Add to Instagram Story — opens Instagram camera directly. Uses
+     instagram://camera (story-camera doesn't work on all IG versions). */
   const handleInstagramStory = async () => {
     if (mobile) {
-      // Mobile + video: try OS share sheet with file first. This is the
-      // ONLY way to pass a video file to Instagram Story — the OS sheet
-      // lets the user pick Instagram, which opens with the video attached.
-      // The user then selects 'Your Story' or 'Close Friends'.
       if (isSharableFile && !sharing) {
+        // OS share sheet is the ONLY way to pass a video file to Instagram
+        // Story — it lets the user pick Instagram, which opens with the
+        // video attached.
         setSharing(true)
         try {
           const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
@@ -512,12 +452,10 @@ export default function ShareSheet({
             const shared = await tryFileShare(file, shareText, 'KrishiClip')
             if (shared) { setSharing(false); return }
           }
-          // File share failed — download the video to the device FIRST,
-          // then open Instagram camera. The user swipes to Story and
-          // picks the downloaded video from their gallery.
-          // ALSO copy the post URL to clipboard so the user can add a
-          // Link Sticker to their Story (Instagram allows ALL users to
-          // add link stickers now). Viewers tap the sticker to visit.
+          // File share failed — download the video first, then open IG
+          // camera. Also copy the post URL so the user can add a Link
+          // Sticker to their Story (Instagram allows ALL users to add
+          // link stickers now).
           await downloadWatermarked(mediaUrl!)
           navigator.clipboard?.writeText(postUrl).catch(() => {})
           showToast('Video saved! In Instagram Story: add a Link sticker → paste the URL → viewers can tap it')
@@ -525,7 +463,6 @@ export default function ShareSheet({
           return
         } catch { /* silent */ } finally { setSharing(false) }
       }
-      // No video file — just open Instagram camera
       tryDeepLink('instagram://camera', 'Instagram')
       return
     }
@@ -540,17 +477,13 @@ export default function ShareSheet({
     }
   }
 
-  /* ---------------------------------------------------------------- */
-  /* Add to WhatsApp Status (story) — opens WhatsApp directly.          */
-  /* Downloads the video first so the user can attach it to Status.     */
-  /* NO web fallback (no wa.me — causes download/login prompt).         */
-  /* ---------------------------------------------------------------- */
+  /* Add to WhatsApp Status (story) — opens WhatsApp directly. NO web
+     fallback (no wa.me — causes download/login prompt). */
   const handleWhatsAppStatus = async () => {
     if (mobile) {
-      // Mobile + video: try OS share sheet with file first. On Android,
-      // this shows ALL WhatsApp instances (including cloned apps). The
-      // user picks one, and can select 'My Status' as the recipient.
       if (isSharableFile && !sharing) {
+        // OS share sheet on Android shows ALL WhatsApp instances (including
+        // cloned apps); the user picks one and can select 'My Status'.
         setSharing(true)
         try {
           const file = await fetchWatermarkedFile(mediaUrl!, "krishiclip")
@@ -558,16 +491,13 @@ export default function ShareSheet({
             const shared = await tryFileShare(file, shareText, 'KrishiClip')
             if (shared) { setSharing(false); return }
           }
-          // File share failed — download the video to the device FIRST,
-          // then open WhatsApp. The user goes to Status and attaches the
-          // downloaded video from their gallery.
+          // File share failed — download the video first, then open WhatsApp.
           showToast('Video saved — add it to your Status from your gallery')
           await downloadWatermarked(mediaUrl!)
           tryDeepLink('whatsapp://', 'WhatsApp')
           return
         } catch { /* silent */ } finally { setSharing(false) }
       }
-      // No video file — just open WhatsApp
       tryDeepLink('whatsapp://', 'WhatsApp')
       return
     }
@@ -626,7 +556,6 @@ export default function ShareSheet({
 
   const canDownload = allowDownload && mediaUrl && mediaType !== 'text' && mediaType !== 'youtube'
 
-  // App share options
   type ShareOption = {
     icon: React.ReactNode
     label: string
@@ -653,7 +582,7 @@ export default function ShareSheet({
     })
   }
 
-  // Show at most 6 friends in the horizontal scroll
+  // 8 friends max in the horizontal scroll
   const friends = conversations.slice(0, 8)
 
   return (
@@ -670,7 +599,7 @@ export default function ShareSheet({
           {sharing ? 'Preparing video…' : 'Share to...'}
         </p>
 
-        {/* ── Send to friends (Instagram Direct style) ── */}
+        {/* Send to friends (Instagram Direct style) */}
         {friends.length > 0 && (
           <div style={{ marginBottom: 18 }}>
             <p style={{ fontSize: '0.72rem', fontWeight: 700, color: SOCIAL.muted, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '0 0 10px' }}>Send to</p>
@@ -703,10 +632,9 @@ export default function ShareSheet({
           </div>
         )}
 
-        {/* Divider */}
         <div style={{ height: 1, background: SOCIAL.border, margin: '0 0 16px' }} />
 
-        {/* ── Apps grid ── */}
+        {/* Apps grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: 12, marginBottom: 16 }}>
           {shareOptions.map((option, i) => (
             <button key={i} onClick={option.onClick} disabled={sharing || !!sendingTo} style={{
@@ -737,7 +665,6 @@ export default function ShareSheet({
           borderRadius: 12, fontWeight: 700, fontSize: '0.9rem', color: SOCIAL.text, cursor: 'pointer',
         }}>Cancel</button>
 
-        {/* Toast */}
         {toast && (
           <div style={{
             position: 'fixed', bottom: 'calc(100px + env(safe-area-inset-bottom))', left: '50%',

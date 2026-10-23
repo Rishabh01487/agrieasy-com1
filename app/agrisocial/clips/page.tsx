@@ -46,7 +46,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
     const [showShareSheet, setShowShareSheet] = useState(false)
     const [muted, setMuted] = useState(false)
     const [paused, setPaused] = useState(false)
-    const [ended, setEnded] = useState(false)  // true when clip finishes — shows AgriSocial branding
+    const [ended, setEnded] = useState(false)  // clip finished — shows AgriSocial end screen
     const [heartBurst, setHeartBurst] = useState(false)
     const ytId = clip.mediaUrl ? (clip.mediaUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)?.[1]) : null
     const [showComments, setShowComments] = useState(false)
@@ -59,18 +59,17 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
     const viewRecordedRef = useRef(false)
     const cardRef = useRef<HTMLDivElement>(null)
 
-    // Backup IntersectionObserver — self-pause when card scrolls out of view
-    // This is a safety net in case the parent's activeIdx doesn't update reliably
+    // Backup IntersectionObserver — self-pause when card scrolls out of view.
+    // Safety net in case the parent's activeIdx doesn't update reliably.
     useEffect(() => {
         const card = cardRef.current
         if (!card) return
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (!e.isIntersecting && videoRef.current) {
-                    // Clip scrolled out of view — pause immediately + reset
                     videoRef.current.pause()
                     videoRef.current.currentTime = 0
-                    setPaused(false)  // reset paused state so next play starts fresh
+                    setPaused(false)
                 }
             })
         }, { threshold: 0.5 })
@@ -78,13 +77,12 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
         return () => observer.disconnect()
     }, [])
 
-    // Global event listener: when any clip becomes active, all OTHER clips pause
-    // This is the most reliable approach — uses a custom event broadcast
+    // Global event: when any clip becomes active, all OTHER clips pause.
+    // Custom-event broadcast is the most reliable approach.
     useEffect(() => {
         const handleActiveChange = (e: Event) => {
             const activeClipId = (e as CustomEvent).detail?.clipId
             if (activeClipId !== clip._id && videoRef.current) {
-                // This is NOT the active clip — pause immediately
                 videoRef.current.pause()
                 videoRef.current.currentTime = 0
                 setPaused(false)
@@ -94,7 +92,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
         return () => window.removeEventListener('agrieasy-active-clip-change', handleActiveChange as EventListener)
     }, [clip._id])
 
-    // When THIS clip becomes active, broadcast the event so all other clips pause
+    // When THIS clip becomes active, broadcast so all other clips pause.
     useEffect(() => {
         if (isActive) {
             window.dispatchEvent(new CustomEvent('agrieasy-active-clip-change', { detail: { clipId: clip._id } }))
@@ -104,10 +102,9 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
     useEffect(() => {
         if (videoRef.current) {
             if (isActive && !paused) {
-                setEnded(false)  // reset end screen when clip starts playing
+                setEnded(false)
                 videoRef.current.play().catch(() => null)
             } else {
-                // Aggressive pause: stop playback + reset to beginning + clear audio
                 videoRef.current.pause()
                 videoRef.current.currentTime = 0
                 setEnded(false)
@@ -115,13 +112,13 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
         }
     }, [isActive, paused])
 
-    // Listen for YouTube iframe 'ended' events via postMessage.
-    // YouTube's IFrame API posts state changes: 0 = ended, 1 = playing, 2 = paused.
-    // We listen for state 0 to trigger the AgriSocial end screen.
+    // YouTube IFrame API posts state changes via postMessage:
+    // 0 = ended, 1 = playing, 2 = paused. Listen for state 0 to show
+    // the AgriSocial end screen.
     useEffect(() => {
         if (!ytId || !isActive) return
 
-        // Tell the YouTube iframe to start sending state change events
+        // Tell the YouTube iframe to start sending state change events.
         const iframe = document.querySelector('iframe[title="KrishiClip"]') as HTMLIFrameElement
         if (iframe && iframe.contentWindow) {
             iframe.contentWindow.postMessage(JSON.stringify({
@@ -134,10 +131,10 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 if (e.origin !== 'https://www.youtube.com') return
                 const data = JSON.parse(e.data)
                 if (data.event === 'onStateChange' && data.info === 0) {
-                    setEnded(true)  // YouTube video ended → show AgriSocial branding
+                    setEnded(true)
                 }
                 if (data.event === 'onStateChange' && data.info === 1) {
-                    setEnded(false)  // playing → hide end screen
+                    setEnded(false)
                 }
             } catch { /* ignore non-JSON messages */ }
         }
@@ -145,18 +142,14 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
         return () => window.removeEventListener('message', handler)
     }, [ytId, isActive])
 
-    // Record a view when this clip becomes active (Fix: Issue 3 — per-clip view tracking)
-    // Uses a ref to ensure we only record ONE view per active session (not on every re-render)
+    // Record ONE view per active session (ref guards against re-renders).
     useEffect(() => {
         if (isActive && viewerId && !viewRecordedRef.current) {
             viewRecordedRef.current = true
-            // Optimistically increment local count for instant feedback
             setViewsCount(c => c + 1)
-            // Fire-and-forget API call to record the view server-side
             authFetch(`/api/social/clips/${clip._id}/view`, { method: 'POST' }).catch(() => null)
         }
         if (!isActive) {
-            // Reset so next time this clip becomes active, we record another view
             viewRecordedRef.current = false
         }
     }, [isActive, viewerId, clip._id])
@@ -268,8 +261,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
         else setShowDeleteConfirm(false)
     }
 
-    // ytId is declared at the top of the component (needed by useEffect hooks above)
-
     return (
         <div ref={cardRef} style={{ position: 'relative', height: '100vh', width: '100%', background: SOCIAL.clips.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start', flexShrink: 0 }}>
             {/* Media */}
@@ -278,12 +269,10 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                     style={{ width: '100%', height: '100%', border: 'none', position: 'absolute', top: 0, left: 0 }} allowFullScreen title="KrishiClip" allow="autoplay" />
             ) : clip.mediaUrl && clip.mediaType === 'video' ? (
                 <video ref={videoRef} src={clip.mediaUrl}
-                    // CRITICAL audio fix:
-                    // - If the clip has EXTERNAL music (clip.audioUrl), mute the video
-                    //   so only the music plays (not the video's recorded audio).
-                    // - If NO external music, the video's own audio plays (muted={muted}).
-                    // - Always muted when the clip is NOT active (safety: prevents the
-                    //   previous clip's audio from bleeding into the next during scroll).
+                    // If the clip has EXTERNAL music (clip.audioUrl), mute the video so
+                    // only the music plays. Otherwise the video's own audio plays. Always
+                    // muted when the clip is NOT active so the previous clip's audio can't
+                    // bleed into the next during scroll.
                     muted={!!clip.audioUrl || muted || !isActive}
                     playsInline controls={false}
                     onClick={handleVideoTap}
@@ -301,7 +290,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
             {/* Overlay gradient */}
             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '50%', background: 'linear-gradient(to top, rgba(0,0,0,0.85), transparent)', pointerEvents: 'none' }} />
 
-            {/* AgriSocial watermark — visible on the clip (like Instagram's @username overlay) */}
             <div style={{ position: 'absolute', top: 12, left: 12, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: 100, padding: '4px 10px 4px 4px', pointerEvents: 'none', zIndex: 5 }}>
                 <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}><path d="M8 5v14l11-7z" /></svg>
@@ -309,12 +297,10 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 <span style={{ color: '#fff', fontSize: '0.68rem', fontWeight: 700, maxWidth: 100, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>AgriSocial</span>
             </div>
 
-            {/* Heart burst on double-tap */}
             {heartBurst && (
                 <div className="heart-burst" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', fontSize: '5rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))', zIndex: 10 }}>❤️</div>
             )}
 
-            {/* Pause indicator — dark red, not yellow */}
             {paused && !ended && (
                 <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{
@@ -330,8 +316,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 </div>
             )}
 
-            {/* End screen — AgriSocial branding when clip finishes.
-                Like Instagram's end-of-reel branding. Shows logo + name + replay. */}
+            {/* End screen — AgriSocial branding when the clip finishes. */}
             {ended && (
                 <div style={{
                     position: 'absolute', inset: 0, zIndex: 20,
@@ -339,7 +324,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                     gap: 16, animation: 'fadeIn 0.3s ease',
                 }}>
-                    {/* AgriSocial logo */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src="/agrisocial-logo.png" alt="AgriSocial"
                         style={{
@@ -348,7 +332,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                             animation: 'logoPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
                         }}
                     />
-                    {/* Brand name */}
                     <div style={{ textAlign: 'center' }}>
                         <h2 style={{
                             color: '#fff', fontSize: '1.6rem', fontWeight: 800, margin: 0,
@@ -363,7 +346,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                             India's Agricultural Community
                         </p>
                     </div>
-                    {/* Replay button */}
                     <button
                         onClick={() => {
                             setEnded(false)
@@ -381,7 +363,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                             transition: 'all 0.2s ease',
                         }}
                     >🔁 Replay</button>
-                    {/* Swipe up hint */}
                     <p style={{
                         color: 'rgba(255,255,255,0.3)', fontSize: '0.7rem', fontWeight: 600,
                         margin: '8px 0 0', animation: 'bounce 1.5s ease infinite',
@@ -404,7 +385,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 </div>
             )}
 
-            {/* Sound toggle (top-right) */}
             {clip.mediaType === 'video' && (
                 <button onClick={() => setMuted(m => !m)} title={muted ? 'Unmute' : 'Mute'}
                     style={{ position: 'absolute', top: 60, right: 16, background: 'rgba(0,0,0,0.5)', border: 'none', color: '#fff', width: 36, height: 36, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)', zIndex: 10 }}>
@@ -412,7 +392,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 </button>
             )}
 
-            {/* Right action bar */}
             <div style={{ position: 'absolute', right: '16px', bottom: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '18px' }}>
                 <Link href={`/agrisocial/profile/${authorId || '#'}`} style={{ textDecoration: 'none' }}>
                     {clip.userId && typeof clip.userId === 'object' && (clip.userId as any).profilePic ? (
@@ -428,12 +407,10 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                     <Icon name="heart" size={32} color={liked ? '#D9534F' : '#fff'} filled={liked} />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{likesCount}</span>
                 </button>
-                {/* Comment — links to the post detail page where comments live */}
                 <button onClick={openComments} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="comment" size={32} color="#fff" />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.commentsCount || 0}</span>
                 </button>
-                {/* Share — copies link + tracks share count */}
                 <button onClick={handleShare} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: SOCIAL.clips.text, transition: 'all 0.2s ease' }}>
                     <Icon name="send" size={30} color="#fff" />
                     <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{clip.sharedCount || 0}</span>
@@ -454,14 +431,12 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 </div>
             </div>
 
-            {/* Share copied toast */}
             {shareCopied && (
                 <div style={{ position: 'absolute', top: 60, left: '50%', transform: 'translateX(-50%)', background: 'rgba(0,0,0,0.85)', color: '#fff', padding: '8px 16px', borderRadius: 100, fontSize: '0.78rem', fontWeight: 700, zIndex: 50, display: 'flex', alignItems: 'center', gap: 6, backdropFilter: 'blur(8px)' }}>
                     <Icon name="check" size={14} color="#22c55e" /> Link copied
                 </div>
             )}
 
-            {/* Delete confirm overlay */}
             {showDeleteConfirm && (
                 <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
                     <p style={{ color: SOCIAL.clips.text, fontSize: '1rem', fontWeight: 700, margin: 0 }}>Delete this KrishiClip?</p>
@@ -496,7 +471,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                                 setFollowLoading(false)
                             }}
                             style={{
-                                // Glass effect on dark clips background: semi-transparent + blur
                                 background: following
                                     ? 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(255,255,255,0.06))'
                                     : 'linear-gradient(135deg, rgba(217,83,79,0.55), rgba(217,83,79,0.35))',
@@ -531,7 +505,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 )}
             </div>
 
-            {/* YouTube-style play button badge (replaces 🎬 KrishiClip emoji) */}
+            {/* YouTube-style KrishiClip badge */}
             <div style={{ position: 'absolute', top: '60px', left: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.4)' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 2 }}>
@@ -541,7 +515,7 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 <span style={{ color: SOCIAL.clips.text, fontSize: '0.72rem', fontWeight: 800, background: 'rgba(0,0,0,0.5)', borderRadius: '100px', padding: '3px 10px', backdropFilter: 'blur(8px)' }}>KrishiClip</span>
             </div>
 
-            {/* Comment bottom sheet — slides up like Instagram Reels */}
+            {/* Comments bottom sheet */}
             <BottomSheet open={showComments} onClose={() => setShowComments(false)} title="Comments" height="tall">
                 {loadingComments ? (
                     <div style={{ textAlign: 'center', padding: 40 }}><Spinner size={24} color={SOCIAL.muted} /></div>
@@ -585,7 +559,6 @@ function ClipCard({ clip, viewerId, isActive, userInteracted, onDelete }: { clip
                 )}
             </BottomSheet>
 
-            {/* Share Sheet */}
             <ShareSheet
                 isOpen={showShareSheet}
                 onClose={() => setShowShareSheet(false)}
@@ -609,29 +582,27 @@ export default function KrishiClips() {
     const sentinelRef = useRef<HTMLDivElement | null>(null)
     const [activeIdx, setActiveIdx] = useState(0)
     // userInteracted gates audio autoplay — music only starts after the
-    // user first taps/scrolls the clips feed, NOT the moment the page opens.
+    // user first taps/scrolls, not the moment the page opens.
     const [userInteracted, setUserInteracted] = useState(false)
     const [userId] = useState(() => (typeof window !== 'undefined' ? localStorage.getItem('userId') || '' : ''))
     const [category, setCategory] = useState('all')
     const containerRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
 
-    // Track which clip IDs we've already fired a view event for, so we
-    // don't re-fire when the same clip scrolls back into view.
+    // Track clip IDs we've already fired a view event for so we don't
+    // re-fire when the same clip scrolls back into view.
     const viewedClipsRef = useRef<Set<string>>(new Set())
 
-    // localStorage cache key — per-category, last page only.
-    // This is the stale-while-revalidate pattern: show cached clips
-    // IMMEDIATELY (0s load time), then fetch fresh ones in the background.
+    // Per-category cache key (page 1 only). Stale-while-revalidate: show
+    // cached clips IMMEDIATELY (0s load), then fetch fresh ones in background.
     const cacheKey = `agrieasy:clips:${category}:p1`
 
     const loadClips = async (pageNum: number, append: boolean) => {
         try {
             if (append) setLoadingMore(true)
-            // First load: try to show cached clips instantly (0s) before
-            // the network call completes. The "loading" state stays true
-            // only if there's NO cached data — so users with a previous
-            // visit see clips immediately.
+            // First load: show cached clips instantly (0s) before the network
+            // call completes. "loading" stays true only if there's no cached
+            // data, so repeat visitors see clips immediately.
             if (!append) {
                 try {
                     const cached = localStorage.getItem(cacheKey)
@@ -653,14 +624,13 @@ export default function KrishiClips() {
             setClips(prev => append ? [...prev, ...clipsData] : clipsData)
             setHasMore(clipsData.length > 0 && (append ? (clips.length + clipsData.length < total) : (clipsData.length < total)))
             pageRef.current = pageNum
-            // Cache page 1 for instant load next time
             if (!append && pageNum === 1) {
                 try { localStorage.setItem(cacheKey, JSON.stringify(clipsData)) } catch {}
             }
         } catch {
             if (!append) {
-                // Network error: keep cached clips visible if we have them,
-                // otherwise show the empty state.
+                // Network error: keep cached clips visible if any, else show
+                // the empty state.
                 if (clips.length === 0) setLoading(false)
             }
         }
@@ -668,23 +638,21 @@ export default function KrishiClips() {
         setLoadingMore(false)
     }
 
-    // Fire the view endpoint for the active clip — but only once per clip
-    // per page session. This implements the "1 view per account per clip"
-    // rule: even if the user scrolls back and forth 100 times, we only
-    // hit the server ONCE per clip.
+    // Fire the view endpoint ONCE per clip per page session — even if the
+    // user scrolls back and forth 100 times, we only hit the server once.
     useEffect(() => {
         if (!clips[activeIdx]?._id) return
         const clipId = clips[activeIdx]._id
         if (viewedClipsRef.current.has(clipId)) return
         viewedClipsRef.current.add(clipId)
-        // Fire-and-forget — don't block the UI on this
+        // Fire-and-forget — don't block the UI on this.
         const url = userId
             ? `/api/social/clips/${clipId}/view?userId=${userId}`
             : `/api/social/clips/${clipId}/view`
         authFetch(url, { method: 'POST' }).catch(() => {})
     }, [activeIdx, clips, userId])
 
-    // Preload cached clips synchronously on mount so first paint is instant
+    // Preload cached clips synchronously on mount so first paint is instant.
     useEffect(() => {
         try {
             const cached = localStorage.getItem(cacheKey)
@@ -702,8 +670,7 @@ export default function KrishiClips() {
     useEffect(() => {
         pageRef.current = 1
         setHasMore(true)
-        // Reset the viewed-clips set when category changes so the new
-        // batch of clips can be viewed again.
+        // Reset viewed-clips set when category changes so new clips can be viewed again.
         viewedClipsRef.current = new Set()
         void loadClips(1, false)
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -721,9 +688,9 @@ export default function KrishiClips() {
         return () => observer.disconnect()
     }, [hasMore, loadingMore, clips.length])
 
-    // Mark userInteracted=true on the first tap/scroll/keydown inside the
-    // clips feed. Until then, MusicSticker won't auto-play — so the music
-    // does NOT blast the moment the page opens, only after the user engages.
+    // Mark userInteracted=true on the first tap/scroll/keydown in the feed.
+    // MusicSticker won't auto-play until then, so music doesn't blast the
+    // moment the page opens — only after the user engages.
     useEffect(() => {
         const container = containerRef.current
         if (!container) return
@@ -742,13 +709,11 @@ export default function KrishiClips() {
         }
     }, [])
 
-    // Track the MOST-VISIBLE clip and set it as active.
-    // The old single-threshold (0.6) observer had a timing gap: when clip A
-    // dropped below 60% and clip B hadn't yet reached 60%, activeIdx stayed
-    // on A — so A's music kept playing during the scroll. By tracking the
-    // highest intersection ratio across ALL clips with multiple thresholds,
-    // activeIdx always reflects the truly-most-visible clip, eliminating the
-    // gap where the previous clip's sound could keep playing.
+    // Track the MOST-VISIBLE clip and set it as active. The old single
+    // (0.6) threshold had a timing gap: when clip A dropped below 60% and
+    // clip B hadn't reached 60%, activeIdx stayed on A — so A's music kept
+    // playing during the scroll. Tracking the highest intersection ratio
+    // across ALL clips with multiple thresholds eliminates that gap.
     useEffect(() => {
         const container = containerRef.current
         if (!container) return
@@ -758,7 +723,6 @@ export default function KrishiClips() {
                 const idx = parseInt((e.target as HTMLElement).dataset.idx || '0')
                 ratios.set(idx, e.intersectionRatio)
             })
-            // Pick the most-visible clip
             let bestIdx = -1
             let bestRatio = 0
             ratios.forEach((ratio, idx) => {
@@ -767,22 +731,19 @@ export default function KrishiClips() {
             if (bestIdx >= 0 && bestRatio >= 0.4) {
                 setActiveIdx(bestIdx)
             }
-            // Force-pause videos + audio on any clip that is NOT the most-visible one.
-            // Belt-and-suspenders safety net so audio from a previous clip can NEVER
-            // bleed into the next one during a fast scroll. Pauses BOTH the <video>
-            // element (recorded audio) AND any <audio> element (external music).
+            // Belt-and-suspenders safety net: force-pause video + audio on
+            // any clip that isn't the most-visible, so audio from a previous
+            // clip can NEVER bleed into the next during a fast scroll.
             ratios.forEach((ratio, idx) => {
                 if (idx !== bestIdx) {
                     const el = container.querySelector(`.clip-item[data-idx="${idx}"]`) as HTMLElement | null
                     if (!el) return
-                    // Pause + reset the video (recorded audio)
                     const video = el.querySelector('video')
                     if (video) {
                         video.pause()
                         video.currentTime = 0
-                        video.muted = true  // extra safety: mute the video too
+                        video.muted = true
                     }
-                    // Pause + reset any audio elements (external music from MusicSticker)
                     el.querySelectorAll('audio').forEach(a => {
                         a.pause()
                         a.currentTime = 0
@@ -796,7 +757,6 @@ export default function KrishiClips() {
 
     return (
         <div style={{ height: '100vh', overflow: 'hidden', background: SOCIAL.clips.bg, fontFamily: SHARED.font, position: 'relative' }}>
-            {/* Top bar */}
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button onClick={() => router.push('/agrisocial')} style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '10px', padding: '8px 12px', color: SOCIAL.clips.text, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>← Back</button>
                 <div style={{ flex: 1, fontWeight: 900, fontSize: '1.1rem', color: SOCIAL.clips.text, display: 'flex', alignItems: 'center', gap: '8px' }}>

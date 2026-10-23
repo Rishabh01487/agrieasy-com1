@@ -47,7 +47,6 @@ function CreateContent() {
     const [audioStartTime, setAudioStartTime] = useState(0)
     const [audioUploading, setAudioUploading] = useState(false)
     const audioInputRef = useRef<HTMLInputElement>(null)
-    // ── Music library state (powered by iTunes Search API — millions of songs) ──
     const [showMusicLibrary, setShowMusicLibrary] = useState(false)
 
     const [submitting, setSubmitting] = useState(false)
@@ -109,7 +108,7 @@ function CreateContent() {
             if (videoRef.current) { videoRef.current.srcObject = stream; videoRef.current.play() }
         } catch (e) {
             console.error('Flip camera failed:', e)
-            // Try the other facing mode as fallback
+            // Try the other facing mode as fallback.
             try {
                 const fallback = newFacing === 'user' ? 'environment' : 'user'
                 const stream2 = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: fallback } }, audio: postType === 'krishiclip' })
@@ -132,8 +131,8 @@ function CreateContent() {
         canvas.width = w; canvas.height = h
         const ctx = canvas.getContext('2d')
         if (!ctx) return
-        // Front camera: un-mirror the captured photo (the live preview is
-        // mirrored for natural UX, but the saved photo should NOT be mirrored)
+        // Front camera: un-mirror the captured photo. The live preview is mirrored
+        // for natural UX, but the saved photo should NOT be mirrored.
         if (facingMode === 'user') {
             ctx.translate(w, 0)
             ctx.scale(-1, 1)
@@ -254,7 +253,6 @@ function CreateContent() {
             const cld = await cldRes.json()
             if (cldRes.ok && cld.secure_url) {
                 setAudioUrl(cld.secure_url)
-                // Extract song name from filename (remove extension)
                 const name = file.name.replace(/\.[^/.]+$/, '')
                 setAudioTitle(name)
                 setAudioArtist('')
@@ -389,7 +387,6 @@ function CreateContent() {
 
     return (
         <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
-            {/* Nav */}
             <nav style={{ background: 'rgba(255,255,255,0.85)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: '10px', position: 'sticky', top: 0, zIndex: 100, boxShadow: SHARED.shadow, backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <button onClick={() => { if (mode === 'choose') router.push('/agrisocial'); else if (mode === 'preview' || mode === 'camera') { stopCamera(); setMode('choose'); setMediaFile(null) } else if (mode === 'details') setMode('preview') }}
                     style={{ background: 'none', border: 'none', color: SOCIAL.primary, fontWeight: 700, fontSize: '0.9rem', cursor: 'pointer', transition: 'all 0.2s ease' }}>← Back</button>
@@ -409,10 +406,9 @@ function CreateContent() {
                 )}
             </nav>
 
-            {/* ── CHOOSE MODE ── */}
+            {/* CHOOSE MODE */}
             {mode === 'choose' && (
                 <div style={{ maxWidth: '500px', margin: '0 auto', padding: '24px 16px' }}>
-                    {/* Post/KrishiClip toggle */}
                     <div style={{ display: 'flex', background: SOCIAL.primaryLight, borderRadius: '14px', padding: '5px', gap: '4px', marginBottom: '24px', border: `1px solid ${SOCIAL.border}` }}>
                         {(['post', 'krishiclip', 'story'] as const).map(t => (
                             <button key={t} onClick={() => setPostType(t)}
@@ -429,7 +425,6 @@ function CreateContent() {
                     )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {/* Camera */}
                         <button onClick={startCamera}
                             style={{ background: SOCIAL.gradient, border: 'none', borderRadius: '16px', padding: '28px', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: SHARED.shadowLg, transition: 'all 0.2s ease' }}>
                             <span style={{ fontSize: '2.8rem' }}>{postType === 'krishiclip' ? '🎥' : postType === 'story' ? '✨' : '📸'}</span>
@@ -439,7 +434,6 @@ function CreateContent() {
                             </div>
                         </button>
 
-                        {/* Upload */}
                         <button onClick={() => fileInputRef.current?.click()}
                             style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '22px', color: SOCIAL.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: SHARED.shadowMd, transition: 'all 0.2s ease' }}>
                             <span style={{ fontSize: '2.8rem' }}>🖼️</span>
@@ -450,7 +444,6 @@ function CreateContent() {
                         </button>
                         <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple={postType === "post"} style={{ display: 'none' }} onChange={handleFileUpload} />
 
-                        {/* Text post */}
                         <button onClick={() => setMode('details')}
                             style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '22px', color: SOCIAL.text, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '16px', transition: 'all 0.2s ease' }}>
                             <span style={{ fontSize: '2.8rem' }}>✍️</span>
@@ -465,12 +458,11 @@ function CreateContent() {
                 </div>
             )}
 
-            {/* ── CAMERA MODE ── */}
+            {/* CAMERA MODE */}
             {mode === 'camera' && (
                 <div style={{ position: 'relative', background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
                     <video ref={videoRef} autoPlay playsInline muted style={{ width: '100%', flex: 1, objectFit: 'cover', filter: buildFilterString(), transform: facingMode === 'user' ? 'scaleX(-1)' : 'none' }} />
 
-                    {/* Recording timer */}
                     {isRecording && (
                         <div style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(239,68,68,0.9)', borderRadius: '100px', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#fff', animation: 'pulse 1s infinite' }} />
@@ -522,10 +514,9 @@ function CreateContent() {
                 </div>
             )}
 
-            {/* ── PREVIEW + FILTERS ── */}
+            {/* PREVIEW + FILTERS */}
             {mode === 'preview' && mediaFile && (
                 <div style={{ background: '#000', minHeight: 'calc(100vh - 56px)', display: 'flex', flexDirection: 'column' }}>
-                    {/* Media preview */}
                     <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', maxHeight: '55vh', overflow: 'hidden', position: 'relative' }}>
                         {mediaFile.type === 'image' ? (
                             // eslint-disable-next-line @next/next/no-img-element
@@ -533,7 +524,6 @@ function CreateContent() {
                         ) : (
                             <video src={mediaFile.url} controls style={{ width: '100%', height: '100%', objectFit: 'contain', ...getFilterStyle() }} />
                         )}
-                        {/* Carousel dots + navigation */}
                         {carouselFiles.length > 1 && (
                             <>
                                 <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 6 }}>
@@ -573,7 +563,6 @@ function CreateContent() {
                     <div style={{ background: '#1a1a1a', padding: '12px 20px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
                             <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>Adjust</p>
-                            {/* Rotate buttons */}
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <button onClick={() => setRotation(r => r - 90)} title="Rotate left" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↺</button>
                                 <button onClick={() => setRotation(r => r + 90)} title="Rotate right" style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: '4px 10px', color: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}>↻</button>
@@ -601,10 +590,9 @@ function CreateContent() {
                 </div>
             )}
 
-            {/* ── DETAILS MODE ── */}
+            {/* DETAILS MODE */}
             {mode === 'details' && (
                 <div style={{ maxWidth: '560px', margin: '0 auto', padding: '16px 16px 60px' }}>
-                    {/* Preview thumbnail — BIG full-width hero (like IG create) */}
                     {mediaFile && (
                         <div style={{
                             borderRadius: '18px', overflow: 'hidden', marginBottom: '14px',
@@ -626,7 +614,6 @@ function CreateContent() {
                     )}
 
                     <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '16px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '14px', boxShadow: SHARED.shadowMd }}>
-                        {/* Caption — COMPACT (2 short rows, smaller padding) */}
                         <div>
                             <label style={{ color: SOCIAL.muted, fontSize: '0.68rem', fontWeight: 700, display: 'block', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Caption</label>
                             <textarea value={caption} onChange={e => setCaption(e.target.value)} placeholder={postType === 'krishiclip' ? 'About this KrishiClip… #farming' : 'What\'s on your farm? #farming'} rows={2}
@@ -691,9 +678,7 @@ function CreateContent() {
                                     {/* Mithila-inspired double-line border motif (top) */}
                                     <div style={{ height: 6, background: 'repeating-linear-gradient(90deg, #C8403A 0 8px, #F4B942 8px 14px, #2E6E4A 14px 20px, #1F4A6E 20px 26px)', opacity: 0.9 }} />
                                     <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, position: 'relative' }}>
-                                        {/* Mithila-style sun/lotus motif disc (SVG, hand-drawn feel) */}
-                                        <svg width="46" height="46" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>
-                                            <circle cx="24" cy="24" r="22" fill="#FFF1D6" stroke="#C8403A" strokeWidth="1.5" />
+                                        <svg width="46" height="46" viewBox="0 0 48 48" style={{ flexShrink: 0 }}>                                            <circle cx="24" cy="24" r="22" fill="#FFF1D6" stroke="#C8403A" strokeWidth="1.5" />
                                             {/* 8 petal rays around the disc (sun motif — common in Mithila art) */}
                                             {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
                                                 <path key={deg} d="M24 4 L26 12 L22 12 Z" fill="#F4B942" stroke="#C8403A" strokeWidth="0.8" transform={`rotate(${deg} 24 24)`} />
@@ -706,7 +691,6 @@ function CreateContent() {
                                             <ellipse cx="22.4" cy="25.5" rx="2" ry="1.5" fill="#FFF1D6" />
                                             <path d="M24 19 l3.6 -1.2 v1.8" stroke="#FFF1D6" strokeWidth="1.4" fill="none" strokeLinejoin="round" strokeLinecap="round" />
                                         </svg>
-                                        {/* Song info */}
                                         <div style={{ flex: 1, minWidth: 0 }}>
                                             <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: '#5A1A18', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioTitle || 'Unknown track'}</p>
                                             {audioArtist && <p style={{ margin: '2px 0 0', fontSize: '0.72rem', color: '#9A4A48', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{audioArtist}</p>}
@@ -717,7 +701,6 @@ function CreateContent() {
                                                 ))}
                                             </div>
                                         </div>
-                                        {/* Remove button */}
                                         <button onClick={() => { setAudioUrl(''); setAudioTitle(''); setAudioArtist('') }} title="Remove"
                                             style={{ background: 'rgba(200,64,58,0.12)', border: '1px solid rgba(200,64,58,0.3)', color: '#C8403A', cursor: 'pointer', borderRadius: '50%', width: 28, height: 28, fontSize: '0.9rem', padding: 0, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>✕</button>
                                     </div>
@@ -739,7 +722,7 @@ function CreateContent() {
                             <input ref={audioInputRef} type="file" accept="audio/*,.mp3,.m4a,.wav,.aac,.ogg" style={{ display: 'none' }} onChange={handleAudioUpload} />
                         </div>
 
-                        {/* Music Library Modal — powered by iTunes Search API (millions of songs) */}
+                        {/* Music Library Modal (powered by iTunes Search API) */}
                         {showMusicLibrary && (
                             <MusicLibrary
                                 onSelect={(song: { url: string; title: string; artist: string; startTime?: number }) => {
@@ -755,14 +738,12 @@ function CreateContent() {
 
                         {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', padding: '10px 14px', color: SOCIAL.red, fontSize: '0.85rem', fontWeight: 600 }}>⚠️ {error}</div>}
 
-                        {/* Primary share button — clean, no emoji, no "AI-looking" styling */}
                         <button onClick={handlePost} disabled={submitting}
                             style={{ width: '100%', padding: '13px', background: SOCIAL.primary, border: 'none', borderRadius: '12px', color: '#fff', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', opacity: submitting ? 0.7 : 1, transition: 'all 0.2s ease', letterSpacing: '0.02em' }}>
                             {submitting ? 'Sharing…' : postType === 'krishiclip' ? 'Share KrishiClip' : postType === 'story' ? 'Share Story' : 'Share Post'}
                         </button>
                     </div>
 
-                    {/* Bottom nav link */}
                     <div style={{ textAlign: 'center', marginTop: '16px' }}>
                         <Link href="/agrisocial" style={{ color: SOCIAL.muted, fontSize: '0.85rem', textDecoration: 'none', transition: 'all 0.2s ease' }}>← Cancel &amp; go back to feed</Link>
                     </div>

@@ -84,11 +84,9 @@ function Avatar({ name, size = 44, src }: { name: string; size?: number; src?: s
     return <div style={{ width: size, height: size, borderRadius: '50%', background: SOCIAL.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: size * 0.4, flexShrink: 0, fontFamily: SHARED.font }}>{name?.[0]?.toUpperCase() || 'U'}</div>
 }
 
-/* ------------------------------------------------------------------ */
-/* Shared-post preview card — renders inside DM conversations          */
-/* Detects /agrisocial/post/{id} URLs in message text and shows the    */
-/* post's thumbnail + caption as a tappable card (Instagram Direct).   */
-/* ------------------------------------------------------------------ */
+/* Shared-post preview card — detects /agrisocial/post/{id} URLs in
+   message text and renders a tappable thumbnail + caption card
+   (Instagram Direct style). */
 interface SharedPostData {
     _id: string
     mediaUrl?: string
@@ -97,7 +95,7 @@ interface SharedPostData {
     userId?: { _id: string; farmerName?: string; firmName?: string; profilePic?: string } | string
 }
 
-// Module-level cache so we don't re-fetch the same shared post every render
+// Module-level cache so we don't re-fetch the same shared post every render.
 const sharedPostCache: Record<string, SharedPostData | null> = {}
 
 function SharedPostCard({ postId, isMine }: { postId: string; isMine: boolean }) {
@@ -166,7 +164,7 @@ function SharedPostCard({ postId, isMine }: { postId: string; isMine: boolean })
     )
 }
 
-// Detect /agrisocial/post/{id} or /agrisocial/stories/{id} URLs in a text
+// Detect /agrisocial/post/{id} or /agrisocial/stories/{id} URLs in text.
 function extractSharedPostId(text: string): string | null {
     const m = text.match(/\/agrisocial\/post\/([a-f0-9]{24})/i)
     return m ? m[1] : null
@@ -228,8 +226,7 @@ function AgriSocialDMInner() {
         } catch {}
     }, [])
 
-    // Fetch the viewer's profile (name + pic) so the top bar can show
-    // "username ▾" Instagram-style instead of a generic label.
+    // Fetch the viewer's profile (name + pic) for the Instagram-style top bar.
     useEffect(() => {
         let cancelled = false
         ;(async () => {
@@ -336,7 +333,7 @@ function AgriSocialDMInner() {
         { key: 'requests', label: 'Requests' },
     ]
 
-    // Search filters the conversation list by name (Instagram-style).
+    // Search filters the conversation list by name.
     const filteredConversations = conversations.filter(c => {
         if (!searchQuery) return true
         const name = (c.other?.farmerName || c.other?.firmName || 'User').toLowerCase()
@@ -389,7 +386,6 @@ function AgriSocialDMInner() {
                 }
             `}</style>
 
-            {/* Share overlay banner — appears when sharing a post/story via DM */}
             {shareMode && (
                 <div style={{ background: SOCIAL.primaryLight, borderBottom: `1px solid ${SOCIAL.border}`, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
                     <span style={{ fontSize: '1.1rem' }}>📤</span>
@@ -399,9 +395,8 @@ function AgriSocialDMInner() {
             )}
 
             <div className={`ig-dm-body ${mobileChatOpen ? 'mobile-chat-open' : ''}`}>
-                {/* ============================ LIST PANEL ============================ */}
+                {/* LIST PANEL */}
                 <div className="ig-dm-list">
-                    {/* Top bar — Instagram-style: back arrow | username ▾ | new-message icon */}
                     <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: `1px solid ${SOCIAL.borderLight}`, paddingTop: 'env(safe-area-inset-top)', flexShrink: 0 }}>
                         <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 14, padding: '0 12px' }}>
                             <Link href="/agrisocial" aria-label="Back to AgriSocial" style={{ color: SOCIAL.text, textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0 }}>
@@ -415,7 +410,6 @@ function AgriSocialDMInner() {
                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /></svg>
                             </Link>
                         </div>
-                        {/* Search bar */}
                         <div style={{ padding: '0 12px 10px' }}>
                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={SOCIAL.muted} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 12, pointerEvents: 'none' }}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
@@ -551,7 +545,7 @@ function AgriSocialDMInner() {
                     )}
                 </div>
 
-                {/* ============================ CHAT PANEL ============================ */}
+                {/* CHAT PANEL */}
                 <div className="ig-dm-chat">
                     {!activeId || !active ? (
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: SOCIAL.muted, padding: 24, textAlign: 'center' }}>
@@ -562,7 +556,6 @@ function AgriSocialDMInner() {
                         </div>
                     ) : (
                         <>
-                            {/* Chat header — Instagram style: back (mobile) | avatar | name | video | call | info */}
                             <div style={{ paddingTop: 'env(safe-area-inset-top)', background: 'rgba(255,255,255,0.96)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', borderBottom: `1px solid ${SOCIAL.borderLight}`, flexShrink: 0, position: 'relative', zIndex: 10 }}>
                                 <div style={{ height: 56, display: 'flex', alignItems: 'center', gap: 6, padding: '0 8px' }}>
                                     {/* Back arrow — mobile only (returns to the list) */}
@@ -585,7 +578,6 @@ function AgriSocialDMInner() {
                                                         <p style={{ color: SOCIAL.muted, fontSize: '0.7rem', margin: 0 }}>{roleLabel[other?.role || ''] || 'AgriSocial'}</p>
                                                     </div>
                                                 </Link>
-                                                {/* Video / Call / Info icons (Instagram-style header actions) */}
                                                 <button aria-label="Video call" style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, flexShrink: 0, color: SOCIAL.text }}>
                                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7" /><rect x="1" y="5" width="15" height="14" rx="2" ry="2" /></svg>
                                                 </button>
@@ -626,11 +618,9 @@ function AgriSocialDMInner() {
                                                     <img src={m.mediaUrl} alt="msg" style={{ width: '100%', borderRadius: 8, marginBottom: m.text ? 6 : 0 }} />
                                                 )}
                                                 {(() => {
-                                                    // Detect a shared-post URL in the text and render it
-                                                    // as a rich preview card (Instagram Direct style) so
-                                                    // shared clips/posts are visible inline in the chat.
-                                                    // Wrapped in try/catch so a bad API response can NEVER
-                                                    // crash the whole DM page.
+                                                    // Detect a shared-post URL in the text and render it as a rich
+                                                    // preview card (Instagram Direct style). Wrapped in try/catch
+                                                    // so a bad API response can NEVER crash the whole DM page.
                                                     if (!m.text) return null
                                                     try {
                                                         const sharedId = extractSharedPostId(m.text)
@@ -644,7 +634,6 @@ function AgriSocialDMInner() {
                                                 {isMine && m.readBy && m.readBy.length > 1 && (
                                                     <span style={{ fontSize: '0.62rem', opacity: 0.7, marginTop: 2, display: 'block', textAlign: 'right' }}>Seen</span>
                                                 )}
-                                                {/* Reaction badge */}
                                                 {messageReactions[m._id] && (
                                                     <span style={{ position: 'absolute', bottom: -8, right: isMine ? 8 : 'auto', left: isMine ? 'auto' : 8, background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: 100, padding: '1px 6px', fontSize: '0.75rem', boxShadow: SHARED.shadow }}>
                                                         {messageReactions[m._id]}
@@ -667,9 +656,7 @@ function AgriSocialDMInner() {
                                 <div ref={messagesEndRef} />
                             </div>
 
-                            {/* Composer */}
                             <div style={{ padding: '10px 12px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom))', background: SOCIAL.white, borderTop: `1px solid ${SOCIAL.border}`, display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
-                                {/* Photo attach button */}
                                 <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 36, height: 36, borderRadius: '50%', background: SOCIAL.primaryLight, flexShrink: 0, transition: 'background 0.2s' }} title="Send photo">
                                     <span style={{ fontSize: '1.1rem' }}>📷</span>
                                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
@@ -710,7 +697,7 @@ function AgriSocialDMInner() {
                                                 fetchConversations()
                                             }
                                         } catch {}
-                                        e.target.value = '' // reset input
+                                        e.target.value = ''
                                     }} />
                                 </label>
                                 <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), handleSend())}
@@ -728,11 +715,10 @@ function AgriSocialDMInner() {
 
             {/* Extra safe-area spacer so the fixed bottom nav never overlaps the
                 chat composer on devices with a home indicator (e.g. iPhone X+).
-                AgriSocialBottomNav renders its own 56px spacer + the fixed bar,
-                but that spacer doesn't account for env(safe-area-inset-bottom). */}
+                AgriSocialBottomNav renders its own 56px spacer, but that spacer
+                doesn't account for env(safe-area-inset-bottom). */}
             <div style={{ height: 'env(safe-area-inset-bottom)', flexShrink: 0 }} aria-hidden />
 
-            {/* Instagram-style bottom nav (renders its own 56px spacer + fixed bar) */}
             <AgriSocialBottomNav active="send" />
         </div>
     )

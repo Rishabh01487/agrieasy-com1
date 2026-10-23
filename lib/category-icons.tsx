@@ -1,9 +1,8 @@
 'use client'
 
 /**
- * Shared category icons — Feather-style SVG icons for all AgriSocial pages.
- * Used in: feed, clips, explore, post detail, profile.
- * These replace the old emoji icons (🌾💰🔬🚜🐄🌱🌍) with consistent SVGs.
+ * Shared category icons — Feather-style SVG icons for all AgriSocial pages
+ * (feed, clips, explore, post detail, profile).
  */
 
 type IconProps = { size?: number; className?: string }
@@ -105,9 +104,7 @@ export function FollowingIcon({ size = 14 }: IconProps) {
   )
 }
 
-/* ---------------------------------------------------------------- */
-/* Category config — single source of truth for all pages            */
-/* ---------------------------------------------------------------- */
+/* Category config — single source of truth for all pages */
 
 export interface CategoryConfig {
   key: string
@@ -125,7 +122,7 @@ export const CATEGORIES: CategoryConfig[] = [
   { key: 'organic', label: 'Organic', icon: <OrganicIcon /> },
 ]
 
-// Map for quick lookup by key (replaces the old catIcon record)
+// Map for quick lookup by key.
 export const catIconMap: Record<string, React.ReactNode> = {
   all: <GlobeIcon />,
   farming: <FarmingIcon />,
@@ -134,22 +131,17 @@ export const catIconMap: Record<string, React.ReactNode> = {
   equipment: <EquipmentIcon />,
   livestock: <LivestockIcon />,
   organic: <OrganicIcon />,
-  weather: <ClockIcon />,  // weather doesn't have a dedicated icon; use clock
+  weather: <ClockIcon />,  // weather has no dedicated icon — use clock
   general: <GlobeIcon />,
 }
 
-/* ---------------------------------------------------------------- */
-/* Mithila-painting pill background for category icons                */
-/* Use this as the background of category pills so they're not just   */
-/* plain white — adds a subtle Mithila-art pattern.                   */
-/* ---------------------------------------------------------------- */
+/* Mithila-painting pill background for category icons */
 
 export function mithilaPillBackground(active: boolean): React.CSSProperties {
   if (active) {
-    // Active pill: solid brand color (the icon is white)
     return { background: '#31372B' }
   }
-  // Inactive pill: subtle Mithila-inspired pattern on cream background
+  // Inactive pill: subtle Mithila-inspired pattern on cream background.
   return {
     background: `
       repeating-linear-gradient(45deg, transparent 0 4px, rgba(200,64,58,0.04) 4px 5px),

@@ -14,7 +14,6 @@ import { CATEGORIES as SHARED_CATEGORIES, catIconMap, mithilaPillBackground } fr
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 
-// Use the shared category config (single source of truth)
 const CATEGORIES = SHARED_CATEGORIES
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; profilePic?: string }
@@ -75,14 +74,13 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
     const lastTapRef = useRef<number>(0)
     const videoRef = useRef<HTMLVideoElement>(null)
 
-    // Pause the feed video when it scrolls out of view.
-    // Also listen for the single-audio-source coordinator event so that
-    // when a MusicSticker starts playing, this video pauses (and vice versa).
+    // Pause the feed video when it scrolls out of view, and coordinate with
+    // MusicSticker so only one audio source plays at a time (single-audio-source
+    // coordinator: when a MusicSticker starts, this video pauses, and vice versa).
     useEffect(() => {
         const video = videoRef.current
         if (!video) return
 
-        // IntersectionObserver — pause when the video scrolls out of view
         const observer = new IntersectionObserver(
             (entries) => {
                 entries.forEach((e) => {
@@ -95,14 +93,11 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         )
         observer.observe(video)
 
-        // When this video starts playing, broadcast the PLAY_EVENT so
-        // MusicStickers pause their audio (single-audio-source coordinator)
         const onPlay = () => {
             window.dispatchEvent(new CustomEvent('agrieasy-music-play', { detail: { id: `feed-video-${post._id}` } }))
         }
         video.addEventListener('play', onPlay)
 
-        // When a MusicSticker starts playing, pause this video
         const onMusicPlay = (e: Event) => {
             const detail = (e as CustomEvent).detail
             if (!detail || detail.id === `feed-video-${post._id}`) return
@@ -249,7 +244,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     {burst && (
                         <div className="heart-burst" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', pointerEvents: 'none', fontSize: '6rem', filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.4))' }}>❤️</div>
                     )}
-                    {/* Carousel dots */}
                     {carouselImages.length > 1 && (
                         <div style={{ position: 'absolute', top: 8, left: 0, right: 0, display: 'flex', justifyContent: 'center', gap: 4, pointerEvents: 'none' }}>
                             {carouselImages.map((_, i) => (
@@ -257,7 +251,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                             ))}
                         </div>
                     )}
-                    {/* Carousel nav arrows */}
                     {carouselImages.length > 1 && (
                         <>
                             {carouselIdx > 0 && (
@@ -283,7 +276,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* Actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '8px 10px' }}>
                 <IconButton name="heart" size={24} title="Like" onClick={handleLike}
                     active={liked} activeColor="#ef4444" color={SOCIAL.text}
@@ -317,7 +309,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 )}
             </div>
 
-            {/* Caption */}
             {post.caption && (
                 <div style={{ padding: '0 14px 8px' }}>
                     <p style={{ color: SOCIAL.text, fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
@@ -335,7 +326,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* View comments link */}
             {comments.length > 0 && !showComments && (
                 <div style={{ padding: '0 14px 10px' }}>
                     <button onClick={() => setShowComments(true)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: SOCIAL.muted, fontSize: '0.82rem', fontWeight: 600, padding: 0 }}>
@@ -350,7 +340,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* Delete confirm */}
             {showDeleteConfirm && (
                 <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '12px 14px', textAlign: 'center' }}>
                     <p style={{ color: SOCIAL.red, fontSize: '0.85rem', margin: '0 0 8px', fontWeight: 600 }}>Delete this post?</p>
@@ -361,7 +350,6 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 </div>
             )}
 
-            {/* Comments */}
             {showComments && (
                 <div style={{ borderTop: `1px solid ${SOCIAL.border}`, padding: '10px 14px' }}>
                     {comments.length === 0 && <p style={{ color: SOCIAL.muted, fontSize: '0.82rem', margin: '0 0 8px', textAlign: 'center' }}>No comments yet — be first! 🌾</p>}
@@ -542,8 +530,8 @@ export default function AgriSocialFeed() {
         try {
             if (append) setLoadingMore(true)
             // First load: show cached posts INSTANTLY (0s) before the network
-            // call completes. This is the stale-while-revalidate pattern —
-            // the "loading" state stays true only if there's no cache.
+            // call completes (stale-while-revalidate). "loading" stays true
+            // only if there's no cache.
             if (!append) {
                 const cacheKey = `agrieasy:feed:${feedMode}:${cat}`
                 try {
@@ -569,7 +557,6 @@ export default function AgriSocialFeed() {
             setPosts(prev => append ? [...prev, ...newPosts] : newPosts)
             setHasMore(newPosts.length > 0 && (append ? (posts.length + newPosts.length < total) : (newPosts.length < total)))
             pageRef.current = pageNum
-            // Cache page 1 of this feed+category for instant load next time
             if (!append && pageNum === 1) {
                 const cacheKey = `agrieasy:feed:${feedMode}:${cat}`
                 try { localStorage.setItem(cacheKey, JSON.stringify(newPosts)) } catch {}
@@ -580,15 +567,14 @@ export default function AgriSocialFeed() {
                     setError('Could not load posts. Please check your connection.')
                     setPosts([])
                 }
-                // If we have cached posts visible, keep them rather than
-                // showing an empty state on a network blip.
+                // Keep cached posts visible rather than showing empty on a network blip.
             }
         } finally {
             setLoading(false)
             setLoadingMore(false)
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [feed])  // Removed posts.length from deps — it caused a re-render loop
+    }, [feed])  // posts.length removed from deps — caused a re-render loop
 
     const fetchStories = useCallback(async () => {
         if (!userId) return
@@ -717,12 +703,11 @@ export default function AgriSocialFeed() {
             </nav>
 
             <div className="agrisocial-layout" style={{ maxWidth: '1100px', margin: '0 auto', padding: '16px 14px 80px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '24px' }}>
-                {/* Main column */}
                 <div style={{ minWidth: 0, maxWidth: '600px', margin: '0 auto', width: '100%' }}>
                     {/* Stories tray */}
                     <StoryTray stories={stories} viewerId={userId} viewerProfilePic={viewerProfilePic} />
 
-                    {/* Feed mode tabs (Instagram-style: Following / Trending / Latest) */}
+                    {/* Feed mode tabs (Following / Trending / Latest) */}
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto' }} className="no-scrollbar">
                         {([
                             { key: 'following' as const, label: 'Following', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 11h-6" /><path d="M19 8v6" /></svg> },
@@ -736,7 +721,7 @@ export default function AgriSocialFeed() {
                         ))}
                     </div>
 
-                    {/* Category pills — with Mithila-painting background on inactive pills */}
+                    {/* Category pills — Mithila-painting background on inactive pills */}
                     <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '14px', marginBottom: '6px' }} className="no-scrollbar">
                         {CATEGORIES.map(c => (
                             <button key={c.key} onClick={() => setCategory(c.key)}
@@ -746,7 +731,6 @@ export default function AgriSocialFeed() {
                         ))}
                     </div>
 
-                    {/* Create post CTA */}
                     <div onClick={() => router.push('/agrisocial/create')}
                         style={{ background: SOCIAL.white, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px', cursor: 'pointer', boxShadow: SHARED.shadowMd }}>
                         <Avatar name={userId || '🌾'} size={36} />
@@ -757,7 +741,6 @@ export default function AgriSocialFeed() {
                         </div>
                     </div>
 
-                    {/* Posts */}
                     {loading ? (
                         <div>
                             {[1, 2, 3].map(i => (
