@@ -112,6 +112,20 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         }
     }, [post._id])
 
+    // Pause post audio when another audio source starts (single-audio-source coordinator)
+    useEffect(() => {
+        if (!post.audioUrl) return
+        const onPostAudioMusicPlay = (e: Event) => {
+            const detail = (e as CustomEvent).detail
+            if (!detail || detail.id === `post-audio-${post._id}`) return
+            if (postAudioRef.current && !postAudioRef.current.paused) {
+                postAudioRef.current.pause()
+            }
+        }
+        window.addEventListener('agrieasy-music-play', onPostAudioMusicPlay as EventListener)
+        return () => window.removeEventListener('agrieasy-music-play', onPostAudioMusicPlay as EventListener)
+    }, [post._id, post.audioUrl])
+
     const isDeletedUser = !post.userId || typeof post.userId !== 'object'
     const authorName = isDeletedUser ? 'Unknown User' : (post.userId.farmerName || post.userId.firmName || 'User')
     const authorRole = isDeletedUser ? '' : (post.userId.role || '')
@@ -120,6 +134,22 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
 
     const carouselImages = (post.mediaUrls && post.mediaUrls.length > 0 ? post.mediaUrls : (post.mediaUrl ? [post.mediaUrl] : []))
         .filter(u => u && (u.startsWith('http') || u.startsWith('/')))
+
+    const postAudioRef = useRef<HTMLAudioElement>(null)
+
+    const togglePostAudio = () => {
+        const audio = postAudioRef.current
+        if (!audio) return
+        if (audio.paused) {
+            audio.currentTime = post.audioStartTime || 0
+            audio.volume = 0.5
+            audio.play().then(() => {
+                window.dispatchEvent(new CustomEvent('agrieasy-music-play', { detail: { id: `post-audio-${post._id}` } }))
+            }).catch(() => {})
+        } else {
+            audio.pause()
+        }
+    }
 
     const handleLike = async () => {
         if (!viewerId) return
@@ -155,6 +185,8 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
         const now = Date.now()
         if (now - lastTapRef.current < 300) {
             handleImageDoubleTap()
+        } else {
+            if (post.audioUrl) togglePostAudio()
         }
         lastTapRef.current = now
     }
@@ -267,13 +299,17 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                 <video ref={videoRef} src={post.mediaUrl} controls playsInline style={{ width: '100%', maxHeight: '600px', display: 'block', background: '#000' }} />
             ) : null}
 
-            {/* Music Sticker — shows if post has audio */}
+            {/* Music Sticker — shows if post has audio. Tapping the post image
+                toggles this audio (single-tap = play/pause, double-tap = like). */}
             {post.audioUrl && (
-                <div style={{ position: 'relative' }}>
-                    <div style={{ position: 'absolute', bottom: 8, left: 8, zIndex: 5 }}>
-                        <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} startTime={post.audioStartTime} autoPlay={false} compact />
+                <>
+                    <audio ref={postAudioRef} src={post.audioUrl} loop preload="none" />
+                    <div style={{ position: 'relative' }}>
+                        <div style={{ position: 'absolute', bottom: 8, left: 8, zIndex: 5 }}>
+                            <MusicSticker audioUrl={post.audioUrl} audioTitle={post.audioTitle || ''} audioArtist={post.audioArtist} startTime={post.audioStartTime} autoPlay={false} compact />
+                        </div>
                     </div>
-                </div>
+                </>
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '2px', padding: '8px 10px' }}>
