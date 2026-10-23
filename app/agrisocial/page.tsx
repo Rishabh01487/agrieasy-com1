@@ -10,18 +10,12 @@ import ShareSheet from './components/ShareSheet'
 import MusicSticker from './components/MusicSticker'
 import AgriSocialBottomNav from './components/AgriSocialBottomNav'
 
-const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
-const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
+import { CATEGORIES as SHARED_CATEGORIES, catIconMap, mithilaPillBackground } from '@/lib/category-icons'
 
-const CATEGORIES = [
-    { key: 'all', label: 'All', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
-    { key: 'farming', label: 'Farming', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" /><path d="M12 22V12" /><path d="M4 7l8 5 8-5" /></svg> },
-    { key: 'agritrading', label: 'Trading', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
-    { key: 'technique', label: 'Technique', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V2" /><line x1="9" y1="2" x2="15" y2="2" /></svg> },
-    { key: 'equipment', label: 'Equipment', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l3-3h10l3 3v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z" /><circle cx="7" cy="16" r="2" /><circle cx="17" cy="16" r="2" /></svg> },
-    { key: 'livestock', label: 'Livestock', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M16 17h1" /><path d="M2 17a2.5 2.5 0 1 0 5 0" /><path d="M8 17h7" /></svg> },
-    { key: 'organic', label: 'Organic', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96c1.4 9.3-3.6 15.65-8.2 17.04" /><path d="M2 21c0-3 1.85-5.36 5.08-6" /></svg> },
-]
+const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
+
+// Use the shared category config (single source of truth)
+const CATEGORIES = SHARED_CATEGORIES
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string; parentId?: string | null; likes?: string[]; likesCount?: number }
@@ -238,7 +232,7 @@ function PostCard({ post, viewerId, onLike, onDelete }: { post: Post; viewerId: 
                     </p>
                 </div>
                 <span style={{ background: SOCIAL.primaryLight, color: SOCIAL.primary, padding: '3px 10px', borderRadius: '100px', fontSize: '0.68rem', fontWeight: 700, flexShrink: 0 }}>
-                    {catIcon[post.category]} {post.category}
+                    {catIconMap[post.category] || post.category} {post.category}
                 </span>
             </div>
 
@@ -742,11 +736,11 @@ export default function AgriSocialFeed() {
                         ))}
                     </div>
 
-                    {/* Category pills */}
+                    {/* Category pills — with Mithila-painting background on inactive pills */}
                     <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '14px', marginBottom: '6px' }} className="no-scrollbar">
                         {CATEGORIES.map(c => (
                             <button key={c.key} onClick={() => setCategory(c.key)}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', background: category === c.key ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${category === c.key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: category === c.key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', ...(category === c.key ? { background: SOCIAL.primary } : mithilaPillBackground(false)), border: `1.5px solid ${category === c.key ? SOCIAL.primary : 'rgba(200,64,58,0.2)'}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: category === c.key ? '#fff' : SOCIAL.text, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                                 {c.icon} {c.label}
                             </button>
                         ))}
@@ -788,7 +782,7 @@ export default function AgriSocialFeed() {
                         </div>
                     ) : posts.length === 0 ? (
                         <div style={{ background: SOCIAL.white, border: `1px solid ${SOCIAL.border}`, borderRadius: '12px', padding: '48px 24px', textAlign: 'center', boxShadow: SHARED.shadowMd }}>
-                            <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>{category === 'all' ? '🌾' : catIcon[category] || '📢'}</div>
+                            <div style={{ fontSize: '3.5rem', marginBottom: '12px' }}>{catIconMap[category] || catIconMap.all}</div>
                             <h3 style={{ color: SOCIAL.text, margin: '0 0 8px' }}>{category === 'all' ? 'No posts yet!' : `No ${category} posts yet`}</h3>
                             <p style={{ color: SOCIAL.muted, fontSize: '0.9rem', margin: '0 0 20px' }}>
                                 {feed === 'following' && category === 'all' ? 'Follow more farmers and buyers to fill your feed, or share your first post!' : 'Be the first to post!'}

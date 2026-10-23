@@ -8,13 +8,10 @@ import { SOCIAL, SHARED } from '@/lib/styles'
 import { Spinner } from '@/app/components/Spinner'
 import { useIsMobile } from '@/lib/use-is-mobile'
 import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
+import { CATEGORIES as SHARED_CATEGORIES, catIconMap, mithilaPillBackground, LivestockIcon } from '@/lib/category-icons'
 
-const CATEGORIES = [
-    { key: 'all', label: 'All', icon: '🌐' }, { key: 'farming', label: 'Farming', icon: '🌾' },
-    { key: 'technique', label: 'Technique', icon: '🔬' }, { key: 'agritrading', label: 'Trading', icon: '💰' },
-    { key: 'equipment', label: 'Equipment', icon: '🚜' }, { key: 'organic', label: 'Organic', icon: '🌱' },
-    { key: 'livestock', label: 'Livestock', icon: '🐄' }, { key: 'weather', label: 'Weather', icon: '🌦️' },
-]
+// Use shared categories + add weather (explore has it)
+const CATEGORIES = [...SHARED_CATEGORIES, { key: 'weather', label: 'Weather', icon: <LivestockIcon /> }]
 
 const FILTERS = [{ key: 'all', label: 'All' }, { key: 'post', label: '📷 Posts' }, { key: 'krishiclip', label: '🎬 KrishiClips' }]
 
@@ -120,7 +117,7 @@ function AgriSocialExploreInner() {
                 <div className="no-scrollbar" style={{ display: 'flex', gap: 8, overflowX: 'auto', marginBottom: 20, paddingBottom: 4 }}>
                     {CATEGORIES.map(c => (
                         <button key={c.key} onClick={() => setCategory(c.key)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 14px', borderRadius: '100px', border: `1.5px solid ${category === c.key ? SOCIAL.primary : SOCIAL.border}`, cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', background: category === c.key ? SOCIAL.primary : SOCIAL.white, color: category === c.key ? '#fff' : SOCIAL.muted, whiteSpace: 'nowrap' }}>
+                            style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: '100px', border: `1.5px solid ${category === c.key ? SOCIAL.primary : 'rgba(200,64,58,0.2)'}`, cursor: 'pointer', fontWeight: 700, fontSize: '0.78rem', ...(category === c.key ? { background: SOCIAL.primary } : mithilaPillBackground(false)), color: category === c.key ? '#fff' : SOCIAL.text, whiteSpace: 'nowrap' }}>
                             {c.icon} {c.label}
                         </button>
                     ))}

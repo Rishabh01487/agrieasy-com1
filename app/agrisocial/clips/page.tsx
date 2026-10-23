@@ -10,11 +10,16 @@ import { Icon } from '@/lib/icons'
 import BottomSheet from '@/app/components/BottomSheet'
 import ShareSheet from '../components/ShareSheet'
 import MusicSticker from '../components/MusicSticker'
+import { GlobeIcon, FarmingIcon, TradingIcon, TechniqueIcon, EquipmentIcon, OrganicIcon, mithilaPillBackground } from '@/lib/category-icons'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
-    { key: 'all', label: 'All' }, { key: 'farming', label: '🌾 Farming' }, { key: 'technique', label: '🔬 Technique' },
-    { key: 'agritrading', label: '💰 Trading' }, { key: 'equipment', label: '🚜 Equipment' }, { key: 'organic', label: '🌱 Organic' },
+    { key: 'all', label: 'All', icon: <GlobeIcon /> },
+    { key: 'farming', label: 'Farming', icon: <FarmingIcon /> },
+    { key: 'technique', label: 'Technique', icon: <TechniqueIcon /> },
+    { key: 'agritrading', label: 'Trading', icon: <TradingIcon /> },
+    { key: 'equipment', label: 'Equipment', icon: <EquipmentIcon /> },
+    { key: 'organic', label: 'Organic', icon: <OrganicIcon /> },
 ]
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
@@ -809,8 +814,8 @@ export default function KrishiClips() {
             <div style={{ position: 'absolute', top: '52px', left: 0, right: 0, zIndex: 100, display: 'flex', gap: '6px', padding: '8px 16px', overflowX: 'auto', scrollbarWidth: 'none' }}>
                 {CATEGORIES.map(c => (
                     <button key={c.key} onClick={() => setCategory(c.key)}
-                        style={{ padding: '5px 12px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', background: category === c.key ? SOCIAL.clips.accent : 'rgba(255,255,255,0.15)', color: SOCIAL.clips.text, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>
-                        {c.label}
+                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '5px 12px', borderRadius: '100px', border: 'none', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', background: category === c.key ? SOCIAL.clips.accent : 'rgba(255,255,255,0.15)', color: SOCIAL.clips.text, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>
+                        {c.icon} {c.label}
                     </button>
                 ))}
             </div>

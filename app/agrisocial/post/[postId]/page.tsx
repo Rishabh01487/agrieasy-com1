@@ -10,8 +10,10 @@ import { shareContent } from '@/lib/share'
 import ShareSheet from '../../components/ShareSheet'
 import MusicSticker from '../../components/MusicSticker'
 
+import { catIconMap } from '@/lib/category-icons'
+
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
-const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
+const catIcon = catIconMap  // use shared SVG icons instead of emoji
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; profilePic?: string }
 interface Comment { _id: string; userId: User | string; text: string; createdAt: string; parentId?: string | null; likes?: string[]; likesCount?: number }
