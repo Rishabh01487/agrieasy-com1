@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
         previewUrl,
         fullUrl,
         artworkUrl: image,
-        _debug: { hasEnc: !!encUrl, encLen: encUrl.length, decLen: fullUrl.length, keys: Object.keys(song).join(',') },
         genre: song.language || 'Music',
       }
     }).filter((s: any) => s.fullUrl || s.previewUrl)
