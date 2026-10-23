@@ -14,13 +14,13 @@ const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Bu
 const catIcon: Record<string, string> = { farming: '🌾', agritrading: '💰', technique: '🔬', equipment: '🚜', weather: '🌦️', livestock: '🐄', organic: '🌱', general: '📢' }
 
 const CATEGORIES = [
-    { key: 'all', label: 'All', icon: '🌍' },
-    { key: 'farming', label: 'Farming', icon: '🌾' },
-    { key: 'agritrading', label: 'Trading', icon: '💰' },
-    { key: 'technique', label: 'Technique', icon: '🔬' },
-    { key: 'equipment', label: 'Equipment', icon: '🚜' },
-    { key: 'livestock', label: 'Livestock', icon: '🐄' },
-    { key: 'organic', label: 'Organic', icon: '🌱' },
+    { key: 'all', label: 'All', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg> },
+    { key: 'farming', label: 'Farming', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" /><path d="M12 22V12" /><path d="M4 7l8 5 8-5" /></svg> },
+    { key: 'agritrading', label: 'Trading', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg> },
+    { key: 'technique', label: 'Technique', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 2v6l-5 9a2 2 0 0 0 2 3h12a2 2 0 0 0 2-3l-5-9V2" /><line x1="9" y1="2" x2="15" y2="2" /></svg> },
+    { key: 'equipment', label: 'Equipment', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l3-3h10l3 3v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1H7v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9z" /><circle cx="7" cy="16" r="2" /><circle cx="17" cy="16" r="2" /></svg> },
+    { key: 'livestock', label: 'Livestock', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M16 17h1" /><path d="M2 17a2.5 2.5 0 1 0 5 0" /><path d="M8 17h7" /></svg> },
+    { key: 'organic', label: 'Organic', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19.2 2.96c1.4 9.3-3.6 15.65-8.2 17.04" /><path d="M2 21c0-3 1.85-5.36 5.08-6" /></svg> },
 ]
 
 interface User { _id: string; farmerName?: string; firmName?: string; role?: string; phone?: string; profilePic?: string }
@@ -728,12 +728,16 @@ export default function AgriSocialFeed() {
                     {/* Stories tray */}
                     <StoryTray stories={stories} viewerId={userId} viewerProfilePic={viewerProfilePic} />
 
-                    {/* Feed mode tabs (Instagram-style: Following / Favourites / Latest) */}
+                    {/* Feed mode tabs (Instagram-style: Following / Trending / Latest) */}
                     <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto' }} className="no-scrollbar">
-                        {([['following', 'Following'], ['ranked', '🔥 Top'], ['latest', '⏱ Latest']] as const).map(([k, label]) => (
-                            <button key={k} onClick={() => setFeed(k)}
-                                style={{ padding: '7px 16px', background: feed === k ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${feed === k ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === k ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                                {label}
+                        {([
+                            { key: 'following' as const, label: 'Following', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 11h-6" /><path d="M19 8v6" /></svg> },
+                            { key: 'ranked' as const, label: 'Trending', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg> },
+                            { key: 'latest' as const, label: 'Latest', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg> },
+                        ]).map(({ key, label, icon }) => (
+                            <button key={key} onClick={() => setFeed(key)}
+                                style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', background: feed === key ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${feed === key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                {icon} {label}
                             </button>
                         ))}
                     </div>
@@ -792,7 +796,7 @@ export default function AgriSocialFeed() {
                             <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
                                 <button onClick={() => router.push('/agrisocial/create')} style={{ padding: '11px 22px', background: SOCIAL.primary, color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '0.9rem' }}>📸 Create First Post</button>
                                 <Link href="/agrisocial/explore" style={{ padding: '11px 22px', background: SOCIAL.primaryLight, color: SOCIAL.textSecondary, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', fontWeight: 700, textDecoration: 'none', fontSize: '0.9rem' }}>🔍 Explore</Link>
-                                {feed === 'following' && <button onClick={() => setFeed('ranked')} style={{ padding: '11px 22px', background: SOCIAL.bg, color: SOCIAL.text, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}>🔥 See Top Posts</button>}
+                                {feed === 'following' && <button onClick={() => setFeed('ranked')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '11px 22px', background: SOCIAL.bg, color: SOCIAL.text, border: `1.5px solid ${SOCIAL.border}`, borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '0.9rem' }}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg> See Trending Posts</button>}
                             </div>
                         </div>
                     ) : (
