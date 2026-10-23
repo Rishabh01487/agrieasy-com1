@@ -3,8 +3,8 @@ import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
 
 /**
- * AgriEasy Bill OCR Proxy — Z-AI GLM-4.6V Vision Model
- * Uses the z-ai-web-dev-sdk to call the free Z-AI vision API.
+ * AgriEasy Bill OCR Proxy — GLM-4.6V Vision Model
+ * Uses the SDK to call the vision API.
  * No auth required — works with or without login.
  * Error messages are user-friendly — never exposes internal API errors.
  */
@@ -13,7 +13,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// ── Z-AI config ───────────────────────────────────────────────────────
+// ── Vision config ──────────────────────────────────────────────────
 // SECURITY: previously held a hardcoded JWT token — removed because it
 // was leaked into git history. Credentials MUST come from env vars now.
 // If env vars are missing, the route returns 503 — it never falls back
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
 
     // SECURITY: refuse to run without configured credentials — the
-    // previously hardcoded Z-AI JWT was leaked into git history. Return
+    // previously hardcoded provider JWT was leaked into git history. Return
     // a clean 503 instead of falling back to embedded creds.
     const zaiConfig = loadZaiConfigFromEnv()
     if (!zaiConfig) {
@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Write Z-AI config to /tmp so the SDK can find it
+    // Write the config to /tmp so the SDK can find it
     try {
       const tmpDir = '/tmp'
       await mkdir(tmpDir, { recursive: true }).catch(() => {})
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       ? `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}`
       : body.imageUrl
 
-    // Call Z-AI vision model
+    // Call the vision model
     const response = await zai.chat.completions.createVision({
       messages: [
         {

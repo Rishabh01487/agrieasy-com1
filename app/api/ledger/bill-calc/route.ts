@@ -3,7 +3,7 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { apiSuccess } from '@/lib/api-response'
 
-// Vercel serverless function timeout — the Z-AI vision API takes ~30s,
+// Vercel serverless function timeout — the vision API takes ~30s,
 // so we need to extend the default 10s (Hobby) / 15s (Pro) limit.
 // 60s is the max on Vercel Pro; on Hobby this gets capped to 10s but
 // we set it anyway in case the project is on Pro.
@@ -12,7 +12,7 @@ export const maxDuration = 60
 export const runtime = 'nodejs'
 
 /**
- * Z-AI vision API configuration.
+ * Vision API configuration.
  *
  * SECURITY: All credentials must come from env vars (ZAI_BASE_URL,
  * ZAI_API_KEY, ZAI_CHAT_ID, ZAI_USER_ID, ZAI_TOKEN) set in the Vercel/
@@ -71,7 +71,7 @@ async function loadZaiConfigFromFile(): Promise<ZaiConfig | null> {
 }
 
 /**
- * Resolve Z-AI config:
+ * Resolve vision config:
  *   1. Env vars (preferred — set on Vercel/hosting dashboard)
  *   2. Config file (local dev only)
  *
@@ -83,8 +83,8 @@ async function loadZaiConfig(): Promise<{ config: ZaiConfig; source: string } | 
     // 1. Env vars
     const fromEnv = loadZaiConfigFromEnv()
     if (fromEnv) {
-        // Best-effort write to /tmp/.z-ai-config so any code using the
-        // z-ai-web-dev-sdk can find it on Vercel's read-only filesystem.
+        // Best-effort write to the config file in /tmp so any code using the
+        // SDK can find it on Vercel's read-only filesystem.
         try {
             const fs = await import('fs')
             const path = await import('path')
@@ -113,8 +113,8 @@ async function loadZaiConfig(): Promise<{ config: ZaiConfig; source: string } | 
 }
 
 /**
- * Call the Z-AI vision model directly via fetch.
- * Uses the same headers + body format as z-ai-web-dev-sdk's createVision().
+ * Call the vision model directly via fetch.
+ * Uses the same headers + body format as the SDK's createVision().
  */
 async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string) {
     const url = `${config.baseUrl}/chat/completions/vision`
@@ -151,7 +151,7 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
             signal: AbortSignal.timeout(20000),
         })
     } catch {
-        // Direct call failed (Vercel can't reach internal-api.z.ai)
+        // Direct call failed (Vercel can't reach the internal API)
         // Strategy 2: Route through allorigins proxy (passes headers)
         const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
         res = await fetch(proxyUrl, {
@@ -171,7 +171,7 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
  * POST /api/ledger/bill-calc
  *
  * Accepts a bill photo (multipart/form-data with `file` field, or JSON with
- * `imageUrl`/`imageBase64`) and uses the z-ai vision model to OCR-extract
+ * `imageUrl`/`imageBase64`) and uses the vision model to OCR-extract
  * a structured breakdown:
  *   - commodity names (as written, in Hindi or English)
  *   - per-batch rows: each row has {bagCount, weight} — the buyer weighs bags
@@ -234,7 +234,7 @@ export async function POST(req: NextRequest) {
         const finalUrl = imageUrl || `data:${mimeType};base64,${imageBase64}`
 
         // SECURITY: refuse to run without configured credentials — the
-        // previously hardcoded Z-AI JWT was leaked into git history. Return
+        // previously hardcoded provider JWT was leaked into git history. Return
         // a clean 503 instead of falling back to embedded creds.
         const resolved = await loadZaiConfig()
         if (!resolved) {
@@ -408,7 +408,7 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
 
 /**
  * GET /api/ledger/bill-calc — health check / config debug endpoint.
- * Returns whether the Z-AI config is resolvable + which source it came from.
+ * Returns whether the vision config is resolvable + which source it came from.
  * Useful for debugging Vercel env var setup.
  */
 export async function GET(req: NextRequest) {

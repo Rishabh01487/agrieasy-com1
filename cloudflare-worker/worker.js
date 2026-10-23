@@ -1,7 +1,7 @@
 /**
  * AgriEasy Bill OCR — Cloudflare Worker
  *
- * Acts as a CORS proxy to the Z-AI vision API for bill OCR.
+ * Acts as a CORS proxy to the vision API for bill OCR.
  * Reads ALL credentials from Cloudflare Worker environment variables
  * (set via dash.cloudflare.com → Workers → agrieasy-ocr → Settings → Variables).
  *
@@ -11,8 +11,8 @@
  *
  * ── REQUIRED ENVIRONMENT VARIABLES (set in Cloudflare dashboard) ──
  *
- *   ZAI_BASE_URL   — e.g. https://internal-api.z.ai/v1
- *   ZAI_API_KEY    — API key (e.g. "Z.ai")
+ *   ZAI_BASE_URL   — base URL of the internal API endpoint
+ *   ZAI_API_KEY    — API key for the vision API
  *   ZAI_CHAT_ID    — Chat session ID
  *   ZAI_USER_ID    — User ID
  *   ZAI_TOKEN      — JWT auth token
