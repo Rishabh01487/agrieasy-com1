@@ -805,12 +805,10 @@ export default function KrishiClips() {
                     </div>
                 )}
             </div>
-            {/* Instagram-style bottom nav — visible on clips so users can navigate */}
-            <AgriSocialBottomNav active="reels" />
+            {/* Instagram-style bottom nav — dark theme for clips page */}
+            <AgriSocialBottomNav active="reels" dark />
             <style>{`
                 @keyframes spin { to { transform: rotate(360deg); } }
-                .agrisocial-bottom-nav { background: rgba(0,0,0,0.85) !important; backdrop-filter: blur(12px); }
-                .agrisocial-bottom-nav svg, .agrisocial-bottom-nav span { color: #fff !important; }
             `}</style>
         </div>
     )

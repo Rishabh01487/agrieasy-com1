@@ -9,6 +9,7 @@ type ActiveTab = 'home' | 'reels' | 'send' | 'search' | 'profile'
 
 interface Props {
   active: ActiveTab
+  dark?: boolean  // dark theme for clips page (dark background + white icons)
 }
 
 /**
@@ -23,7 +24,7 @@ interface Props {
  *   - /agrisocial/clips  (full-screen immersive, has its own back button)
  *   - /agrisocial/create (full-screen creation flow)
  */
-export default function AgriSocialBottomNav({ active }: Props) {
+export default function AgriSocialBottomNav({ active, dark = false }: Props) {
   const [unreadDMs, setUnreadDMs] = useState(0)
   const [profilePic, setProfilePic] = useState('')
   const [userId, setUserId] = useState('')
@@ -113,17 +114,17 @@ export default function AgriSocialBottomNav({ active }: Props) {
         style={{
           position: 'fixed',
           bottom: 0, left: 0, right: 0,
-          background: 'rgba(255,255,255,0.97)',
+          background: dark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.97)',
           backdropFilter: 'blur(20px)',
           WebkitBackdropFilter: 'blur(20px)',
-          borderTop: '1px solid #E8E4D6',
+          borderTop: dark ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E8E4D6',
           display: 'flex',
           justifyContent: 'space-around',
           alignItems: 'center',
           padding: '8px 0 calc(8px + env(safe-area-inset-bottom))',
           zIndex: 1000,
           fontFamily: SHARED.font,
-          boxShadow: '0 -2px 12px rgba(49,55,43,0.06)',
+          boxShadow: '0 -2px 12px rgba(0,0,0,0.3)',
           maxWidth: '600px',
           margin: '0 auto',
         }}
@@ -143,13 +144,14 @@ export default function AgriSocialBottomNav({ active }: Props) {
                 textDecoration: 'none',
                 position: 'relative',
                 padding: '6px 0',
+                color: dark ? '#fff' : '#000',
               }}
             >
               {/* Pill background on the active icon (Instagram-style) */}
               <div style={{
                 padding: '7px 11px',
                 borderRadius: 14,
-                background: isActive ? '#EFEFEF' : 'transparent',
+                background: isActive ? (dark ? 'rgba(255,255,255,0.15)' : '#EFEFEF') : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
