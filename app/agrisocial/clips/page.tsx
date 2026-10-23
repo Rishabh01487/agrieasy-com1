@@ -794,6 +794,11 @@ export default function KrishiClips() {
                     </div>
                 )}
             </div>
+            {/* CSS override: hide any bottom nav/tab bar that might bleed through from the layout.
+                The clips page is full-screen immersive — no bottom nav should show. */}
+            <style>{`
+                .bottom-tab-bar, .agrisocial-bottom-nav { display: none !important; }
+            `}</style>
         </div>
     )
 }
