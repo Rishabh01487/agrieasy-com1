@@ -16,7 +16,7 @@ const SECURITY_HEADERS: Record<string, string> = {
     "connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://*.cloudinary.com https://api.razorpay.com https://api.twilio.com https://www.fast2sms.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://corsproxy.io https://api.allorigins.win https://generativelanguage.googleapis.com https://*.workers.dev https://openrouter.ai https://itunes.apple.com https://*.itunes.apple.com",
     "style-src 'self' 'unsafe-inline' https://unpkg.com",
     "font-src 'self' data:",
-    "media-src 'self' blob: https://res.cloudinary.com https://*.itunes.apple.com https://audio-ssl.itunes.apple.com",
+    "media-src 'self' blob: https://res.cloudinary.com https://*.itunes.apple.com https://audio-ssl.itunes.apple.com https://*.saavncdn.com https://aac.saavncdn.com https://preview.saavncdn.com",
   ].join('; '),
 }
 

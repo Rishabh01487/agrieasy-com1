@@ -7,6 +7,8 @@ interface Song {
   title: string
   artist: string
   previewUrl: string
+  fullUrl?: string
+  duration?: number
   artworkUrl: string
   genre: string
 }
@@ -17,11 +19,9 @@ interface MusicLibraryProps {
 }
 
 /**
- * MusicLibrary — Instagram-style music picker powered by iTunes Search API.
- * Gives access to millions of songs (entire Apple Music catalog).
- * Returns 30-second preview clips that play in the app.
- *
- * No API key required. Free. CORS-friendly.
+ * MusicLibrary — Instagram-style music picker.
+ * Uses JioSaavn API (via /api/social/music/search) for full songs.
+ * Millions of Bollywood, Punjabi, Hindi, regional songs.
  */
 export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const [query, setQuery] = useState('')
@@ -29,7 +29,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
   const [loading, setLoading] = useState(false)
   const [playingUrl, setPlayingUrl] = useState('')
   const [previewProgress, setPreviewProgress] = useState(0)
-  const [previewDuration, setPreviewDuration] = useState(30)
+  const [previewDuration, setPreviewDuration] = useState(0)
   const [seekStartTime, setSeekStartTime] = useState(0)
   const [isScrubbing, setIsScrubbing] = useState(false)
   const scrubberRef = useRef<HTMLDivElement>(null)
@@ -48,27 +48,24 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     setError('')
     if (!isTrending) setResults([])
     try {
-      // iTunes Search API is CORS-friendly, but a CSP rule in middleware.ts
-      // must explicitly allow itunes.apple.com in connect-src / media-src /
-      // img-src — otherwise the browser blocks the fetch and songs never appear.
-      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(searchQuery)}&entity=song&limit=50&country=in`
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } })
+      const res = await fetch(`/api/social/music/search?q=${encodeURIComponent(searchQuery)}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
-      const songs: Song[] = (data.results || []).map((r: any) => ({
-        title: r.trackName || 'Unknown',
-        artist: r.artistName || 'Unknown',
+      const songs: Song[] = (data.data?.songs || []).map((r: any) => ({
+        title: r.title || 'Unknown',
+        artist: r.artist || 'Unknown',
         previewUrl: r.previewUrl || '',
-        artworkUrl: (r.artworkUrl100 || '').replace('100x100', '200x200'),
-        genre: r.primaryGenreName || 'Music',
-      })).filter((s: Song) => s.previewUrl)
+        fullUrl: r.fullUrl || '',
+        duration: r.duration || 0,
+        artworkUrl: r.artworkUrl || '',
+        genre: r.genre || 'Music',
+      })).filter((s: Song) => s.fullUrl || s.previewUrl)
 
       if (isTrending) {
         setTrending(songs)
       } else {
         setResults(songs)
       }
-      // Distinguish "no results" from "fetch failed" for obscure queries.
       if (songs.length === 0 && !isTrending) {
         setError(`No songs found for "${searchQuery}". Try a different spelling or artist name.`)
       }
@@ -179,8 +176,9 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
     if (audioRef.current) audioRef.current.pause()
     // Pass seekStartTime so the post plays from the user's chosen point —
     // only if they actually previewed this song and moved the slider.
-    const startTime = playingUrl === song.previewUrl ? seekStartTime : 0
-    onSelect({ url: song.previewUrl, title: song.title, artist: song.artist, startTime })
+    const songUrl = song.fullUrl || song.previewUrl
+    const startTime = playingUrl === songUrl ? seekStartTime : 0
+    onSelect({ url: songUrl, title: song.title, artist: song.artist, startTime })
   }
 
   const displaySongs = query.trim() ? results : trending
@@ -215,7 +213,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
           <div>
             <h3 style={{ margin: 0, color: SOCIAL.text, fontWeight: 800, fontSize: '1.1rem' }}>🎵 Choose Music</h3>
-            <p style={{ margin: '2px 0 0', fontSize: '0.66rem', color: SOCIAL.muted }}>30-sec preview clips · loops in your post (like Instagram)</p>
+            <p style={{ margin: '2px 0 0', fontSize: '0.66rem', color: SOCIAL.muted }}>Full songs · Bollywood, Punjabi, Hindi &amp; more</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: SOCIAL.muted, fontSize: '1.3rem', cursor: 'pointer', padding: 4 }}>✕</button>
         </div>
@@ -293,7 +291,8 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
               >
                 {/* Artwork + play button */}
                 <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}
-                  onClick={() => togglePreview(song.previewUrl)}>
+                  onClick={() => togglePreview(song.fullUrl || song.previewUrl)}
+                  >
                   {song.artworkUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={song.artworkUrl} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />
@@ -304,10 +303,10 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
                     position: 'absolute', inset: 0, borderRadius: 8,
                     background: 'rgba(0,0,0,0.5)', display: 'flex',
                     alignItems: 'center', justifyContent: 'center',
-                    opacity: playingUrl === song.previewUrl ? 1 : 0,
+                    opacity: playingUrl === (song.fullUrl || song.previewUrl) ? 1 : 0,
                     transition: 'opacity 0.2s',
                   }}>
-                    {playingUrl === song.previewUrl ? (
+                    {playingUrl === (song.fullUrl || song.previewUrl) ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><rect x="6" y="5" width="4" height="14" rx="1" /><rect x="14" y="5" width="4" height="14" rx="1" /></svg>
                     ) : (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M8 5v14l11-7z" /></svg>
@@ -358,7 +357,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', color: SOCIAL.text, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {displaySongs.find(s => s.previewUrl === playingUrl)?.title || 'Preview'}
+                  {displaySongs.find(s => (s.fullUrl || s.previewUrl) === playingUrl)?.title || 'Preview'}
                 </p>
                 <p style={{ margin: '2px 0 0', fontSize: '0.68rem', color: SOCIAL.primary, fontWeight: 600 }}>
                   Drag to set start: {formatTime(seekStartTime)}
@@ -420,7 +419,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
 
             <button
               onClick={() => {
-                const song = displaySongs.find(s => s.previewUrl === playingUrl)
+                const song = displaySongs.find(s => (s.fullUrl || s.previewUrl) === playingUrl)
                 if (song) handleSelect(song)
               }}
               style={{
