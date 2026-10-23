@@ -9,6 +9,7 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { parsePagination, paginationMeta, validationError } from '@/lib/api-response'
 import { validateBody, createPostSchema } from '@/lib/validation'
+import { rankPosts } from '@/lib/feed-ranking'
 
 // GET /api/social/posts
 //   ?page=&limit=&category=&userId=&feed=following|ranked|latest
@@ -71,41 +72,44 @@ export async function GET(req: NextRequest) {
 
         if (feedParam === 'following' && userIdParam) {
             const followDocs = await Follow.find({ followerId: userIdParam }).select('followingId').lean()
-            const followingIds = followDocs.map(f => f.followingId)
-            followingIds.push(userIdParam as any)
+            const followingIds = followDocs.map(f => f.followingId.toString())
+            followingIds.push(userIdParam as string)
+            const followingSet = new Set(followingIds)
 
             query.userId = { $in: followingIds }
 
-            const rankedCount = Math.ceil(limit * 0.6)
-            const latestCount = limit - rankedCount
+            // Fetch more than needed so the ranking algorithm has a good pool to rank from.
+            // Fetch 3x the limit, rank them, then slice to the page size.
+            const fetchLimit = Math.min(limit * 3, 100)
+            const raw = await Post.find(query)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(fetchLimit)
+                .lean()
+            const populated = await safePopulate(raw)
 
-            // Find without populate first (avoids crash on corrupt user refs)
-            const [ranked, latest] = await Promise.all([
-                Post.find(query).sort({ rankScore: -1, createdAt: -1 }).skip(skip).limit(rankedCount).lean(),
-                Post.find(query).sort({ createdAt: -1 }).skip(skip + rankedCount).limit(latestCount).lean(),
-            ])
-            const merged: any[] = []
-            for (let i = 0; i < Math.max(ranked.length, latest.length); i++) {
-                if (ranked[i]) merged.push(ranked[i])
-                if (latest[i]) merged.push(latest[i])
-            }
-            posts = await safePopulate(merged)
+            // Rank posts using the follow-graph-aware algorithm.
+            // Posts from followed authors get a 2x boost → they show up first.
+            posts = rankPosts(populated, followingSet).slice(0, limit)
 
-            // FALLBACK: if the following feed returned 0 posts (user follows no one
-            // and has no posts), fall back to the latest feed so the page isn't empty.
-            // This fixes the "posts not showing on feed" issue for new users.
             if (posts.length === 0) {
-                const raw = await Post.find({ isActive: { $ne: false } })
+                const fallbackRaw = await Post.find({ isActive: { $ne: false } })
                     .sort({ createdAt: -1 })
                     .skip(skip).limit(limit).lean()
-                posts = await safePopulate(raw)
+                posts = await safePopulate(fallbackRaw)
             }
         } else if (feedParam === 'ranked') {
+            // Trending feed — rank ALL posts by engagement + recency (no follow boost)
+            const fetchLimit = Math.min(limit * 3, 100)
             const raw = await Post.find(query)
-                .sort({ rankScore: -1, createdAt: -1 })
-                .skip(skip).limit(limit).lean()
-            posts = await safePopulate(raw)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(fetchLimit)
+                .lean()
+            const populated = await safePopulate(raw)
+            posts = rankPosts(populated).slice(0, limit)
         } else {
+            // Latest feed — pure chronological (no ranking)
             const raw = await Post.find(query)
                 .sort({ createdAt: -1 })
                 .skip(skip).limit(limit).lean()

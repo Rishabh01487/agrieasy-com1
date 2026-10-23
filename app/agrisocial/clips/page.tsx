@@ -588,6 +588,16 @@ export default function KrishiClips() {
     const [category, setCategory] = useState('all')
     const containerRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
+    const [refreshing, setRefreshing] = useState(false)
+
+    const refreshClips = async () => {
+        setRefreshing(true)
+        pageRef.current = 1
+        setHasMore(true)
+        try { localStorage.removeItem(`agrieasy:clips:${category}`) } catch {}
+        await loadClips(1, false)
+        setRefreshing(false)
+    }
 
     // Track clip IDs we've already fired a view event for so we don't
     // re-fire when the same clip scrolls back into view.
@@ -745,14 +755,14 @@ export default function KrishiClips() {
         <div style={{ height: '100vh', overflow: 'hidden', background: SOCIAL.clips.bg, fontFamily: SHARED.font, position: 'relative' }}>
             <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 100, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <button onClick={() => router.push('/agrisocial')} style={{ background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '10px', padding: '8px 12px', color: SOCIAL.clips.text, cursor: 'pointer', fontSize: '0.9rem', fontWeight: 700, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>← Back</button>
-                <div style={{ flex: 1, fontWeight: 900, fontSize: '1.1rem', color: SOCIAL.clips.text, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <button onClick={refreshClips} style={{ flex: 1, fontWeight: 900, fontSize: '1.1rem', color: SOCIAL.clips.text, display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: refreshing ? 'wait' : 'pointer', padding: 0 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: '50%', background: '#D9534F', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }}>
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="white" style={{ marginLeft: 1 }}>
                             <path d="M8 5v14l11-7z" />
                         </svg>
                     </div>
                     KrishiClips
-                </div>
+                </button>
                 <button onClick={() => router.push('/agrisocial/create?type=krishiclip')} style={{ background: `${SOCIAL.clips.accent}d9`, border: 'none', borderRadius: '10px', padding: '8px 14px', color: SOCIAL.clips.text, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800, backdropFilter: 'blur(8px)', transition: 'all 0.2s ease' }}>+ Create</button>
             </div>
 
@@ -798,6 +808,7 @@ export default function KrishiClips() {
                 The clips page is full-screen immersive — no bottom nav should show. */}
             <style>{`
                 .bottom-tab-bar, .agrisocial-bottom-nav { display: none !important; }
+                @keyframes spin { to { transform: rotate(360deg); } }
             `}</style>
         </div>
     )

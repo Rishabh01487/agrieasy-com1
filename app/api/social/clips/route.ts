@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import { parsePagination, paginationMeta } from '@/lib/api-response'
 import { SOCIAL } from '@/lib/config'
+import { rankClips } from '@/lib/feed-ranking'
 
 /**
  * Helper: try to populate userId, but if it fails (e.g. corrupt clip
@@ -36,17 +37,20 @@ export async function GET(req: NextRequest) {
         const query: Record<string, unknown> = { isActive: true, type: 'krishiclip' }
         if (category && category !== 'all') query.category = category
 
-        // Find without populate first (avoids crash on corrupt user refs)
+        // Fetch more than needed so the ranking algorithm has a good pool.
+        const fetchLimit = Math.min(limit * 3, 60)
         const [rawClips, total] = await Promise.all([
             Post.find(query)
-                .sort({ rankScore: -1, createdAt: -1 })
+                .sort({ createdAt: -1 })
                 .skip(skip)
-                .limit(limit)
+                .limit(fetchLimit)
                 .lean(),
             Post.countDocuments(query).catch(() => 0),
         ])
 
-        const clips = await safePopulate(rawClips)
+        const populated = await safePopulate(rawClips)
+        // Rank clips: views + likes + comments + shares + recency + audio boost
+        const clips = rankClips(populated).slice(0, limit)
 
         return NextResponse.json({ success: true, data: { clips }, meta: paginationMeta(page, limit, total) })
     } catch (e) {

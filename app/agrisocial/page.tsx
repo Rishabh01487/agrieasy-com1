@@ -668,6 +668,22 @@ export default function AgriSocialFeed() {
         fetchPosts(userId, category, feed, pageRef.current + 1, true)
     }, [loadingMore, hasMore, fetchPosts, userId, category, feed])
 
+    // Refresh the feed — called when the user taps the AgriSocial logo or pulls to refresh.
+    // Clears the cache, resets to page 1, and re-fetches with the ranking algorithm.
+    const [refreshing, setRefreshing] = useState(false)
+    const refreshFeed = useCallback(async () => {
+        setRefreshing(true)
+        setLoading(true)
+        pageRef.current = 1
+        setHasMore(true)
+        // Clear the feed cache so we get fresh posts
+        try { localStorage.removeItem(`agrieasy:feed:${feed}:${category}`) } catch {}
+        await fetchPosts(userId, category, feed, 1, false)
+        fetchStories()
+        fetchUnreadCounts()
+        setRefreshing(false)
+    }, [fetchPosts, fetchStories, fetchUnreadCounts, userId, category, feed])
+
     useEffect(() => {
         const sentinel = sentinelRef.current
         if (!sentinel) return
@@ -692,11 +708,11 @@ export default function AgriSocialFeed() {
         <div style={{ minHeight: '100vh', background: SOCIAL.bg, fontFamily: SHARED.font }}>
             {/* Sticky Top Nav (Instagram-style) */}
             <nav style={{ background: 'rgba(255,255,255,0.92)', borderBottom: `1px solid ${SOCIAL.border}`, padding: '0 20px', boxShadow: SHARED.shadow, position: 'sticky', top: 0, zIndex: 50, height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-                <Link href="/agrisocial" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button onClick={refreshFeed} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', background: 'none', border: 'none', cursor: refreshing ? 'wait' : 'pointer', padding: 0 }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/agrisocial-logo.png" alt="AgriSocial" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <img src="/agrisocial-logo.png" alt="AgriSocial" style={{ width: '32px', height: '32px', borderRadius: '8px', objectFit: 'cover', animation: refreshing ? 'spin 0.8s linear infinite' : 'none' }} />
                     <span style={{ fontWeight: 900, fontSize: '1.15rem', color: SOCIAL.text }}>Agri<span style={{ color: SOCIAL.primary }}>Social</span></span>
-                </Link>
+                </button>
 
                 {/* Desktop search */}
                 <Link href="/agrisocial/search" style={{ flex: 1, maxWidth: 240, margin: '0 24px', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 14px', background: SOCIAL.bg, borderRadius: '8px', textDecoration: 'none' }}>
@@ -858,6 +874,7 @@ export default function AgriSocialFeed() {
 
             {/* Instagram-style bottom nav (mobile) */}
             <AgriSocialBottomNav active="home" />
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
     )
 }
