@@ -11,6 +11,7 @@ import BottomSheet from '@/app/components/BottomSheet'
 import ShareSheet from '../components/ShareSheet'
 import MusicSticker from '../components/MusicSticker'
 import { GlobeIcon, FarmingIcon, TradingIcon, TechniqueIcon, EquipmentIcon, OrganicIcon, mithilaPillBackground } from '@/lib/category-icons'
+import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
 const roleLabel: Record<string, string> = { farmer: '🌾 Farmer', buyer: '🛒 Buyer', transporter: '🚛 Transporter', driver: '🚗 Driver' }
 const CATEGORIES = [
@@ -804,11 +805,12 @@ export default function KrishiClips() {
                     </div>
                 )}
             </div>
-            {/* CSS override: hide any bottom nav/tab bar that might bleed through from the layout.
-                The clips page is full-screen immersive — no bottom nav should show. */}
+            {/* Instagram-style bottom nav — visible on clips so users can navigate */}
+            <AgriSocialBottomNav active="reels" />
             <style>{`
-                .bottom-tab-bar, .agrisocial-bottom-nav { display: none !important; }
                 @keyframes spin { to { transform: rotate(360deg); } }
+                .agrisocial-bottom-nav { background: rgba(0,0,0,0.85) !important; backdrop-filter: blur(12px); }
+                .agrisocial-bottom-nav svg, .agrisocial-bottom-nav span { color: #fff !important; }
             `}</style>
         </div>
     )
