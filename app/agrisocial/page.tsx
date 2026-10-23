@@ -10,7 +10,7 @@ import ShareSheet from './components/ShareSheet'
 import MusicSticker from './components/MusicSticker'
 import AgriSocialBottomNav from './components/AgriSocialBottomNav'
 
-import { CATEGORIES as SHARED_CATEGORIES, catIconMap, mithilaPillBackground } from '@/lib/category-icons'
+import { CATEGORIES as SHARED_CATEGORIES, catIconMap, mithilaPillBackground, ClockIcon } from '@/lib/category-icons'
 
 const roleLabel: Record<string, string> = { farmer: 'Farmer/Vyapari', buyer: 'Buyer', transporter: 'Transporter', driver: 'Driver' }
 
@@ -712,7 +712,7 @@ export default function AgriSocialFeed() {
                         {([
                             { key: 'following' as const, label: 'Following', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 11h-6" /><path d="M19 8v6" /></svg> },
                             { key: 'ranked' as const, label: 'Trending', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg> },
-                            { key: 'latest' as const, label: 'Latest', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg> },
+                            { key: 'latest' as const, label: 'Latest', icon: <ClockIcon /> },
                         ]).map(({ key, label, icon }) => (
                             <button key={key} onClick={() => setFeed(key)}
                                 style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', background: feed === key ? SOCIAL.primary : SOCIAL.white, border: `1.5px solid ${feed === key ? SOCIAL.primary : SOCIAL.border}`, borderRadius: '100px', fontSize: '0.78rem', fontWeight: 700, color: feed === key ? '#fff' : SOCIAL.textSecondary, cursor: 'pointer', whiteSpace: 'nowrap' }}>
