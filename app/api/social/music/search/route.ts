@@ -46,7 +46,14 @@ export async function GET(req: NextRequest) {
 
     const songs = Object.values(detailsData).map((song: any) => {
       const encUrl = song.encrypted_media_url || ''
-      const fullUrl = decryptMediaUrl(encUrl)
+      let fullUrl = ''
+      if (encUrl) {
+        try {
+          fullUrl = decryptMediaUrl(encUrl)
+        } catch (e) {
+          console.error('Decrypt error for', song.song, ':', e)
+        }
+      }
       const previewUrl = song.media_preview_url || ''
       const image = (song.image || '').replace('150x150', '500x500')
       return {
@@ -57,6 +64,7 @@ export async function GET(req: NextRequest) {
         previewUrl,
         fullUrl,
         artworkUrl: image,
+        _debug: { hasEnc: !!encUrl, encLen: encUrl.length, decLen: fullUrl.length, keys: Object.keys(song).join(',') },
         genre: song.language || 'Music',
       }
     }).filter((s: any) => s.fullUrl || s.previewUrl)
