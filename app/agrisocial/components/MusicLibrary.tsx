@@ -333,10 +333,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
           </div>
         )}
 
-        {/* Sticky scrubber bar — appears when a song is selected. Lets
-            the user play/pause, drag to set the start time, and see
-            elapsed/total time. The chosen start time is passed to the post
-            when they tap "Use". */}
+        {/* Instagram-style scrubber — waveform bars + draggable position line */}
         {playingUrl && (
           <div style={{
             position: 'sticky', bottom: 0, left: 0, right: 0,
@@ -346,7 +343,7 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
             boxShadow: '0 -4px 16px rgba(0,0,0,0.08)',
             flexShrink: 0, zIndex: 10,
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
               <button
                 onClick={() => playingUrl && togglePreview(playingUrl)}
                 style={{
@@ -373,35 +370,52 @@ export default function MusicLibrary({ onSelect, onClose }: MusicLibraryProps) {
               </span>
             </div>
 
+            {/* Instagram-style waveform scrubber.
+                A row of vertical bars of varying heights (like a waveform).
+                Bars before the playhead are brand-colored, after are gray.
+                A thin vertical line marks the current position. */}
             <div
-              ref={(el) => {
-                (scrubberRef as any).current = el
-              }}
+              ref={(el) => { (scrubberRef as any).current = el }}
               onPointerDown={handleScrubberPointerDown}
               style={{
-                position: 'relative', width: '100%', height: 24,
-                display: 'flex', alignItems: 'center', cursor: 'pointer',
-                touchAction: 'none',  // prevent scroll while dragging
+                position: 'relative', width: '100%', height: 32,
+                display: 'flex', alignItems: 'center', gap: 2,
+                cursor: 'pointer', touchAction: 'none',
               }}
             >
-              <div style={{
-                position: 'absolute', left: 0, right: 0, height: 4,
-                borderRadius: 2, background: SOCIAL.border,
-              }} />
-              <div style={{
-                position: 'absolute', left: 0, height: 4, borderRadius: 2,
-                background: SOCIAL.primary,
-                width: `${(previewProgress / (previewDuration || 30)) * 100}%`,
-              }} />
+              {Array.from({ length: 48 }).map((_, i) => {
+                const barProgress = i / 48
+                const isPast = barProgress <= (previewProgress / (previewDuration || 30))
+                // Varying heights for the waveform effect (deterministic, not random)
+                const heightPct = 30 + Math.abs(Math.sin(i * 0.7)) * 60
+                return (
+                  <div key={i} style={{
+                    flex: 1,
+                    height: `${heightPct}%`,
+                    background: isPast ? SOCIAL.primary : SOCIAL.border,
+                    borderRadius: 1,
+                    transition: 'background 0.1s',
+                  }} />
+                )
+              })}
+              {/* Playhead — thin white vertical line with a dot at the top (Instagram style) */}
               <div style={{
                 position: 'absolute',
-                left: `calc(${(previewProgress / (previewDuration || 30)) * 100}% - 10px)`,
-                width: 20, height: 20, borderRadius: '50%',
-                background: '#fff', border: `2px solid ${SOCIAL.primary}`,
-                boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                transition: 'transform 0.1s ease',
-                transform: isScrubbing ? 'scale(1.2)' : 'scale(1)',
-              }} />
+                top: 0, bottom: 0,
+                left: `${(previewProgress / (previewDuration || 30)) * 100}%`,
+                width: 2,
+                background: '#fff',
+                boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                transform: 'translateX(-1px)',
+                pointerEvents: 'none',
+              }}>
+                <div style={{
+                  position: 'absolute', top: -3, left: -3,
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: '#fff', border: `1.5px solid ${SOCIAL.primary}`,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                }} />
+              </div>
             </div>
 
             <button
