@@ -6,11 +6,10 @@ import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
 import {
   MH, mhPageBg, mhCardStyle, mhPrimaryBtn, mhSecondaryBtn, mhNavStyle,
-  ShoppingCartIcon, UserIcon, CalendarIcon, TruckIcon, SmartphoneIcon,
-  CreditCardIcon, ListIcon, DollarSignIcon, PlusIcon, AlertTriangleIcon,
-  FileTextIcon, ReceiptIcon, BookIcon, WheatIcon, StoreIcon, MapPinIcon,
-  ArrowRightIcon, LogOutIcon, TagIcon, ClockIcon,
+  PlusIcon, AlertTriangleIcon, ArrowRightIcon, LogOutIcon, MapPinIcon, ClockIcon,
+  StoreIcon, TagIcon, ListIcon, DollarSignIcon, FileTextIcon, ReceiptIcon, UserIcon, WheatIcon,
 } from '@/lib/madhubani'
+import { BuyerIcon, TransporterIcon, SocialIcon, WalletIcon, LedgerIcon } from '@/app/components/CardIcons'
 
 interface Listing {
   _id: string
@@ -161,7 +160,7 @@ export default function BuyerDashboard() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${MH.navy}, ${MH.pink})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MH.cream, border: `1px solid ${MH.gold}` }}>
-              <ShoppingCartIcon size={18} />
+              <BuyerIcon size={18} />
             </div>
             <div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: MH.navy, lineHeight: 1 }}>AgriEasy</p>
@@ -170,19 +169,19 @@ export default function BuyerDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <Link href="/buyer/profile" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <UserIcon size={14} /> My Profile
+              <img src="/logo-commodities.png" alt="" width={14} height={14} style={{ borderRadius: 2 }} /> My Profile
             </Link>
             <Link href="/buyer/bookings" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <CalendarIcon size={14} /> Bookings
+              <img src="/logo-bookings.png" alt="" width={14} height={14} style={{ borderRadius: 2 }} /> Bookings
             </Link>
             <Link href="/buyer/my-vehicles" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <TruckIcon size={14} /> My Vehicles
+              <TransporterIcon size={14} /> My Vehicles
             </Link>
             <Link href="/agrisocial" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <SmartphoneIcon size={14} /> AgriSocial
+              <SocialIcon size={14} /> AgriSocial
             </Link>
             <Link href="/agripay" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-              <CreditCardIcon size={14} /> Wallet
+              <WalletIcon size={14} /> Wallet
             </Link>
             <button onClick={logout} style={{ color: MH.white, background: MH.deepPink, border: `1px solid ${MH.gold}`, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
               <LogOutIcon size={14} /> Logout
@@ -241,7 +240,7 @@ export default function BuyerDashboard() {
         {/* Stat cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14, marginBottom: 24 }}>
           <StatCard icon={<ListIcon size={20} />} label="Commodities" value={activeCount} sub="In your price-list" href="/buyer/create-listing" />
-          <StatCard icon={<CalendarIcon size={20} />} label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? <><ClockIcon size={11} /> Awaiting your confirmation</> : 'No pending bookings'} href="/buyer/bookings" />
+          <StatCard icon={<img src="/logo-bookings.png" alt="" width={20} height={20} style={{ borderRadius: 3 }} />} label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? <><ClockIcon size={11} /> Awaiting your confirmation</> : 'No pending bookings'} href="/buyer/bookings" />
           <StatCard icon={<DollarSignIcon size={20} />} label="Avg Price" value={`₹${avgPrice}`} sub="Per unit across commodities" />
           <StatCard icon={<PlusIcon size={20} />} label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" />
         </div>
@@ -255,7 +254,7 @@ export default function BuyerDashboard() {
               borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14,
               boxShadow: '0 4px 14px rgba(26,26,62,0.06)', transition: 'all 0.2s ease', cursor: 'pointer',
             }}>
-              <span style={{ color: MH.deepPink, display: 'inline-flex' }}><CalendarIcon size={26} /></span>
+              <span style={{ color: MH.deepPink, display: 'inline-flex' }}><img src="/logo-bookings.png" alt="" width={26} height={26} style={{ borderRadius: 4 }} /></span>
               <div style={{ flex: 1 }}>
                 <p style={{ margin: 0, color: MH.warning, fontWeight: 800, fontSize: '0.95rem' }}>
                   {pendingBookings} {pendingBookings === 1 ? 'farmer wants' : 'farmers want'} to sell to your shop!
@@ -276,13 +275,13 @@ export default function BuyerDashboard() {
           <h2 style={{ color: MH.navy, fontSize: '1.05rem', fontWeight: 800, margin: '0 0 12px' }}>Quick actions</h2>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <QuickAction icon={<FileTextIcon size={20} />} label="Add Commodity" href="/buyer/create-listing" />
-            <QuickAction icon={<CalendarIcon size={20} />} label="Bookings" href="/buyer/bookings" />
+            <QuickAction icon={<img src="/logo-bookings.png" alt="" width={20} height={20} style={{ borderRadius: 3 }} />} label="Bookings" href="/buyer/bookings" />
             <QuickAction icon={<UserIcon size={20} />} label="My Profile" href="/buyer/profile" />
-            <QuickAction icon={<TruckIcon size={20} />} label="My Vehicles" href="/buyer/my-vehicles" />
+            <QuickAction icon={<TransporterIcon size={20} />} label="My Vehicles" href="/buyer/my-vehicles" />
             <QuickAction icon={<ReceiptIcon size={20} />} label="Billing" href="/buyer/billing" />
-            <QuickAction icon={<BookIcon size={20} />} label="Ledger" href="/ledger" />
-            <QuickAction icon={<CreditCardIcon size={20} />} label="Payment" href="/buyer/payment" />
-            <QuickAction icon={<SmartphoneIcon size={20} />} label="AgriSocial" href="/agrisocial" />
+            <QuickAction icon={<LedgerIcon size={20} />} label="Ledger" href="/ledger" />
+            <QuickAction icon={<WalletIcon size={20} />} label="Payment" href="/buyer/payment" />
+            <QuickAction icon={<SocialIcon size={20} />} label="AgriSocial" href="/agrisocial" />
             <QuickAction icon={<WheatIcon size={20} />} label="Browse Sellers" href="/farmer/search-buyers" />
           </div>
         </div>
