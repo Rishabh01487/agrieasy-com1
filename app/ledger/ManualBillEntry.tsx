@@ -78,6 +78,8 @@ function emptyCommodity(): ManualCommodity {
 export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
     const [commodities, setCommodities] = useState<ManualCommodity[]>([emptyCommodity()])
     const [counterpartyName, setCounterpartyName] = useState('')
+    const [entryMode, setEntryMode] = useState<'batch' | 'direct'>('batch')
+    const [directCommodities, setDirectCommodities] = useState<{ id: string; name: string; totalBags: string; totalWeight: string; rate: string; unit: 'kg' | 'quintal' }[]>([{ id: makeId(), name: '', totalBags: '', totalWeight: '', rate: '', unit: 'kg' }])
     const palette = LEDGER
 
     // ── Commodity operations ──
@@ -196,6 +198,45 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
         })
     }
 
+    // ── Direct entry generate (no batches — just total bags + total weight) ──
+    const handleDirectGenerate = () => {
+        const valid = directCommodities.filter(c => c.name.trim() && (parseFloat(c.totalWeight) > 0 || parseInt(c.totalBags) > 0))
+        if (valid.length === 0) {
+            alert('Please add at least one commodity with a name and total weight/bags.')
+            return
+        }
+        const groups: CommodityGroup[] = valid.map(c => {
+            const totalBags = parseInt(c.totalBags) || 0
+            const totalWeight = Math.round((parseFloat(c.totalWeight) || 0) * 1000) / 1000
+            return {
+                name: c.name.trim(),
+                nameEn: c.name.trim(),
+                batches: [{ bagCount: totalBags, weight: totalWeight }],
+                totalBags,
+                totalWeight,
+                directEntry: true,
+            }
+        })
+        const grandTotalBags = groups.reduce((s, g) => s + g.totalBags, 0)
+        const grandTotalWeight = groups.reduce((s, g) => s + g.totalWeight, 0)
+        const rawText = groups.map(g => `${g.name}: ${g.totalBags} bags, ${g.totalWeight} kg`).join('\n')
+        const ratesMap: Record<number, { rate: string; unit: 'kg' | 'quintal' }> = {}
+        valid.forEach((c, i) => { ratesMap[i] = { rate: c.rate, unit: c.unit } })
+        ;(window as any).__manualBillRates = ratesMap
+        ;(window as any).__manualBillCounterparty = counterpartyName
+        onGenerate({
+            commodities: groups,
+            grandTotalBags,
+            grandTotalWeight: Math.round(grandTotalWeight * 1000) / 1000,
+            rawText,
+        })
+    }
+
+    // ── Direct entry commodity operations ──
+    const addDirectCommodity = () => setDirectCommodities(c => [...c, { id: makeId(), name: '', totalBags: '', totalWeight: '', rate: '', unit: 'kg' }])
+    const removeDirectCommodity = (id: string) => setDirectCommodities(c => c.length > 1 ? c.filter(x => x.id !== id) : c)
+    const updateDirectCommodity = (id: string, field: string, value: any) => setDirectCommodities(c => c.map(x => x.id === id ? { ...x, [field]: value } : x))
+
     // ── Live total preview ──
     const liveTotals = commodities.reduce((acc, c) => {
         const weights = c.weights.map(w => parseFloat(w)).filter(w => !isNaN(w) && w > 0)
@@ -218,9 +259,20 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                             Manual Bill Entry
                         </h3>
                         <p style={{ margin: '2px 0 0', color: palette.muted, fontSize: '0.78rem' }}>
-                            Enter commodity name, bag count, and per-bag weights. Bill auto-calculates.
+                            {entryMode === 'batch' ? 'Enter commodity name, bag count, and per-bag weights.' : 'Enter commodity name, total bags, and total weight directly.'}
                         </p>
                     </div>
+                </div>
+                {/* Mode toggle */}
+                <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                    <button onClick={() => setEntryMode('batch')}
+                        style={{ padding: '5px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${entryMode === 'batch' ? palette.primary : palette.border}`, background: entryMode === 'batch' ? palette.primary : palette.white, color: entryMode === 'batch' ? '#fff' : palette.muted }}>
+                        Per-bag weights
+                    </button>
+                    <button onClick={() => setEntryMode('direct')}
+                        style={{ padding: '5px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', border: `1px solid ${entryMode === 'direct' ? palette.primary : palette.border}`, background: entryMode === 'direct' ? palette.primary : palette.white, color: entryMode === 'direct' ? '#fff' : palette.muted }}>
+                        Direct total
+                    </button>
                 </div>
             </div>
 
@@ -243,6 +295,66 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                 />
             </div>
 
+            {entryMode === 'direct' ? (
+                /* ── Direct entry mode — total bags + total weight per commodity ── */
+                <>
+                    {directCommodities.map((c, cIdx) => (
+                        <div key={c.id} style={{ background: palette.white, borderRadius: 12, padding: 16, border: `1px solid ${palette.borderLight}`, marginBottom: 12 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: palette.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Commodity {cIdx + 1}</span>
+                                {directCommodities.length > 1 && (
+                                    <button onClick={() => removeDirectCommodity(c.id)} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.9rem' }}>✕ Remove</button>
+                                )}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 8, marginBottom: 8 }}>
+                                <input type="text" placeholder="Commodity name (e.g. Wheat, Maize)" value={c.name}
+                                    onChange={e => updateDirectCommodity(c.id, 'name', e.target.value)}
+                                    style={inputStyle(palette)} />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', color: palette.muted, fontWeight: 600, display: 'block', marginBottom: 4 }}>Total Bags</label>
+                                    <input type="number" inputMode="numeric" min="0" placeholder="e.g. 670" value={c.totalBags}
+                                        onChange={e => updateDirectCommodity(c.id, 'totalBags', e.target.value)}
+                                        style={inputStyle(palette)} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', color: palette.muted, fontWeight: 600, display: 'block', marginBottom: 4 }}>Total Weight (kg)</label>
+                                    <input type="number" inputMode="decimal" step="0.001" min="0" placeholder="e.g. 35673" value={c.totalWeight}
+                                        onChange={e => updateDirectCommodity(c.id, 'totalWeight', e.target.value)}
+                                        style={inputStyle(palette)} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', color: palette.muted, fontWeight: 600, display: 'block', marginBottom: 4 }}>Rate (₹)</label>
+                                    <input type="number" inputMode="decimal" step="0.01" min="0" placeholder="e.g. 19.80" value={c.rate}
+                                        onChange={e => updateDirectCommodity(c.id, 'rate', e.target.value)}
+                                        style={inputStyle(palette)} />
+                                </div>
+                                <select value={c.unit} onChange={e => updateDirectCommodity(c.id, 'unit', e.target.value)}
+                                    style={{ ...inputStyle(palette), width: 'auto', padding: '8px 6px' }}>
+                                    <option value="kg">/kg</option>
+                                    <option value="quintal">/quintal</option>
+                                </select>
+                            </div>
+                            {parseFloat(c.totalWeight) > 0 && parseFloat(c.rate) > 0 && (
+                                <p style={{ margin: '8px 0 0', textAlign: 'right', color: palette.primary, fontWeight: 700, fontSize: '0.92rem' }}>
+                                    = ₹{((parseFloat(c.totalWeight) || 0) * (parseFloat(c.rate) || 0) * (c.unit === 'quintal' ? 0.01 : 1)).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                                </p>
+                            )}
+                        </div>
+                    ))}
+                    <button onClick={addDirectCommodity}
+                        style={{ width: '100%', padding: '10px', background: palette.primaryLight, color: palette.primary, border: `1px dashed ${palette.primary}`, borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
+                        + Add Another Commodity
+                    </button>
+                    <button onClick={handleDirectGenerate}
+                        style={{ width: '100%', padding: '14px 24px', background: 'linear-gradient(135deg, #E8D49A 0%, #C9A14E 50%, #9D7A2C 100%)', color: '#050C1E', border: 'none', borderRadius: 12, fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201, 161, 78, 0.35)' }}>
+                        📋 Generate Calculated Bill
+                    </button>
+                </>
+            ) : (
+                /* ── Batch entry mode (original) ── */
+                <>
             {/* Commodities */}
             {commodities.map((c, cIdx) => {
                 const totalWeight = c.weights
@@ -508,6 +620,8 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                     boxShadow: liveTotals.bags > 0 ? '0 4px 16px rgba(201, 161, 78, 0.35)' : 'none',
                 }}
             >📋 Generate Calculated Bill</button>
+                </>
+            )}
         </div>
     )
 }

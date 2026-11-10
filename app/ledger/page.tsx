@@ -321,10 +321,10 @@ export default function LedgerPage() {
                 {summary && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 14, marginBottom: 32 }}>
                         {[
-                            { label: 'Earnings', value: summary.totalEarnings, color: L.green, icon: '\u{1F4B0}', bg: 'rgba(22, 163, 74, 0.08)' },
-                            { label: 'Expenses', value: summary.totalExpenses, color: L.red, icon: '\u{1F4B8}', bg: 'rgba(220, 38, 38, 0.08)' },
-                            { label: 'Receivables', value: summary.pendingReceivables, color: L.goldDark, icon: '\u{1F4E5}', bg: L.accentSoft, sub: 'Pending incoming' },
-                            { label: 'Payables', value: summary.pendingPayables, color: L.red, icon: '\u{1F4E4}', bg: 'rgba(220, 38, 38, 0.08)', sub: 'Pending outgoing' },
+                            { label: 'Earnings', value: summary.totalEarnings, color: L.green, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>, bg: 'rgba(22, 163, 74, 0.08)' },
+                            { label: 'Expenses', value: summary.totalExpenses, color: L.red, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>, bg: 'rgba(220, 38, 38, 0.08)' },
+                            { label: 'Receivables', value: summary.pendingReceivables, color: L.goldDark, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>, bg: L.accentSoft, sub: 'Pending incoming' },
+                            { label: 'Payables', value: summary.pendingPayables, color: L.red, icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 3h5v5" /><path d="M21 3l-7 7" /><path d="M8 21H3v-5" /><path d="M3 21l7-7" /></svg>, bg: 'rgba(220, 38, 38, 0.08)', sub: 'Pending outgoing' },
                         ].map((card, i) => (
                             <div key={i} style={{
                                 background: L.card, borderRadius: 16, padding: 20,
