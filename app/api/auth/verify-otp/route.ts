@@ -54,7 +54,8 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = { userId: user._id.toString(), email: user.email, role: user.role }
-    const token = jwt.sign(payload, secret, { expiresIn: '7d' })
+    // Session lifetime: 30 days (matches NextAuth session maxAge).
+    const token = jwt.sign(payload, secret, { expiresIn: '30d' })
 
     const successBody = apiSuccess({
       token,
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60,
+      maxAge: 30 * 24 * 60 * 60, // 30 days — matches JWT expiresIn
       path: '/',
     })
 

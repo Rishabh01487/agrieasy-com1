@@ -19,7 +19,8 @@ export async function POST(req: NextRequest) {
         const jwtSecret = process.env.JWT_SECRET
         if (!jwtSecret || jwtSecret === 'your-secret-key') return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
 
-        const jwtToken = jwt.sign({ userId: user._id.toString(), email: user.email, role: user.role }, jwtSecret, { expiresIn: '7d' })
+        // Session lifetime: 30 days (matches NextAuth session maxAge).
+        const jwtToken = jwt.sign({ userId: user._id.toString(), email: user.email, role: user.role }, jwtSecret, { expiresIn: '30d' })
 
         return NextResponse.json({ registered: true, token: jwtToken, userId: user._id.toString(), role: user.role })
     } catch (error) {

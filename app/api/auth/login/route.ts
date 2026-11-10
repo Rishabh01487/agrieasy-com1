@@ -44,7 +44,11 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = { userId: user._id.toString(), email: user.email, role: user.role, tokenVersion: user.tokenVersion || 0 }
-    const token = jwt.sign(payload, secret, { expiresIn: '7d' })
+    // Session lifetime: 30 days (matches NextAuth session maxAge).
+    // Previously 7d, which forced re-login after a week even if the user
+    // opened the app daily. See lib/auth-fetch.ts for the client-side
+    // localStorage mirror.
+    const token = jwt.sign(payload, secret, { expiresIn: '30d' })
 
     const successBody = apiSuccess({
       token,
@@ -56,7 +60,7 @@ export async function POST(request: NextRequest) {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60,
+        maxAge: 30 * 24 * 60 * 60, // 30 days — matches JWT expiresIn
         path: '/',
       })
     } catch (cookieErr) {
