@@ -44,6 +44,25 @@ export default function Login() {
     if (params.get('expired') === '1') {
       setError('Your session has expired. Please sign in again to continue.')
     }
+    // OAuth error banner — NextAuth redirects here as ?error=<code> when
+    // the Google flow fails (configured via pages.signIn/pages.error in
+    // app/api/auth/[...nextauth]/route.ts). Without this the user was
+    // bounced back to a blank login page with no explanation.
+    const oauthError = params.get('error')
+    if (oauthError) {
+      const oauthMessages: Record<string, string> = {
+        Configuration: 'Google sign-in is not configured correctly on the server.',
+        OAuthSignin: 'Could not start Google sign-in. Please try again.',
+        OAuthCallback: 'Google sign-in could not be verified. Please try again.',
+        OAuthCallbackError: 'Google sign-in could not be verified. Please try again.',
+        OAuthAccountNotLinked: 'This Google account is linked to a different sign-in method. Please sign in with your email/phone and password.',
+        AccessDenied: 'Access was denied. Please try again.',
+        Verification: 'The sign-in link has expired. Please try again.',
+      }
+      setError(
+        `Google sign-in failed — ${oauthMessages[oauthError] || `unexpected error (${oauthError}).`}`
+      )
+    }
   }, [])
 
   const rc = roleConfig[role] || roleConfig.farmer

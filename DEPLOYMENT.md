@@ -129,10 +129,35 @@ In Vercel dashboard, under "Environment Variables", add:
    vars (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), then
    **redeploy** (Vercel → Deployments → ⋯ → Redeploy).
 
-**How to verify what URI your app actually sends:**
-Visit `https://agrieasy.site/api/auth/providers` — the `callback`
-field for the google provider shows the exact redirect URI NextAuth
-uses. That exact string must be in the Authorized redirect URIs list.
+**How to verify what your app ACTUALLY sends — and whether Google accepts it:**
+
+Visit **`https://agrieasy.site/api/auth/oauth-check`**. It performs the exact
+same authorization request a real "Continue with Google" click performs and
+reports:
+
+- `clientId` — the client ID your deployment is really using. **The redirect
+  URI must be registered on THIS client** (client IDs are the identity Google
+  checks against — if you edited a different client, your change does nothing).
+- `redirectUri` — the callback URL NextAuth sends.
+- `status` — `PASS` (Google accepts it) or `FAIL` + a `fix[]` array with
+  concrete steps.
+
+> **Confirmed diagnosis (2026-11-10):** Google's own server rejected the
+> sign-in with `redirect_uri_mismatch` for client ID
+> `855905280291-3a9s97d4jcc28opoo7klilfcvvplutfg` even though the console
+> "looked configured". The 4 traps that cause this, in order of likelihood:
+> 1. **Wrong OAuth client** — the URI was added to a *different* client (or a
+>    *different GCP project* — check the project selector at the top of the
+>    console!) than the one whose ID is in `GOOGLE_CLIENT_ID`.
+> 2. **Env vars updated in Vercel but not redeployed** — env changes do NOT
+>    apply to the running deployment until you click Redeploy.
+> 3. **Wrong application type** — the client must be "Web application";
+>    Desktop/iOS/Android clients ignore the Authorized redirect URI list.
+> 4. **Typo in the saved URI** — trailing slash, `http` instead of `https`,
+>    or `www.` prefix.
+>
+> `oauth-check` also shows the live client ID so you can compare it against
+> the console — they must match character for character.
 
 **Local dev:** sign-in with Google only works locally if
 `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set in `.env.local`
