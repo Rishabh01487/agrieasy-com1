@@ -6,6 +6,100 @@ function getRequestKey(url: string, options: RequestInit = {}): string {
   return '' // Only deduplicate GET requests
 }
 
+// ── Cookie helpers ────────────────────────────────────────────────
+// The login endpoint sets the JWT as an httpOnly cookie alongside the
+// localStorage token. httpOnly cookies can't be read by JS, so we use
+// them only as a fallback signal: if localStorage is empty (e.g. user
+// came back to the site and Safari ITP wiped it) but the cookie still
+// exists, the server-side authenticateRequest() will still accept the
+// request. This makes sessions survive localStorage wipes.
+//
+// We also expose a non-httpOnly "session" marker cookie so the client
+// can detect "user has a session" without needing to read the actual
+// JWT (which is httpOnly).
+
+/** Returns true if a session marker cookie is present. */
+function hasSessionCookie(): boolean {
+  if (typeof document === 'undefined') return false
+  return document.cookie.split('; ').some(c => c.startsWith('agrieasy_session='))
+}
+
+/** Read the CSRF token from the csrf_token cookie (set by middleware). */
+function getCsrfToken(): string | null {
+  if (typeof document === 'undefined') return null
+  const c = document.cookie.split('; ').find(x => x.startsWith('csrf_token='))
+  return c ? c.split('=')[1] : null
+}
+
+// ── Token refresh state ───────────────────────────────────────────
+// Track in-flight refresh so concurrent 401s don't trigger multiple
+// refresh attempts.
+let refreshPromise: Promise<string | null> | null = null
+
+/**
+ * Try to refresh the JWT by calling /api/auth/session-token.
+ * This only works for Google-login users (who have a NextAuth session
+ * cookie). For phone+password users, there's no refresh — they must
+ * re-login. Returns the new token, or null if refresh failed.
+ *
+ * IMPORTANT: This function does NOT use authFetch (would infinite-loop
+ * on 401). It uses plain fetch with credentials: 'include'.
+ */
+async function tryRefreshToken(): Promise<string | null> {
+  if (refreshPromise) return refreshPromise
+  refreshPromise = (async () => {
+    try {
+      const res = await fetch('/api/auth/session-token', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      if (!res.ok) return null
+      const data = await res.json()
+      if (data?.registered === true && data?.token) {
+        // Persist the refreshed token to localStorage
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('token', data.token)
+          localStorage.setItem('userId', data.userId)
+          localStorage.setItem('userEmail', data.email || '')
+          localStorage.setItem('userRole', data.role || 'buyer')
+        }
+        return data.token as string
+      }
+      return null
+    } catch {
+      return null
+    } finally {
+      // Allow future refresh attempts after a short cooldown
+      setTimeout(() => { refreshPromise = null }, 30_000)
+    }
+  })()
+  return refreshPromise
+}
+
+// ── Redirect to login with ?expired=1 ─────────────────────────────
+let expiredRedirectScheduled = false
+function redirectToLoginExpired() {
+  if (expiredRedirectScheduled) return
+  if (typeof window === 'undefined') return
+  expiredRedirectScheduled = true
+  // Clear stale localStorage so the login page doesn't try to use it
+  localStorage.removeItem('token')
+  localStorage.removeItem('userId')
+  localStorage.removeItem('userEmail')
+  localStorage.removeItem('userRole')
+  // Redirect after a short delay so any in-flight UI can settle
+  setTimeout(() => {
+    const current = window.location.pathname
+    // Don't redirect if already on an auth page
+    if (current.startsWith('/auth/')) return
+    const loginUrl = `/auth/login?expired=1&next=${encodeURIComponent(current)}`
+    window.location.href = loginUrl
+  }, 100)
+}
+
+// ── Main authFetch ────────────────────────────────────────────────
 export function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
   const headers = new Headers(options.headers || {})
@@ -17,12 +111,9 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
   // CSRF protection: for state-changing requests, attach the X-CSRF-Token
   // header from the csrf_token cookie set by the middleware.
   const method = (options.method || 'GET').toUpperCase()
-  if (method !== 'GET' && method !== 'HEAD' && typeof document !== 'undefined') {
-    const csrfCookie = document.cookie
-      .split('; ')
-      .find(c => c.startsWith('csrf_token='))
-    if (csrfCookie) {
-      const csrfToken = csrfCookie.split('=')[1]
+  if (method !== 'GET' && method !== 'HEAD') {
+    const csrfToken = getCsrfToken()
+    if (csrfToken) {
       headers.set('X-CSRF-Token', csrfToken)
     }
   }
@@ -37,6 +128,34 @@ export function authFetch(url: string, options: RequestInit = {}): Promise<Respo
     ...options,
     headers,
     credentials: 'include',
+  }).then(async (res) => {
+    // ── 401 auto-refresh ──────────────────────────────────────────
+    // If we get a 401, try refreshing the token ONCE. If refresh
+    // succeeds, retry the original request with the new token. If it
+    // fails, redirect to login with ?expired=1.
+    //
+    // Skip this for the refresh endpoint itself (would infinite-loop)
+    // and for auth endpoints (login/register/send-otp/verify-otp).
+    if (res.status === 401 && !url.startsWith('/api/auth/')) {
+      const newToken = await tryRefreshToken()
+      if (newToken) {
+        // Retry the original request with the new token
+        const retryHeaders = new Headers(options.headers || {})
+        retryHeaders.set('Authorization', `Bearer ${newToken}`)
+        const csrf = getCsrfToken()
+        if (csrf && method !== 'GET' && method !== 'HEAD') {
+          retryHeaders.set('X-CSRF-Token', csrf)
+        }
+        return fetch(url, {
+          ...options,
+          headers: retryHeaders,
+          credentials: 'include',
+        })
+      }
+      // Refresh failed → redirect to login
+      redirectToLoginExpired()
+    }
+    return res
   })
 
   if (key && !options.signal) {
@@ -54,6 +173,13 @@ export function getUserInfo(): { userId: string | null; userEmail: string | null
     userEmail: localStorage.getItem('userEmail'),
     userRole: localStorage.getItem('userRole'),
   }
+}
+
+/** Returns true if the user has any sign of a session (localStorage OR cookie). */
+export function hasSession(): boolean {
+  if (typeof window === 'undefined') return false
+  if (localStorage.getItem('token')) return true
+  return hasSessionCookie()
 }
 
 export async function logout(): Promise<void> {

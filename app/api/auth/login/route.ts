@@ -63,6 +63,18 @@ export async function POST(request: NextRequest) {
         maxAge: 30 * 24 * 60 * 60, // 30 days — matches JWT expiresIn
         path: '/',
       })
+      // Non-httpOnly session marker cookie — lets the client detect
+      // "user has a session" even if localStorage was wiped (Safari ITP,
+      // Firefox "clear on close", incognito, etc.). The actual JWT stays
+      // in the httpOnly 'token' cookie and is sent automatically by the
+      // browser on every request, so server-side auth still works.
+      successBody.cookies.set('agrieasy_session', '1', {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60,
+        path: '/',
+      })
     } catch (cookieErr) {
       console.error('[login] Cookie set error:', cookieErr)
     }

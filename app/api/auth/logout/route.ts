@@ -9,5 +9,13 @@ export async function POST() {
     maxAge: 0,
     path: '/',
   })
+  // Also clear the session marker cookie
+  response.cookies.set('agrieasy_session', '', {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0,
+    path: '/',
+  })
   return response
 }

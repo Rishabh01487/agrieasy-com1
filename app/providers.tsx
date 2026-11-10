@@ -3,7 +3,6 @@
 import { SessionProvider } from 'next-auth/react'
 import { Component, ReactNode } from 'react'
 import AuthSync from './components/AuthSync'
-import { useAppOpenSound } from './components/SoundManager'
 
 // Wrap SessionProvider in an error boundary so that if next-auth ever
 // throws during render (e.g. misconfigured env vars, network error
@@ -35,7 +34,6 @@ class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasEr
             >
                 {this.props.children}
                 <AuthSync />
-                <AppSoundPlayer />
             </SessionProvider>
         )
     }
@@ -43,9 +41,4 @@ class SessionProviderBoundary extends Component<{ children: ReactNode }, { hasEr
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
     return <SessionProviderBoundary>{children}</SessionProviderBoundary>
-}
-
-function AppSoundPlayer() {
-    useAppOpenSound()
-    return null
 }

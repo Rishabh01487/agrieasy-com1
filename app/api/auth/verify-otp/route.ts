@@ -69,6 +69,14 @@ export async function POST(request: NextRequest) {
       maxAge: 30 * 24 * 60 * 60, // 30 days — matches JWT expiresIn
       path: '/',
     })
+    // Non-httpOnly session marker cookie (see login route for explanation)
+    successBody.cookies.set('agrieasy_session', '1', {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 30 * 24 * 60 * 60,
+      path: '/',
+    })
 
     await logAudit({ userId: user._id.toString(), action: 'LOGIN', resource: 'User', resourceId: user._id.toString(), details: { method: 'otp', role: user.role }, request })
 

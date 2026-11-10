@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { CardIcon } from './CardIcons'
 
 /**
@@ -61,25 +62,6 @@ const FEATURE_CARDS = [
 
 const COMING_SOON = new Set<string>(['EasyPay'])
 
-let audioCtx: AudioContext | null = null
-function getCtx() {
-  if (typeof window === 'undefined') return null
-  if (!audioCtx) { try { audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)() } catch { return null } }
-  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {})
-  return audioCtx
-}
-function playClick() {
-  const ctx = getCtx(); if (!ctx) return
-  const now = ctx.currentTime
-  const osc = ctx.createOscillator(); const gain = ctx.createGain()
-  osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now)
-  osc.frequency.exponentialRampToValueAtTime(600, now + 0.04)
-  gain.gain.setValueAtTime(0.08, now)
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06)
-  osc.connect(gain).connect(ctx.destination)
-  osc.start(now); osc.stop(now + 0.08)
-}
-
 const HARVEST_STEPS = [
   { num: '01', name: 'SOW',    headline: 'From first seed',     sub: 'A signed contract for every farmer',  status: 'SEEDING' },
   { num: '02', name: 'GROW',   headline: 'A route with a name', sub: 'Live GPS tracking on every crate',    status: 'IN TRANSIT' },
@@ -89,7 +71,35 @@ const HARVEST_STEPS = [
 void HARVEST_STEPS  // kept for reference; the step card has been removed per user request
 
 export default function NewHomePage() {
+  const router = useRouter()
   const [currentTime, setCurrentTime] = useState('')
+
+  // Auto-redirect to dashboard if the user is already logged in.
+  // Without this, users who reopen the app land on the home page and
+  // see "Sign In" buttons — feels like they were logged out, when
+  // actually their session is still valid. They just need to be sent
+  // to /{role}/dashboard instead of /.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const role = localStorage.getItem('userRole')
+    const token = localStorage.getItem('token')
+    // Only redirect if both token and role are present AND we're not
+    // already on a sub-page (don't hijack navigation)
+    if (token && role && (role === 'farmer' || role === 'buyer' || role === 'transporter')) {
+      // Check the session marker cookie too — if localStorage was wiped
+      // (Safari ITP), we won't have a token but the cookie might still
+      // be there. In that case, try to refresh via /api/auth/session-token
+      // (handled by authFetch on 401). For now, only redirect if
+      // localStorage has both token + role.
+      const currentPath = window.location.pathname
+      const currentSearch = window.location.search
+      // Don't redirect if there's a ?next= or ?role= param (let the user
+      // pick a different role from the home page if they want)
+      if (currentPath === '/' && !currentSearch) {
+        router.replace(`/${role}/dashboard`)
+      }
+    }
+  }, [router])
 
   // Live clock for the "route pulse" indicator (top-right)
   useEffect(() => {
@@ -482,7 +492,7 @@ export default function NewHomePage() {
           gap: 8, maxWidth: 560, width: '100%', marginBottom: 10,
         }}>
           {ROLE_CARDS.map((card, i) => (
-            <Link key={card.title} href={card.href} onClick={playClick}
+            <Link key={card.title} href={card.href}
               className="home-card-sm"
               style={{
                 background: '#fff', borderRadius: 12, padding: '14px 8px',
@@ -535,7 +545,6 @@ export default function NewHomePage() {
             // + slightly reduced opacity to signal the feature isn't live yet.
             return (
               <Link key={c.title} href={c.href}
-                onClick={() => { playClick() }}
                 style={{
                   background: 'rgba(255,255,255,0.7)', borderRadius: 12,
                   padding: '14px 8px', textAlign: 'center', textDecoration: 'none',
@@ -568,7 +577,7 @@ export default function NewHomePage() {
         </div>
 
         {/* CTA */}
-        <Link href="/auth/register" onClick={playClick}
+        <Link href="/auth/register"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             padding: '12px 28px',

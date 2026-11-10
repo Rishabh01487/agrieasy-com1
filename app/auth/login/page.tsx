@@ -37,6 +37,13 @@ export default function Login() {
       // for all newly-registered users (manual registration only).
       setSuccess('Account created! Please sign in with your email/phone and password.')
     }
+    // Session expired banner — set by authFetch when a 401 can't be
+    // refreshed. Tells the user *why* they're being asked to sign in
+    // again (their session timed out after 30 days), instead of just
+    // bouncing them to login silently.
+    if (params.get('expired') === '1') {
+      setError('Your session has expired. Please sign in again to continue.')
+    }
   }, [])
 
   const rc = roleConfig[role] || roleConfig.farmer
