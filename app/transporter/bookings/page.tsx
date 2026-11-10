@@ -142,7 +142,7 @@ export default function TransporterBookings() {
 
   return (
     <div style={{ minHeight: '100vh', background: TRANSPORTER.bg, fontFamily: SHARED.font, color: TRANSPORTER.text }}>
-      <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: TRANSPORTER.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: '0.95rem' }}>🚛</div>
@@ -405,7 +405,7 @@ export default function TransporterBookings() {
                       <button
                         onClick={() => updateStatus(b._id, 'in-transit', dispatchNote[b._id] || '')}
                         disabled={acting === b._id}
-                        style={{ width: '100%', padding: '11px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.88rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(37,99,235,0.25)' }}
+                        style={{ width: '100%', padding: '11px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.88rem', fontWeight: 700, cursor: acting === b._id ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(49,55,43,0.28)' }}
                       >
                         🚚 Dispatch Vehicle — Driver On The Way
                       </button>
@@ -415,7 +415,7 @@ export default function TransporterBookings() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <Link
                         href={`/transporter/tracking/${b._id}`}
-                        style={{ display: 'block', textAlign: 'center', padding: '11px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 14px rgba(37,99,235,0.25)' }}
+                        style={{ display: 'block', textAlign: 'center', padding: '11px 16px', background: TRANSPORTER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.88rem', fontWeight: 700, textDecoration: 'none', boxShadow: '0 4px 14px rgba(49,55,43,0.28)' }}
                       >
                         📍 Open Live Map & Share Location
                       </Link>
@@ -434,7 +434,7 @@ export default function TransporterBookings() {
           </div>
         )}
       </div>
-      <style>{`input:focus { border-color: ${TRANSPORTER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus { border-color: ${TRANSPORTER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }

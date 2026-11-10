@@ -4,39 +4,39 @@
  * Madhubani-art shared UI kit — palette + Feather-style SVG icons + style
  * helpers used across the farmer & buyer dashboards.
  *
- * Palette (matches the AgriSocial feed / PWA install / Cookie consent):
- *   navy      #1A1A3E  (primary — headings, buttons, active states)
- *   pink      #D45D7E  (accent — highlights, badges, gradients)
- *   gold      #D4A574  (borders, dividers, decorative elements)
- *   cream     #FFF8F0  (backgrounds, cards)
- *   deepPink  #B83A5C  (secondary accent)
- *   pinkGray  #8B6B7A  (subtitle / muted text)
+ * Palette — "Harvest Flow" (matches the main home page NewHomePage):
+ *   navy      #31372B  (primary — headings, buttons, active states — deep olive)
+ *   pink      #4A5240  (accent — highlights, badges, gradients — sage green)
+ *   gold      #DDD6C3  (borders, dividers, decorative elements — warm sand)
+ *   cream     #F5F1E8  (backgrounds, cards — home page cream)
+ *   deepPink  #E07A3F  (secondary accent — terracotta orange)
+ *   pinkGray  #6B6E5A  (subtitle / muted text — warm olive gray)
  */
 
 import type { CSSProperties, ReactNode, SVGProps } from 'react'
 
 export const MH = {
-  navy: '#1A1A3E',
-  pink: '#D45D7E',
-  gold: '#D4A574',
-  cream: '#FFF8F0',
-  deepPink: '#B83A5C',
-  pinkGray: '#8B6B7A',
+  navy: '#31372B',
+  pink: '#4A5240',
+  gold: '#DDD6C3',
+  cream: '#F5F1E8',
+  deepPink: '#E07A3F',
+  pinkGray: '#6B6E5A',
   white: '#FFFFFF',
-  error: '#B83A5C',
-  errorLight: '#FBE6EC',
+  error: '#C0442D',
+  errorLight: '#FBE9E1',
   success: '#3F7D5E',
   successLight: '#E4F0E8',
   warning: '#C2822B',
   warningLight: '#FBEFD9',
 } as const
 
-/* ── Page background — cream with a subtle Madhubani paper texture ── */
+/* ── Page background — home-page cream gradient with a subtle paper texture ── */
 export const mhPageBg: CSSProperties = {
   minHeight: '100vh',
   background: `
-    repeating-linear-gradient(45deg, transparent 0 4px, rgba(212,165,116,0.04) 4px 5px),
-    ${MH.cream}
+    repeating-linear-gradient(45deg, transparent 0 4px, rgba(49,55,43,0.03) 4px 5px),
+    linear-gradient(180deg, #F5F1E8 0%, #EDE8D9 50%, #F5F1E8 100%)
   `,
   fontFamily: "var(--font-poppins), 'Poppins', 'Segoe UI', system-ui, sans-serif",
   color: MH.navy,
@@ -55,17 +55,17 @@ export function mhCardStyle(opts?: {
     borderRadius: '16px',
     padding: opts?.padding ?? '24px',
     boxShadow: doubleLine
-      ? `0 4px 14px rgba(26,26,62,0.08), inset 0 0 0 2px ${MH.cream}, inset 0 0 0 3px ${MH.gold}`
-      : '0 4px 14px rgba(26,26,62,0.08)',
+      ? `0 4px 16px rgba(49,55,43,0.08), inset 0 0 0 2px ${MH.cream}, inset 0 0 0 3px ${MH.gold}`
+      : '0 4px 16px rgba(49,55,43,0.08)',
     transition: 'box-shadow 0.2s, transform 0.15s',
   }
 }
 
-/* ── Primary button — navy → pink gradient with gold border ── */
+/* ── Primary button — deep-olive gradient (same as home page CTA) ── */
 export const mhPrimaryBtn = (opts?: { disabled?: boolean }): CSSProperties => ({
   background: opts?.disabled
     ? MH.pinkGray
-    : `linear-gradient(135deg, ${MH.navy}, ${MH.pink})`,
+    : `linear-gradient(135deg, ${MH.navy} 0%, #262B20 100%)`,
   color: MH.cream,
   border: `1px solid ${MH.gold}`,
   borderRadius: '10px',
@@ -87,7 +87,7 @@ export const mhSecondaryBtn: CSSProperties = {
   fontFamily: "var(--font-poppins), 'Poppins', sans-serif",
 }
 
-/* ── Pill / badge — pink with white text, OR cream with navy text ── */
+/* ── Pill / badge — sage with white text, OR cream with olive text ── */
 export function mhPill(active: boolean): CSSProperties {
   return {
     display: 'inline-flex',
@@ -95,9 +95,9 @@ export function mhPill(active: boolean): CSSProperties {
     gap: 6,
     padding: '7px 14px',
     borderRadius: 100,
-    background: active ? MH.pink : MH.cream,
+    background: active ? MH.navy : MH.cream,
     color: active ? MH.white : MH.navy,
-    border: `1.5px solid ${active ? MH.deepPink : MH.gold}`,
+    border: `1.5px solid ${active ? '#262B20' : MH.gold}`,
     fontSize: '0.8rem',
     fontWeight: 700,
     cursor: 'pointer',
@@ -150,17 +150,17 @@ export function mhDivider(): ReactNode {
   )
 }
 
-/* ── Nav bar — cream translucent with gold bottom border ── */
+/* ── Nav bar — home-cream translucent with sand bottom border ── */
 export const mhNavStyle: CSSProperties = {
   position: 'sticky',
   top: 0,
   zIndex: 50,
-  background: 'rgba(255,248,240,0.92)',
+  background: 'rgba(245,241,232,0.92)',
   borderBottom: `1px solid ${MH.gold}`,
   padding: '14px 24px',
   backdropFilter: 'blur(12px)',
   WebkitBackdropFilter: 'blur(12px)',
-  boxShadow: '0 1px 4px rgba(26,26,62,0.04)',
+  boxShadow: '0 1px 4px rgba(49,55,43,0.04)',
 }
 
 /* ── Madhubani top decorative strip (same motif as PWA / Cookie consent) ── */

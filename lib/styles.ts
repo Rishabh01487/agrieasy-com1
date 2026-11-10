@@ -197,32 +197,31 @@ export const ADMIN = {
   sidebarActive: '#2563eb',
 }
 
-// ── Buyer Palette (Plum + Milk) ───────────────────────────────────
-//   Plum #381932 · Milk #FFF3E6
+// ── Buyer Palette (Home — "Harvest Flow": cream + deep olive + sage) ──────────────
 
 export const BUYER = {
-  bg: '#FFF3E6',
-  bgSub: '#F5E5D0',
+  bg: '#F5F1E8',
+  bgSub: '#EDE8D9',
   white: SHARED.white,
-  primary: '#381932',
-  primaryHover: '#261020',
-  primaryLight: 'rgba(56,25,50,0.1)',
-  primarySoft: '#FFF3E6',
-  accent: '#5A2E50',
-  text: '#381932',
-  textSecondary: '#6A4A60',
-  muted: '#A890A0',
-  border: '#E8D5C0',
-  borderLight: '#F5E5D0',
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  primarySoft: '#F5F1E8',
+  accent: '#4A5240',
+  text: '#31372B',
+  textSecondary: '#6B6E5A',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  borderLight: '#EDE8D9',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
-  gold: '#5A2E50',
-  goldLight: '#FFF3E6',
+  gold: '#4A5240',
+  goldLight: '#F5F1E8',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #381932 0%, #4A2050 50%, #5A2E50 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FFF3E6 0%, #F5E5D0 100%)',
+  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5F1E8 0%, #EDE8D9 100%)',
 }
 
 // ── Ledger Palette (Masterpiece Red + Dirty White) ───────────────
@@ -288,57 +287,56 @@ export const LEDGER = {
   radius3xl: '1.5rem',       // 24px
 }
 
-// ── Farmer Palette (Home — Floral White + Black Olive) ─────────────
+// ── Farmer Palette (Home — "Harvest Flow": cream + deep olive + sage) ─────────────
 
 export const FARMER = {
-  bg: '#FAF7EE',
-  bgSub: '#E8E4D6',
+  bg: '#F5F1E8',
+  bgSub: '#EDE8D9',
   white: SHARED.white,
   primary: '#31372B',
   primaryHover: '#262B20',
   primaryLight: '#EFEBDD',
-  primarySoft: '#FAF7EE',
-  accent: '#31372B',
+  primarySoft: '#F5F1E8',
+  accent: '#4A5240',
   text: '#31372B',
   textSecondary: '#6B6E5A',
   muted: '#A8A695',
   border: '#E8E4D6',
-  borderLight: '#FAF7EE',
+  borderLight: '#EDE8D9',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
   gold: '#4A5240',
-  goldLight: '#FAF7EE',
+  goldLight: '#F5F1E8',
   green: SHARED.success,
   greenLight: '#dcfce7',
   gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FAF7EE 0%, #E8E4D6 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5F1E8 0%, #EDE8D9 100%)',
 }
 
-// ── Transporter Palette (Peach + Dark Slate Green) ───────────────
-//   Peach #FEDAB8 · Dark Slate Green #203C3D · Black
+// ── Transporter Palette (Home — "Harvest Flow": cream + deep olive + sage) ───────
 
 export const TRANSPORTER = {
-  bg: '#FEDAB8',
-  bgSub: '#FCE0C5',
+  bg: '#F5F1E8',
+  bgSub: '#EDE8D9',
   white: SHARED.white,
-  primary: '#203C3D',
-  primaryHover: '#15292A',
-  primaryLight: '#FEDAB8',
-  primarySoft: '#FFF0E0',
-  accent: '#203C3D',
-  text: '#1A1A1A',
-  textSecondary: '#3A4A4B',
-  muted: '#7A8A8B',
-  border: '#FCC8A0',
-  borderLight: '#FEDAB8',
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  primarySoft: '#F5F1E8',
+  accent: '#4A5240',
+  text: '#31372B',
+  textSecondary: '#6B6E5A',
+  muted: '#A8A695',
+  border: '#E8E4D6',
+  borderLight: '#EDE8D9',
   card: SHARED.white,
   red: SHARED.error,
   redLight: '#fef2f2',
   green: SHARED.success,
   greenLight: '#dcfce7',
-  gradient: 'linear-gradient(135deg, #203C3D 0%, #2E5658 50%, #3A6A6C 100%)',
-  gradientSoft: 'linear-gradient(135deg, #FEDAB8 0%, #FCC8A0 100%)',
+  gradient: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+  gradientSoft: 'linear-gradient(135deg, #F5F1E8 0%, #EDE8D9 100%)',
 }
 
 // ── Reusable Style Presets ─────────────────────────────────────────

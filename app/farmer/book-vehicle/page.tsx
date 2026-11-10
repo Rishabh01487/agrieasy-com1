@@ -266,7 +266,7 @@ function BookVehicleContent() {
 
   return (
     <div style={{ minHeight: '100vh', background: FARMER.bg, fontFamily: SHARED.font }}>
-      <nav style={{ ...navStyle(FARMER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <nav style={{ ...navStyle(FARMER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link href={payload ? `/farmer/buyer/${payload.buyerId}` : '/farmer/search-buyers'} style={{ color: FARMER.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>← Back</Link>
           <span style={{ color: FARMER.muted }}>›</span>
@@ -481,7 +481,7 @@ function BookVehicleContent() {
             color: '#fff', border: 'none', borderRadius: 12,
             fontSize: '1rem', fontWeight: 700,
             cursor: (submitting || (!selectedVehicleId && !selectedBuyerVehicleId)) ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+            boxShadow: '0 4px 14px rgba(49,55,43,0.28)',
             transition: 'all 0.2s ease',
           }}
         >
@@ -489,7 +489,7 @@ function BookVehicleContent() {
         </button>
         <Link href={payload ? `/farmer/buyer/${payload.buyerId}` : '/farmer/dashboard'} style={{ display: 'block', textAlign: 'center', marginTop: 12, color: FARMER.muted, textDecoration: 'none', fontSize: '0.84rem' }}>← Back</Link>
       </div>
-      <style>{`input:focus { border-color: ${FARMER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus { border-color: ${FARMER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }

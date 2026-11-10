@@ -69,7 +69,7 @@ export default function AddVehicle() {
 
   return (
     <div style={{ minHeight: '100vh', background: TRANSPORTER.bg, fontFamily: SHARED.font }}>
-      <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img src="/icons/icon-192.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
@@ -178,13 +178,13 @@ export default function AddVehicle() {
             width: '100%', padding: '14px', background: loading ? TRANSPORTER.muted : TRANSPORTER.primary,
             color: '#fff', border: 'none', borderRadius: '12px', fontSize: '1rem',
             fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
-            boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease',
+            boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease',
           }}>
             {loading ? 'Registering Vehicle…' : '✅ Register Vehicle & Driver'}
           </button>
         </form>
       </div>
-      <style>{`input:focus, select:focus { border-color: ${TRANSPORTER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus, select:focus { border-color: ${TRANSPORTER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }

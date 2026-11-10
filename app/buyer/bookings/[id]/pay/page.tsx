@@ -348,7 +348,7 @@ export default function PayBookingPage() {
                   color: '#fff', border: 'none', borderRadius: 10,
                   fontSize: '0.95rem', fontWeight: 700,
                   cursor: (paying || !method) ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+                  boxShadow: '0 4px 14px rgba(49,55,43,0.28)',
                 }}
               >
                 {paying ? 'Processing…' : `Pay ₹${effectiveBill.toLocaleString('en-IN')}`}
@@ -361,7 +361,7 @@ export default function PayBookingPage() {
           <Link href="/buyer/bookings" style={{ color: BUYER.muted, textDecoration: 'none', fontSize: '0.84rem' }}>← Back to bookings</Link>
         </div>
       </div>
-      <style>{`input:focus { border-color: ${BUYER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus { border-color: ${BUYER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }

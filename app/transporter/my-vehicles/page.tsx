@@ -73,7 +73,7 @@ export default function ManageVehicles() {
 
     return (
         <div style={{ minHeight: '100vh', background: TRANSPORTER.bg, fontFamily: SHARED.font }}>
-            <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+            <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <img src="/icons/icon-192.png" alt="logo" style={{ width: '32px', height: '32px', borderRadius: '8px' }} />
@@ -82,7 +82,7 @@ export default function ManageVehicles() {
                         <span style={{ color: TRANSPORTER.text, fontWeight: 600, fontSize: '0.9rem' }}>My Fleet</span>
                     </div>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                        <Link href="/transporter/add-vehicle" style={{ background: TRANSPORTER.primary, color: '#fff', padding: '8px 18px', borderRadius: '10px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 700, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
+                        <Link href="/transporter/add-vehicle" style={{ background: TRANSPORTER.primary, color: '#fff', padding: '8px 18px', borderRadius: '10px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 700, boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
                         <Link href="/transporter/dashboard" style={{ color: TRANSPORTER.primary, background: TRANSPORTER.primaryLight, border: `1px solid ${TRANSPORTER.border}`, padding: '8px 16px', borderRadius: '10px', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, transition: 'all 0.2s ease' }}>← Dashboard</Link>
                     </div>
                 </div>
@@ -101,7 +101,7 @@ export default function ManageVehicles() {
                         <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🚛</div>
                         <h3 style={{ color: TRANSPORTER.textSecondary, fontWeight: 700, marginBottom: '8px' }}>No vehicles registered yet</h3>
                         <p style={{ color: TRANSPORTER.muted, marginBottom: '20px' }}>Add your first vehicle to start getting bookings from farmers.</p>
-                        <Link href="/transporter/add-vehicle" style={{ background: TRANSPORTER.primary, color: '#fff', padding: '12px 28px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>+ Register First Vehicle</Link>
+                        <Link href="/transporter/add-vehicle" style={{ background: TRANSPORTER.primary, color: '#fff', padding: '12px 28px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease' }}>+ Register First Vehicle</Link>
                     </div>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

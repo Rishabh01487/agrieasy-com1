@@ -70,7 +70,7 @@ export default function BillingDetail() {
 
   return (
     <div style={{ minHeight: '100vh', background: BUYER.bg, fontFamily: SHARED.font, color: BUYER.text }}>
-      <nav style={{ ...navStyle(BUYER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <nav style={{ ...navStyle(BUYER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link href="/buyer/billing" style={{ color: BUYER.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>← Billing</Link>
           <span style={{ color: BUYER.muted }}>›</span>

@@ -112,7 +112,7 @@ export default function TransporterDashboard() {
 
   return (
     <div style={{ minHeight: '100vh', background: TRANSPORTER.bg, fontFamily: SHARED.font, color: TRANSPORTER.text }}>
-      <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <nav style={{ ...navStyle(TRANSPORTER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <img src="/icons/icon-192.png" alt="logo" style={{ width: '36px', height: '36px', borderRadius: '8px' }} />
@@ -121,7 +121,7 @@ export default function TransporterDashboard() {
           </div>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <Link href="/transporter/my-vehicles" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>🚛 My Fleet</Link>
-            <Link href="/transporter/bookings" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primary, boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>📅 Bookings{pendingBookings > 0 ? ` (${pendingBookings})` : ''}</Link>
+            <Link href="/transporter/bookings" style={{ color: '#fff', textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primary, boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease' }}>📅 Bookings{pendingBookings > 0 ? ` (${pendingBookings})` : ''}</Link>
             <Link href="/transporter/add-vehicle" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
             <Link href="/ledger" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📒 Ledger</Link>
             <Link href="/agrisocial" style={{ color: TRANSPORTER.primary, textDecoration: 'none', padding: '8px 16px', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, background: TRANSPORTER.primaryLight, transition: 'all 0.2s ease' }}>📱 AgriSocial</Link>
@@ -230,7 +230,7 @@ export default function TransporterDashboard() {
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: TRANSPORTER.textSecondary }}>Your Fleet</h3>
-                <Link href="/transporter/add-vehicle" style={{ background: TRANSPORTER.primary, color: '#fff', borderRadius: '8px', padding: '7px 18px', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
+                <Link href="/transporter/add-vehicle" style={{ background: TRANSPORTER.primary, color: '#fff', borderRadius: '8px', padding: '7px 18px', fontSize: '0.875rem', fontWeight: 600, textDecoration: 'none', boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease' }}>+ Add Vehicle</Link>
               </div>
 
               {vehicles.length === 0 ? (

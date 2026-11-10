@@ -274,7 +274,7 @@ export default function FarmerSetupLocation() {
               borderRadius: 12, fontSize: '0.95rem', fontWeight: 800,
               cursor: usingGps ? 'not-allowed' : 'pointer', marginBottom: 14,
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              boxShadow: usingGps ? 'none' : '0 4px 14px rgba(37,99,235,0.3)',
+              boxShadow: usingGps ? 'none' : '0 4px 14px rgba(49,55,43,0.3)',
               transition: 'all 0.2s ease',
             }}
           >
@@ -338,7 +338,7 @@ export default function FarmerSetupLocation() {
               color: '#fff', border: 'none', borderRadius: 12,
               fontSize: '1rem', fontWeight: 700,
               cursor: loading ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+              boxShadow: '0 4px 14px rgba(49,55,43,0.28)',
               transition: 'all 0.2s ease',
             }}
           >
@@ -356,7 +356,7 @@ export default function FarmerSetupLocation() {
           </Link>
         </div>
       </div>
-      <style>{`input:focus { border-color: ${FARMER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus { border-color: ${FARMER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }

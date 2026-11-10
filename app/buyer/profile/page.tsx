@@ -405,14 +405,14 @@ export default function BuyerProfilePage() {
               padding: '12px 28px', background: saving ? BUYER.muted : BUYER.primary,
               color: '#fff', border: 'none', borderRadius: 12,
               fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 14px rgba(37,99,235,0.25)', transition: 'all 0.2s ease',
+              boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease',
             }}
           >
             {saving ? 'Saving…' : '💾 Save Profile'}
           </button>
         </div>
       </div>
-      <style>{`input:focus, textarea:focus { border-color: ${BUYER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus, textarea:focus { border-color: ${BUYER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }

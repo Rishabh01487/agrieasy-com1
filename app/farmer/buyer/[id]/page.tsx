@@ -165,7 +165,7 @@ export default function BuyerListingDetail() {
 
   return (
     <div style={{ minHeight: '100vh', background: FARMER.bg, fontFamily: SHARED.font, color: FARMER.text }}>
-      <nav style={{ ...navStyle(FARMER), background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+      <nav style={{ ...navStyle(FARMER), background: 'rgba(245,241,232,0.92)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link href="/farmer/search-buyers" style={{ color: FARMER.primary, textDecoration: 'none', fontWeight: 700, fontSize: '0.875rem' }}>← Search Buyers</Link>
           <span style={{ color: FARMER.muted }}>›</span>
@@ -310,7 +310,7 @@ export default function BuyerListingDetail() {
                 background: selectedItems.length === 0 ? FARMER.muted : FARMER.primary,
                 color: '#fff', border: 'none', borderRadius: 12,
                 fontSize: '1rem', fontWeight: 700, cursor: selectedItems.length === 0 ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 14px rgba(37,99,235,0.25)',
+                boxShadow: '0 4px 14px rgba(49,55,43,0.28)',
                 transition: 'all 0.2s ease',
               }}
             >
@@ -323,7 +323,7 @@ export default function BuyerListingDetail() {
           <Link href="/farmer/search-buyers" style={{ color: FARMER.muted, textDecoration: 'none', fontSize: '0.875rem' }}>← Back to Search Buyers</Link>
         </div>
       </div>
-      <style>{`input:focus { border-color: ${FARMER.primary} !important; box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important; }`}</style>
+      <style>{`input:focus { border-color: ${FARMER.primary} !important; box-shadow: 0 0 0 3px rgba(49,55,43,0.12) !important; }`}</style>
     </div>
   )
 }
