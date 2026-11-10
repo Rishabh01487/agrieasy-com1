@@ -95,6 +95,49 @@ In Vercel dashboard, under "Environment Variables", add:
 | `RAZORPAY_KEY_ID` | Your Razorpay Key ID |
 | `RAZORPAY_KEY_SECRET` | Your Razorpay Secret |
 | `NEXT_PUBLIC_RAZORPAY_KEY_ID` | Your Razorpay Key ID |
+| `NEXTAUTH_URL` | `https://agrieasy.site` (your production domain) |
+| `NEXTAUTH_SECRET` | Any secure random string (can be same as JWT_SECRET) |
+| `GOOGLE_CLIENT_ID` | From Google Cloud Console (see below) |
+| `GOOGLE_CLIENT_SECRET` | From Google Cloud Console (see below) |
+
+### Google Sign-In Setup (OAuth) — REQUIRED for "Continue with Google"
+
+> **Error 400: redirect_uri_mismatch?** This means the URLs below are
+> missing from your Google OAuth client. This is the #1 Google sign-in
+> failure — follow these steps exactly.
+
+1. Go to **https://console.cloud.google.com/apis/credentials**
+2. Under **OAuth 2.0 Client IDs**, click your Web application client
+   (or create one: **Create Credentials → OAuth client ID → Web application**)
+3. Under **Authorized redirect URIs**, click **ADD URI** and add ALL of these:
+
+   ```
+   https://agrieasy.site/api/auth/callback/google
+   https://agrieasy-com1.vercel.app/api/auth/callback/google
+   http://localhost:3100/api/auth/callback/google
+   ```
+
+4. Under **Authorized JavaScript origins**, add:
+
+   ```
+   https://agrieasy.site
+   http://localhost:3100
+   ```
+
+5. Click **Save** (changes apply within a few minutes)
+6. Copy the **Client ID** and **Client secret** into your Vercel env
+   vars (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`), then
+   **redeploy** (Vercel → Deployments → ⋯ → Redeploy).
+
+**How to verify what URI your app actually sends:**
+Visit `https://agrieasy.site/api/auth/providers` — the `callback`
+field for the google provider shows the exact redirect URI NextAuth
+uses. That exact string must be in the Authorized redirect URIs list.
+
+**Local dev:** sign-in with Google only works locally if
+`GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set in `.env.local`
+and `NEXTAUTH_URL=http://localhost:3100` matches the port you run
+`npm run dev` on.
 
 ### Step 3: Deploy
 1. Click **Deploy**
