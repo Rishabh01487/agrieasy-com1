@@ -348,7 +348,7 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                         + Add Another Commodity
                     </button>
                     <button onClick={handleDirectGenerate}
-                        style={{ width: '100%', padding: '14px 24px', background: 'linear-gradient(135deg, #E8D49A 0%, #C9A14E 50%, #9D7A2C 100%)', color: '#050C1E', border: 'none', borderRadius: 12, fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(201, 161, 78, 0.35)' }}>
+                        style={{ width: '100%', padding: '14px 24px', background: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)', color: '#FFFFFF', border: 'none', borderRadius: 12, fontSize: '1rem', fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(49, 55, 43, 0.25)' }}>
                         📋 Generate Calculated Bill
                     </button>
                 </>
@@ -613,11 +613,11 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                 disabled={liveTotals.bags === 0}
                 style={{
                     width: '100%', padding: '14px 24px',
-                    background: liveTotals.bags > 0 ? 'linear-gradient(135deg, #E8D49A 0%, #C9A14E 50%, #9D7A2C 100%)' : palette.muted,
-                    color: liveTotals.bags > 0 ? '#050C1E' : 'rgba(250,247,240,0.4)', border: 'none', borderRadius: 12,
+                    background: liveTotals.bags > 0 ? 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)' : palette.muted,
+                    color: liveTotals.bags > 0 ? '#FFFFFF' : 'rgba(168, 166, 149, 1)', border: 'none', borderRadius: 12,
                     fontSize: '1rem', fontWeight: 800,
                     cursor: liveTotals.bags > 0 ? 'pointer' : 'not-allowed',
-                    boxShadow: liveTotals.bags > 0 ? '0 4px 16px rgba(201, 161, 78, 0.35)' : 'none',
+                    boxShadow: liveTotals.bags > 0 ? '0 4px 16px rgba(49, 55, 43, 0.25)' : 'none',
                 }}
             >📋 Generate Calculated Bill</button>
                 </>

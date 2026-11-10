@@ -224,59 +224,68 @@ export const BUYER = {
   gradientSoft: 'linear-gradient(135deg, #F5F1E8 0%, #EDE8D9 100%)',
 }
 
-// ── Ledger Palette (Masterpiece Red + Dirty White) ───────────────
-//   Masterpiece Red #5A2132 · Dirty White #EFE9E9
+// ── Ledger Palette (Home — "Harvest Flow": cream + deep olive + sage) ─────────────
+//   Unified with FARMER/BUYER/TRANSPORTER sections.
+//   Cream #F5F1E8 · Deep olive #31372B · Sage #4A5240 · Terracotta #E07A3F
 
 export const LEDGER = {
-  // ── Exact Ridgewood brand palette (from globals.css OKLCH values) ──
-  bg: '#050C1E',             // dark midnight navy
-  bgGradient: 'radial-gradient(circle at 30% 20%, #1A2B4C 0%, #11183A 50%, #050C1E 100%)',
-  bgSub: '#111A2D',          // dark card bg
-  white: '#111A2D',          // DARK CARD background (child components use palette.white as bg)
-  ivory: '#111A2D',
-  cream: '#0F1626',          // darker bg for inputs
-  primary: '#E8AA4E',        // GOLD is primary in dark mode
-  primaryHover: '#FAD18A',
-  primaryLight: 'rgba(232, 170, 78, 0.12)',
-  primarySoft: 'rgba(232, 170, 78, 0.06)',
-  accent: '#C9A14E',         // brand-gold — accents, borders, icons
-  accentDark: '#9D7A2C',     // brand-gold-dark — eyebrow text, deeper gold
-  accentLight: '#E8D49A',    // brand-gold-light — light gold bg
-  accentSoft: 'rgba(201, 161, 78, 0.12)', // gold tint background
-  text: '#FAF7F0',           // cream text on dark
-  textSecondary: 'rgba(250, 247, 240, 0.75)',
-  textMuted: 'rgba(250, 247, 240, 0.55)',
-  textLight: 'rgba(250, 247, 240, 0.40)',
-  muted: 'rgba(250, 247, 240, 0.50)',
-  border: 'rgba(201, 161, 78, 0.20)', // gold-tinted border (visible on dark)
-  borderLight: 'rgba(250, 247, 240, 0.10)', // subtle light border
-  borderGold: 'rgba(201, 161, 78, 0.25)',
-  borderGoldHover: 'rgba(201, 161, 78, 0.45)',
-  card: 'rgba(17, 24, 58, 0.55)', // glass-dark
-  cardSolid: '#111A2D',
-  cardHover: 'rgba(26, 43, 76, 0.65)',
-  red: '#F87171',
-  redLight: 'rgba(248, 113, 113, 0.12)',
-  green: '#4ADE80',
-  greenLight: 'rgba(74, 222, 128, 0.12)',
-  gold: '#C9A14E',           // brand-gold
-  goldLight: '#E8D49A',      // brand-gold-light
-  goldDark: '#9D7A2C',       // brand-gold-dark
-  goldBright: '#E8AA4E',
-  maroon: '#7D2C2C',         // brand-maroon
+  // ── Page backgrounds (cream) ──
+  bg: '#F5F1E8',
+  bgGradient: 'linear-gradient(135deg, #F5F1E8 0%, #EDE8D9 100%)',
+  bgSub: '#EDE8D9',
+  white: SHARED.white,        // cards are solid white on cream
+  ivory: SHARED.white,
+  cream: SHARED.white,        // inputs are forced white by inputStyle()
+  // ── Primary (deep olive) ──
+  primary: '#31372B',
+  primaryHover: '#262B20',
+  primaryLight: '#EFEBDD',
+  primarySoft: '#F5F1E8',
+  // ── Accent (sage) ──
+  accent: '#4A5240',
+  accentDark: '#31372B',      // eyebrow text — deep olive
+  accentLight: '#DDD6C3',     // warm sand
+  accentSoft: 'rgba(74, 82, 64, 0.08)', // sage tint
+  // ── Text ──
+  text: '#31372B',            // deep olive on cream
+  textSecondary: '#4A5240',   // sage
+  textMuted: '#6B6E5A',       // olive-gray
+  textLight: '#A8A695',       // muted gray
+  muted: '#A8A695',
+  // ── Borders ──
+  border: '#E8E4D6',
+  borderLight: '#EDE8D9',
+  borderGold: 'rgba(74, 82, 64, 0.20)',     // sage-tinted border
+  borderGoldHover: 'rgba(74, 82, 64, 0.40)',
+  // ── Cards ──
+  card: SHARED.white,
+  cardSolid: SHARED.white,
+  cardHover: '#F8F5EC',       // slightly cream-tinted on hover
+  // ── Semantic colors ──
+  red: SHARED.error,
+  redLight: '#fef2f2',
+  green: SHARED.success,
+  greenLight: '#dcfce7',
+  // ── "Gold" slot → now sage (kept for backward-compat with property name) ──
+  gold: '#4A5240',            // sage
+  goldLight: '#DDD6C3',       // warm sand
+  goldDark: '#31372B',        // deep olive
+  goldBright: '#E07A3F',      // terracotta — used for highlights/CTA
+  maroon: '#7D2C2C',          // kept — semantic accent
   // ── Gradients ──
-  gradient: 'radial-gradient(circle at 30% 20%, #1A2B4C 0%, #11183A 50%, #050C1E 100%)',
-  gradientSoft: 'linear-gradient(135deg, #111A2D 0%, #050C1E 100%)',
-  gradientGold: 'linear-gradient(135deg, #E8D49A 0%, #C9A14E 50%, #9D7A2C 100%)',
-  gradientNavy: 'linear-gradient(135deg, #1A2B4C 0%, #11183A 100%)',
-  shadowSoft: '0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -8px rgba(0,0,0,0.4)',
-  shadowLuxe: '0 1px 2px rgba(0,0,0,0.2), 0 12px 32px -10px rgba(0,0,0,0.4), 0 24px 48px -16px rgba(201,161,78,0.15)',
-  shadowGold: '0 0 0 1px rgba(201,161,78,0.30), 0 8px 24px -8px rgba(201,161,78,0.35)',
-  shadowNavy: '0 1px 2px rgba(0,0,0,0.4), 0 12px 32px -10px rgba(0,0,0,0.5)',
-  shadowMd: '0 4px 16px rgba(0,0,0,0.4)',
-  shadowXl: '0 8px 32px rgba(0,0,0,0.5)',
-  glassLight: 'rgba(255,255,255,0.08)',
-  glassDark: 'rgba(17,24,58,0.55)',
+  gradient: 'linear-gradient(135deg, #F5F1E8 0%, #EDE8D9 100%)',     // page bg
+  gradientSoft: 'linear-gradient(135deg, #FFFFFF 0%, #F5F1E8 100%)', // card bg
+  gradientGold: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)', // primary CTA
+  gradientNavy: 'linear-gradient(135deg, #31372B 0%, #4A5240 100%)', // secondary CTA
+  // ── Shadows (soft, olive-tinted — never harsh black on cream) ──
+  shadowSoft: '0 1px 2px rgba(49,55,43,0.05), 0 8px 24px -8px rgba(49,55,43,0.10)',
+  shadowLuxe: '0 1px 2px rgba(49,55,43,0.04), 0 12px 32px -10px rgba(49,55,43,0.08), 0 24px 48px -16px rgba(74,82,64,0.08)',
+  shadowGold: '0 0 0 1px rgba(74,82,64,0.20), 0 8px 24px -8px rgba(74,82,64,0.18)',
+  shadowNavy: '0 1px 2px rgba(49,55,43,0.06), 0 12px 32px -10px rgba(49,55,43,0.10)',
+  shadowMd: '0 4px 16px rgba(49,55,43,0.10)',
+  shadowXl: '0 8px 32px rgba(49,55,43,0.12)',
+  glassLight: 'rgba(255,255,255,0.65)',
+  glassDark: 'rgba(245,241,232,0.65)',     // cream glass
   // ── Misc ──
   radius: '0.75rem',         // 12px base
   radiusSm: '0.5rem',        // 8px

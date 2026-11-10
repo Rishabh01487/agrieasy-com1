@@ -34,14 +34,14 @@ interface Summary {
 }
 
 const typeMeta: Record<string, { label: string; icon: string; bg: string; color: string }> = {
-    bill:    { label: 'Bill',    icon: '\u{1F9FE}', bg: 'rgba(201, 161, 78, 0.10)',  color: '#9D7A2C' },
-    invoice: { label: 'Invoice', icon: '\u{1F4C4}', bg: 'rgba(44, 63, 110, 0.10)',   color: '#2C3F6E' },
+    bill:    { label: 'Bill',    icon: '\u{1F9FE}', bg: 'rgba(74, 82, 64, 0.10)',  color: '#4A5240' },
+    invoice: { label: 'Invoice', icon: '\u{1F4C4}', bg: 'rgba(49, 55, 43, 0.10)',    color: '#31372B' },
     earning: { label: 'Earning', icon: '\u{1F4B0}', bg: 'rgba(22, 163, 74, 0.10)',   color: '#16A34A' },
     expense: { label: 'Expense', icon: '\u{1F4B8}', bg: 'rgba(220, 38, 38, 0.10)',    color: '#DC2626' },
 }
 
 const statusMeta: Record<string, { bg: string; color: string; label: string }> = {
-    pending:   { bg: 'rgba(201, 161, 78, 0.15)',  color: '#9D7A2C', label: 'Pending' },
+    pending:   { bg: 'rgba(74, 82, 64, 0.15)',    color: '#4A5240', label: 'Pending' },
     paid:      { bg: 'rgba(22, 163, 74, 0.15)',   color: '#16A34A', label: 'Paid' },
     overdue:   { bg: 'rgba(220, 38, 38, 0.15)',   color: '#DC2626', label: 'Overdue' },
     cancelled: { bg: 'rgba(93, 99, 111, 0.15)',   color: '#5D636F', label: 'Cancelled' },
@@ -52,7 +52,7 @@ function formatINR(n: number) {
 }
 
 // ── Premium Camera Icon (SVG) ──
-function CameraIcon({ size = 28, color = '#9D7A2C' }: { size?: number; color?: string }) {
+function CameraIcon({ size = 28, color = '#4A5240' }: { size?: number; color?: string }) {
     return (
         <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect x="5" y="13" width="38" height="28" rx="5" fill="none" stroke={color} strokeWidth="2.2" />
@@ -70,10 +70,10 @@ function CameraIcon({ size = 28, color = '#9D7A2C' }: { size?: number; color?: s
 function GoldRule({ width = '60px' }: { width?: string }) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '12px 0' }}>
-            <div style={{ height: 1.5, width, background: 'linear-gradient(90deg, transparent, rgba(201, 161, 78, 0.6))' }} />
-            <div style={{ width: 7, height: 7, background: '#C9A14E', transform: 'rotate(45deg)' }} />
-            <div style={{ width: 3, height: 3, background: '#FAF7F0', transform: 'rotate(45deg)', position: 'absolute' }} />
-            <div style={{ height: 1.5, width, background: 'linear-gradient(90deg, rgba(201, 161, 78, 0.6), transparent)' }} />
+            <div style={{ height: 1.5, width, background: 'linear-gradient(90deg, transparent, rgba(74, 82, 64, 0.6))' }} />
+            <div style={{ width: 7, height: 7, background: '#4A5240', transform: 'rotate(45deg)' }} />
+            <div style={{ width: 3, height: 3, background: '#FFFFFF', transform: 'rotate(45deg)', position: 'absolute' }} />
+            <div style={{ height: 1.5, width, background: 'linear-gradient(90deg, rgba(74, 82, 64, 0.6), transparent)' }} />
         </div>
     )
 }
@@ -83,11 +83,11 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2 C12 2 8 8 8 14 C8 18 12 22 12 22 C12 22 16 18 16 14 C16 8 12 2 12 2 Z" fill="#9D7A2C" opacity="0.8" />
-                <path d="M6 12 L6 20 L12 22 L18 20 L18 12" stroke="#9D7A2C" strokeWidth="1.5" fill="none" />
+                <path d="M12 2 C12 2 8 8 8 14 C8 18 12 22 12 22 C12 22 16 18 16 14 C16 8 12 2 12 2 Z" fill="#31372B" opacity="0.8" />
+                <path d="M6 12 L6 20 L12 22 L18 20 L18 12" stroke="#31372B" strokeWidth="1.5" fill="none" />
             </svg>
             <span style={{
-                color: '#9D7A2C', fontSize: '0.65rem', fontWeight: 600,
+                color: '#31372B', fontSize: '0.65rem', fontWeight: 600,
                 letterSpacing: '0.22em', textTransform: 'uppercase',
             }}>{children}</span>
         </div>
@@ -194,10 +194,10 @@ export default function LedgerPage() {
     const L = LEDGER
     const inputStyle: React.CSSProperties = {
         width: '100%', padding: '12px 16px',
-        border: '1.5px solid rgba(26, 43, 76, 0.15)',
+        border: `1.5px solid ${L.border}`,
         borderRadius: 12, fontSize: '0.88rem', color: L.text, outline: 'none',
         boxSizing: 'border-box', fontFamily: SHARED.font,
-        background: 'rgba(250, 247, 240, 0.5)',
+        background: SHARED.white,
         transition: 'border-color 0.2s, box-shadow 0.2s',
     }
 
@@ -206,24 +206,24 @@ export default function LedgerPage() {
             {/* ── Navigation ── */}
             <nav style={{
                 position: 'sticky', top: 0, zIndex: 50,
-                background: 'rgba(250, 247, 240, 0.97)',
+                background: 'rgba(255, 255, 255, 0.92)',
                 backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-                borderBottom: '1px solid rgba(201, 161, 78, 0.20)',
-                boxShadow: '0 8px 32px -12px rgba(17, 24, 58, 0.12)',
+                borderBottom: `1px solid ${L.border}`,
+                boxShadow: '0 8px 32px -12px rgba(49, 55, 43, 0.10)',
             }}>
                 <div style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <Link href={`/${userRole}/dashboard`} style={{ color: L.primary, textDecoration: 'none', fontWeight: 600, fontSize: '0.88rem', letterSpacing: '0.02em' }}>
                             ← Dashboard
                         </Link>
-                        <span style={{ width: 1, height: 16, background: 'rgba(26, 43, 76, 0.15)' }} />
+                        <span style={{ width: 1, height: 16, background: L.border }} />
                         <span style={{ color: L.text, fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <span style={{ fontSize: '1.15rem' }}>📒</span> Ledger
                         </span>
                     </div>
                     {userRole !== 'buyer' && (
                         <button onClick={() => setShowAddModal(true)} style={{
-                            background: L.gradientNavy, color: '#FAF7F0',
+                            background: L.gradientNavy, color: '#FFFFFF',
                             border: 'none', borderRadius: 100, padding: '9px 20px',
                             fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
                             boxShadow: L.shadowSoft, transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -262,7 +262,7 @@ export default function LedgerPage() {
                                 background: L.accentSoft,
                                 border: `1.5px solid ${L.borderGold}`,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: '0 4px 12px rgba(201, 161, 78, 0.15)',
+                                boxShadow: '0 4px 12px rgba(74, 82, 64, 0.10)',
                             }}>
                                 <CameraIcon size={32} color={L.accentDark} />
                             </div>
@@ -355,7 +355,7 @@ export default function LedgerPage() {
                                 padding: '8px 18px', borderRadius: 100,
                                 border: `1.5px solid ${active ? L.accent : L.border}`,
                                 background: active ? L.gradientGold : 'transparent',
-                                color: active ? '#FAF7F0' : L.textLight,
+                                color: active ? '#FFFFFF' : L.textLight,
                                 fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
                                 whiteSpace: 'nowrap', textTransform: 'capitalize',
                                 letterSpacing: '0.02em',
@@ -442,7 +442,7 @@ export default function LedgerPage() {
             {/* ── Add Entry Modal ── */}
             {showAddModal && (
                 <div onClick={() => setShowAddModal(false)} style={{
-                    position: 'fixed', inset: 0, background: 'rgba(17, 24, 58, 0.40)', zIndex: 100,
+                    position: 'fixed', inset: 0, background: 'rgba(49, 55, 43, 0.40)', zIndex: 100,
                     display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
                     backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
                 }}>
@@ -475,14 +475,14 @@ export default function LedgerPage() {
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <input value={counterpartyName} onChange={e => setCounterpartyName(e.target.value)} placeholder="Counterparty name" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(26, 43, 76, 0.15)'; e.currentTarget.style.boxShadow = 'none' }} />
+                            <input value={counterpartyName} onChange={e => setCounterpartyName(e.target.value)} placeholder="Counterparty name" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.boxShadow = 'none' }} />
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="Amount ₹" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(26, 43, 76, 0.15)'; e.currentTarget.style.boxShadow = 'none' }} />
-                                <input value={commodity} onChange={e => setCommodity(e.target.value)} placeholder="Commodity" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(26, 43, 76, 0.15)'; e.currentTarget.style.boxShadow = 'none' }} />
+                                <input value={amount} onChange={e => setAmount(e.target.value)} type="number" placeholder="Amount ₹" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.boxShadow = 'none' }} />
+                                <input value={commodity} onChange={e => setCommodity(e.target.value)} placeholder="Commodity" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.boxShadow = 'none' }} />
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                                <input value={quantity} onChange={e => setQuantity(e.target.value)} type="number" placeholder="Quantity (kg)" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(26, 43, 76, 0.15)'; e.currentTarget.style.boxShadow = 'none' }} />
-                                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Notes (optional)" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(26, 43, 76, 0.15)'; e.currentTarget.style.boxShadow = 'none' }} />
+                                <input value={quantity} onChange={e => setQuantity(e.target.value)} type="number" placeholder="Quantity (kg)" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.boxShadow = 'none' }} />
+                                <input value={description} onChange={e => setDescription(e.target.value)} placeholder="Notes (optional)" style={inputStyle} onFocus={(e) => { e.currentTarget.style.borderColor = L.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${L.accentSoft}` }} onBlur={(e) => { e.currentTarget.style.borderColor = L.border; e.currentTarget.style.boxShadow = 'none' }} />
                             </div>
 
                             {/* Bill photo upload */}
@@ -497,7 +497,7 @@ export default function LedgerPage() {
                                             <img src={billPhoto} alt="bill" style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 12, border: `2px solid ${L.cream}`, boxShadow: L.shadowSoft }} />
                                             <button onClick={() => setBillPhoto('')} style={{
                                                 position: 'absolute', top: 4, right: 4,
-                                                background: 'rgba(17, 24, 58, 0.7)', color: '#fff', border: 'none',
+                                                background: 'rgba(49, 55, 43, 0.85)', color: '#fff', border: 'none',
                                                 borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: '0.75rem',
                                             }}>✕</button>
                                         </div>
@@ -528,7 +528,7 @@ export default function LedgerPage() {
                                 <button onClick={handleAddEntry} disabled={saving || uploading} style={{
                                     flex: 1, padding: '12px', background: L.gradientNavy,
                                     border: 'none', borderRadius: 100, fontWeight: 600, fontSize: '0.88rem',
-                                    color: '#FAF7F0', cursor: 'pointer', opacity: (saving || uploading) ? 0.6 : 1,
+                                    color: '#FFFFFF', cursor: 'pointer', opacity: (saving || uploading) ? 0.6 : 1,
                                     boxShadow: L.shadowSoft,
                                     transition: 'all 0.3s',
                                 }}>{saving ? 'Saving…' : 'Add Entry'}</button>
