@@ -318,7 +318,18 @@ export default function SearchBuyers() {
                 </div>
 
                 <button
-                  onClick={() => router.push(`/farmer/buyer/${l.buyerId?._id || ''}?listingId=${l._id}`)}
+                  onClick={() => {
+                    // Guard: if buyerId is missing (buyer deleted their account
+                    // or the populate didn't return _id), don't navigate to
+                    // /farmer/buyer/?listingId=... which would 404. Show an
+                    // inline error instead.
+                    const bid = l.buyerId?._id
+                    if (!bid) {
+                      alert('This buyer is no longer available. Try refreshing the search.')
+                      return
+                    }
+                    router.push(`/farmer/buyer/${bid}?listingId=${l._id}`)
+                  }}
                   style={{ ...mhPrimaryBtn(), marginTop: 'auto', borderRadius: 10, padding: '11px', fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                 >
                   <TruckIcon size={14} /> View & Sell to this Buyer <ArrowRightIcon size={12} />

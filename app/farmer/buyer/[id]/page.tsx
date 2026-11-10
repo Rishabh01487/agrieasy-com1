@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, Suspense } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
@@ -52,7 +52,24 @@ function distanceLabel(km: number | null | undefined): string {
   return `${km.toFixed(1)} km away`
 }
 
-export default function BuyerListingDetail() {
+export default function BuyerListingDetailPage() {
+  // Wrap in Suspense because useSearchParams() bails out of static
+  // rendering in Next.js 16 — without a Suspense boundary the route
+  // falls through to the not-found boundary during SSR/ prerender,
+  // showing a 404 page even though the route exists.
+  // Ref: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: FARMER.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: FARMER.primary, fontWeight: 700, fontFamily: SHARED.font }}>
+        Loading buyer details…
+      </div>
+    }>
+      <BuyerListingDetail />
+    </Suspense>
+  )
+}
+
+function BuyerListingDetail() {
   const params = useParams()
   const searchParams = useSearchParams()
   const router = useRouter()
