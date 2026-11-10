@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
+import { SaveIcon } from '@/lib/madhubani'
 import { BUYER, SHARED, inputStyle, labelStyle, cardStyle, navStyle } from '@/lib/styles'
 import { LoadingScreen } from '@/app/components/Spinner'
 
@@ -109,7 +110,7 @@ function PhotoUploader({
             src={photoUrl}
             alt={label}
             style={{
-              width: 220, height: 150, objectFit: 'cover',
+              width: 220, maxWidth: '100%', height: 150, objectFit: 'cover',
               borderRadius: 12, border: `1.5px solid ${BUYER.border}`,
             }}
           />
@@ -146,9 +147,9 @@ function PhotoUploader({
         <label
           style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            width: 220, height: 150, border: `2px dashed ${accentColor}55`, borderRadius: 12,
+            width: '100%', maxWidth: 220, height: 150, border: `2px dashed ${accentColor}55`, borderRadius: 12,
             cursor: uploading ? 'wait' : 'pointer', gap: 6,
-            background: `${accentColor}08`, transition: 'border-color 0.2s',
+            background: `${accentColor}08`, transition: 'border-color 0.2s', boxSizing: 'border-box',
           }}
         >
           <span style={{ fontSize: '1.8rem' }}>{uploading ? '⏳' : '📷'}</span>
@@ -406,9 +407,10 @@ export default function BuyerProfilePage() {
               color: '#fff', border: 'none', borderRadius: 12,
               fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 14px rgba(49,55,43,0.28)', transition: 'all 0.2s ease',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            {saving ? 'Saving…' : '💾 Save Profile'}
+            {saving ? (<>Saving…</>) : (<>Save Profile <SaveIcon size={16} /></>)}
           </button>
         </div>
       </div>

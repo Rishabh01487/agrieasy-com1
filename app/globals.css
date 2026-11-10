@@ -414,6 +414,16 @@ input[type="file"] { display: none; }
     font-size: 0.72rem !important;
   }
 
+  /* ── Quick-action 3×3 grid exception ──────────────────────────────
+   * The generic rule above collapses EVERY repeat(3, 1fr) grid to one
+   * column on phones, which breaks the dashboards' 3-per-row
+   * quick-action tiles (the layout the home page tiles use too).
+   * Higher specificity (0,2,1) wins over the attribute rule (0,1,1).
+   */
+  div[style].qa-grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
   /* ── Two-column layout (e.g. farmer dashboard main+sidebar) ── */
   div[style*="grid-template-columns: minmax(0, 1fr) 320px"],
   div[style*="grid-template-columns: minmax(0,1fr) 320px"],

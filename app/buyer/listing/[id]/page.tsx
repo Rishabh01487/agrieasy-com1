@@ -287,7 +287,7 @@ export default function EditListing() {
               {commodityPhoto ? (
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={commodityPhoto} alt="commodity" style={{ width: 200, height: 150, objectFit: 'cover', borderRadius: 10, border: `1.5px solid ${MH.gold}` }} />
+                  <img src={commodityPhoto} alt="commodity" style={{ width: 200, maxWidth: '100%', height: 150, objectFit: 'cover', borderRadius: 10, border: `1.5px solid ${MH.gold}` }} />
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <label style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer', textAlign: 'center', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                       {uploading ? <HourglassIcon size={14} /> : <EditIcon size={14} />} {uploading ? 'Uploading…' : 'Replace'}
@@ -299,7 +299,7 @@ export default function EditListing() {
                   </div>
                 </div>
               ) : (
-                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 200, height: 150, border: `2px dashed ${MH.gold}`, borderRadius: 10, cursor: 'pointer', gap: 6, background: MH.cream, color: MH.deepPink, transition: 'border-color 0.2s' }}>
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 200, maxWidth: '100%', height: 150, border: `2px dashed ${MH.gold}`, borderRadius: 10, cursor: 'pointer', gap: 6, background: MH.cream, color: MH.deepPink, transition: 'border-color 0.2s' }}>
                   <span style={{ display: 'inline-flex' }}>{uploading ? <HourglassIcon size={24} /> : <CameraIcon size={24} />}</span>
                   <span style={{ color: MH.pinkGray, fontSize: '0.78rem', fontWeight: 600 }}>{uploading ? 'Uploading…' : 'Upload photo'}</span>
                   <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCommodityPhotoUpload} disabled={uploading} />

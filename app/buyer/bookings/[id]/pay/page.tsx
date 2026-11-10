@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
+import { SaveIcon } from '@/lib/madhubani'
 import { BUYER, SHARED, inputStyle, labelStyle, cardStyle, navStyle } from '@/lib/styles'
 
 interface Commodity {
@@ -260,9 +261,9 @@ export default function PayBookingPage() {
             <button
               onClick={submitBill}
               disabled={billing || !billAmount}
-              style={{ width: '100%', padding: '11px 16px', background: billing || !billAmount ? BUYER.muted : BUYER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: billing || !billAmount ? 'not-allowed' : 'pointer' }}
+              style={{ width: '100%', padding: '11px 16px', background: billing || !billAmount ? BUYER.muted : BUYER.primary, color: '#fff', border: 'none', borderRadius: 10, fontSize: '0.9rem', fontWeight: 700, cursor: billing || !billAmount ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
             >
-              {billing ? 'Saving…' : '✅ Save Bill'}
+              {billing ? 'Saving…' : (<>Save Bill <SaveIcon size={15} /></>)}
             </button>
           </div>
         )}

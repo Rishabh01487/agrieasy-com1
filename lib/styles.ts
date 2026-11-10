@@ -348,7 +348,7 @@ export const inputStyle = (palette: { border: string; text: string; bg?: string;
   borderRadius: '12px',
   fontSize: '0.95rem',
   color: palette.text,
-  background: (palette as any).bg || SHARED.white,
+  background: SHARED.white, // fill spaces are always white, regardless of section bg
   outline: 'none',
   transition: 'border-color 0.2s, box-shadow 0.2s',
   boxSizing: 'border-box' as const,

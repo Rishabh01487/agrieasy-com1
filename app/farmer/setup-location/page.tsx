@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
+import { SaveIcon } from '@/lib/madhubani'
 import { FARMER, SHARED, inputStyle, labelStyle, cardStyle, navStyle } from '@/lib/styles'
 
 interface NominatimAddress {
@@ -340,9 +341,10 @@ export default function FarmerSetupLocation() {
               cursor: loading ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 14px rgba(49,55,43,0.28)',
               transition: 'all 0.2s ease',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             }}
           >
-            {loading ? 'Saving…' : '✅ Save & Find Buyers'}
+            {loading ? 'Saving…' : (<>Save & Find Buyers <SaveIcon size={16} /></>)}
           </button>
 
           <p style={{ margin: '14px 0 0', color: FARMER.muted, fontSize: '0.76rem', textAlign: 'center' }}>

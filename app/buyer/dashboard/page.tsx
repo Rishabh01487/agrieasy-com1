@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
+import { useIsMobile } from '@/lib/use-is-mobile'
 import {
   MH, mhPageBg, mhCardStyle, mhPrimaryBtn, mhSecondaryBtn, mhNavStyle,
   PlusIcon, AlertTriangleIcon, ArrowRightIcon, LogOutIcon, MapPinIcon, ClockIcon,
@@ -43,28 +44,28 @@ const COMMODITY_CATEGORIES = [
   { name: 'Vegetables' },
 ]
 
-function StatCard({ icon, label, value, sub, href }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; href?: string }) {
+function StatCard({ icon, label, value, sub, href, isMobile }: { icon: React.ReactNode; label: string; value: string | number; sub?: React.ReactNode; href?: string; isMobile?: boolean }) {
   const inner = (
-    <div style={{ ...mhCardStyle({ doubleLine: true, padding: 18 }), display: 'flex', alignItems: 'center', gap: 14, cursor: href ? 'pointer' : 'default' }}>
-      <div style={{ width: 52, height: 52, borderRadius: 14, background: `${MH.pink}18`, color: MH.deepPink, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+    <div style={{ ...mhCardStyle({ doubleLine: true, padding: isMobile ? 14 : 18 }), display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 14, cursor: href ? 'pointer' : 'default' }}>
+      <div style={{ width: isMobile ? 44 : 52, height: isMobile ? 44 : 52, borderRadius: 14, background: `${MH.pink}18`, color: MH.deepPink, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
         {icon}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ color: MH.pinkGray, fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
-        <p style={{ color: MH.navy, fontSize: '1.5rem', fontWeight: 800, margin: '2px 0 0', lineHeight: 1 }}>{value}</p>
-        {sub && <p style={{ color: MH.pinkGray, fontSize: '0.74rem', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>{sub}</p>}
+        <p style={{ color: MH.pinkGray, fontSize: isMobile ? '0.66rem' : '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
+        <p style={{ color: MH.navy, fontSize: isMobile ? '1.25rem' : '1.5rem', fontWeight: 800, margin: '2px 0 0', lineHeight: 1 }}>{value}</p>
+        {sub && <p style={{ color: MH.pinkGray, fontSize: isMobile ? '0.7rem' : '0.74rem', margin: '2px 0 0', display: 'flex', alignItems: 'center', gap: 4 }}>{sub}</p>}
       </div>
     </div>
   )
   return href ? <Link href={href} style={{ textDecoration: 'none' }}>{inner}</Link> : inner
 }
 
-function QuickAction({ icon, label, href }: { icon: React.ReactNode; label: string; href: string }) {
+function QuickAction({ icon, label, href, isMobile }: { icon: React.ReactNode; label: string; href: string; isMobile?: boolean }) {
   return (
-    <Link href={href} style={{ textDecoration: 'none', flex: 1, minWidth: 0 }}>
-      <div style={{ ...mhCardStyle({ padding: '16px 12px' }), textAlign: 'center' }}>
-        <div style={{ width: 48, height: 48, borderRadius: 12, background: `${MH.pink}14`, color: MH.deepPink, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>{icon}</div>
-        <p style={{ color: MH.navy, fontSize: '0.82rem', fontWeight: 700, margin: 0 }}>{label}</p>
+    <Link href={href} style={{ textDecoration: 'none' }}>
+      <div style={{ ...mhCardStyle({ padding: isMobile ? '14px 6px' : '16px 12px' }), textAlign: 'center' }}>
+        <div style={{ width: isMobile ? 44 : 48, height: isMobile ? 44 : 48, borderRadius: 12, background: `${MH.pink}14`, color: MH.deepPink, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>{icon}</div>
+        <p style={{ color: MH.navy, fontSize: isMobile ? '0.76rem' : '0.82rem', fontWeight: 700, margin: 0 }}>{label}</p>
       </div>
     </Link>
   )
@@ -89,6 +90,7 @@ function freshnessBadge(dateStr?: string) {
 
 export default function BuyerDashboard() {
   const router = useRouter()
+  const isMobile = useIsMobile()
   const [listings, setListings] = useState<Listing[]>([])
   const [profile, setProfile] = useState<BuyerProfile | null>(null)
   const [pendingBookings, setPendingBookings] = useState(0)
@@ -156,63 +158,63 @@ export default function BuyerDashboard() {
   return (
     <div style={mhPageBg}>
       {/* Nav */}
-      <nav style={mhNavStyle}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <nav style={{ ...mhNavStyle, padding: isMobile ? '10px 12px' : '14px 24px' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${MH.navy}, ${MH.pink})`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: MH.cream, border: `1px solid ${MH.gold}` }}>
               <BuyerIcon size={18} />
             </div>
             <div>
-              <p style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem', color: MH.navy, lineHeight: 1 }}>AgriEasy</p>
+              <p style={{ margin: 0, fontWeight: 800, fontSize: isMobile ? '0.95rem' : '1.05rem', color: MH.navy, lineHeight: 1 }}>AgriEasy</p>
               <p style={{ margin: 0, fontSize: '0.7rem', color: MH.pinkGray }}>Buyer workspace</p>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <Link href="/buyer/profile" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end', rowGap: 6 }}>
+            <Link href="/buyer/profile" style={{ ...mhSecondaryBtn, color: MH.navy, padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, fontSize: isMobile ? '0.76rem' : '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
               <img src="/logo-commodities.png" alt="" width={14} height={14} style={{ borderRadius: 2 }} /> My Profile
             </Link>
-            <Link href="/buyer/bookings" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <Link href="/buyer/bookings" style={{ ...mhSecondaryBtn, color: MH.navy, padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, fontSize: isMobile ? '0.76rem' : '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
               <img src="/logo-bookings.png" alt="" width={14} height={14} style={{ borderRadius: 2 }} /> Bookings
             </Link>
-            <Link href="/buyer/my-vehicles" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <Link href="/buyer/my-vehicles" style={{ ...mhSecondaryBtn, color: MH.navy, padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, fontSize: isMobile ? '0.76rem' : '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
               <TransporterIcon size={14} /> My Vehicles
             </Link>
-            <Link href="/agrisocial" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <Link href="/agrisocial" style={{ ...mhSecondaryBtn, color: MH.navy, padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, fontSize: isMobile ? '0.76rem' : '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
               <SocialIcon size={14} /> AgriSocial
             </Link>
-            <Link href="/agripay" style={{ ...mhSecondaryBtn, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <Link href="/agripay" style={{ ...mhSecondaryBtn, color: MH.navy, padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, fontSize: isMobile ? '0.76rem' : '0.84rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
               <WalletIcon size={14} /> Wallet
             </Link>
-            <button onClick={logout} style={{ color: MH.white, background: MH.deepPink, border: `1px solid ${MH.gold}`, padding: '8px 14px', borderRadius: 8, fontSize: '0.84rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <button onClick={logout} style={{ color: MH.white, background: MH.deepPink, border: `1px solid ${MH.gold}`, padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: 8, fontSize: isMobile ? '0.76rem' : '0.84rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
               <LogOutIcon size={14} /> Logout
             </button>
           </div>
         </div>
       </nav>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '28px 24px 60px' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '16px 12px 90px' : '28px 24px 60px' }}>
         {/* Hero header */}
-        <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-          <div>
-            <h1 style={{ margin: 0, fontSize: '1.9rem', fontWeight: 800, color: MH.navy, letterSpacing: '-0.02em' }}>
+        <div style={{ marginBottom: isMobile ? 16 : 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: isMobile ? '1.45rem' : '1.9rem', fontWeight: 800, color: MH.navy, letterSpacing: '-0.02em' }}>
               {profile?.firmName ? profile.firmName : 'Welcome back'}
             </h1>
-            <p style={{ margin: '6px 0 0', color: MH.pinkGray, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <p style={{ margin: '6px 0 0', color: MH.pinkGray, fontSize: isMobile ? '0.8rem' : '0.95rem', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
               {profile?.address ? (
                 <>
-                  <MapPinIcon size={14} style={{ color: MH.deepPink }} />
+                  <MapPinIcon size={14} style={{ color: MH.deepPink, flexShrink: 0 }} />
                   <span>{profile.address}</span>
                   <span>·</span>
                 </>
               ) : null}
-              {userEmail && <span style={{ color: MH.navy }}>{userEmail}</span>}
+              {userEmail && <span style={{ color: MH.navy, wordBreak: 'break-all' }}>{userEmail}</span>}
             </p>
           </div>
           <Link href="/buyer/profile" style={{
-            display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
+            display: 'flex', alignItems: 'center', gap: 10, padding: isMobile ? '9px 12px' : '10px 16px',
             background: MH.white, border: `1px solid ${MH.gold}`,
             borderRadius: 12, textDecoration: 'none',
-            boxShadow: `0 4px 14px rgba(26,26,62,0.06), inset 0 0 0 2px ${MH.cream}, inset 0 0 0 3px ${MH.gold}`,
+            boxShadow: `0 4px 14px rgba(49,55,43,0.06), inset 0 0 0 2px ${MH.cream}, inset 0 0 0 3px ${MH.gold}`,
           }}>
             {profile?.shopPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -237,12 +239,12 @@ export default function BuyerDashboard() {
           </div>
         )}
 
-        {/* Stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 14, marginBottom: 24 }}>
-          <StatCard icon={<ListIcon size={20} />} label="Commodities" value={activeCount} sub="In your price-list" href="/buyer/create-listing" />
-          <StatCard icon={<img src="/logo-bookings.png" alt="" width={20} height={20} style={{ borderRadius: 3 }} />} label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? <><ClockIcon size={11} /> Awaiting your confirmation</> : 'No pending bookings'} href="/buyer/bookings" />
-          <StatCard icon={<DollarSignIcon size={20} />} label="Avg Price" value={`₹${avgPrice}`} sub="Per unit across commodities" />
-          <StatCard icon={<PlusIcon size={20} />} label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" />
+        {/* Stat cards — full width on mobile, auto-fit on desktop */}
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(240px,1fr))', gap: isMobile ? 8 : 14, marginBottom: isMobile ? 16 : 24 }}>
+          <StatCard isMobile={isMobile} icon={<ListIcon size={20} />} label="Commodities" value={activeCount} sub="In your price-list" href="/buyer/create-listing" />
+          <StatCard isMobile={isMobile} icon={<img src="/logo-bookings.png" alt="" width={20} height={20} style={{ borderRadius: 3 }} />} label="New Bookings" value={pendingBookings} sub={pendingBookings > 0 ? <><ClockIcon size={11} /> Awaiting your confirmation</> : 'No pending bookings'} href="/buyer/bookings" />
+          <StatCard isMobile={isMobile} icon={<DollarSignIcon size={20} />} label="Avg Price" value={`₹${avgPrice}`} sub="Per unit across commodities" />
+          <StatCard isMobile={isMobile} icon={<PlusIcon size={20} />} label="Add Commodity" value="Create →" sub="Post today's price" href="/buyer/create-listing" />
         </div>
 
         {/* Pending-bookings alert banner */}
@@ -270,19 +272,19 @@ export default function BuyerDashboard() {
           </Link>
         )}
 
-        {/* Quick actions */}
-        <div style={{ marginBottom: 28 }}>
-          <h2 style={{ color: MH.navy, fontSize: '1.05rem', fontWeight: 800, margin: '0 0 12px' }}>Quick actions</h2>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-            <QuickAction icon={<FileTextIcon size={20} />} label="Add Commodity" href="/buyer/create-listing" />
-            <QuickAction icon={<img src="/logo-bookings.png" alt="" width={20} height={20} style={{ borderRadius: 3 }} />} label="Bookings" href="/buyer/bookings" />
-            <QuickAction icon={<UserIcon size={20} />} label="My Profile" href="/buyer/profile" />
-            <QuickAction icon={<TransporterIcon size={20} />} label="My Vehicles" href="/buyer/my-vehicles" />
-            <QuickAction icon={<ReceiptIcon size={20} />} label="Billing" href="/buyer/billing" />
-            <QuickAction icon={<LedgerIcon size={20} />} label="Ledger" href="/ledger" />
-            <QuickAction icon={<WalletIcon size={20} />} label="Payment" href="/buyer/payment" />
-            <QuickAction icon={<SocialIcon size={20} />} label="AgriSocial" href="/agrisocial" />
-            <QuickAction icon={<WheatIcon size={20} />} label="Browse Sellers" href="/farmer/search-buyers" />
+        {/* Quick actions — 3×3 grid on mobile (never squeeze into one row) */}
+        <div style={{ marginBottom: isMobile ? 20 : 28 }}>
+          <h2 style={{ color: MH.navy, fontSize: isMobile ? '0.95rem' : '1.05rem', fontWeight: 800, margin: '0 0 10px' }}>Quick actions</h2>
+          <div className="qa-grid-3" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, minmax(0, 1fr))' : 'repeat(auto-fit, minmax(104px, 1fr))', gap: isMobile ? 8 : 10 }}>
+            <QuickAction isMobile={isMobile} icon={<FileTextIcon size={20} />} label="Add Commodity" href="/buyer/create-listing" />
+            <QuickAction isMobile={isMobile} icon={<img src="/logo-bookings.png" alt="" width={20} height={20} style={{ borderRadius: 3 }} />} label="Bookings" href="/buyer/bookings" />
+            <QuickAction isMobile={isMobile} icon={<UserIcon size={20} />} label="My Profile" href="/buyer/profile" />
+            <QuickAction isMobile={isMobile} icon={<TransporterIcon size={20} />} label="My Vehicles" href="/buyer/my-vehicles" />
+            <QuickAction isMobile={isMobile} icon={<ReceiptIcon size={20} />} label="Billing" href="/buyer/billing" />
+            <QuickAction isMobile={isMobile} icon={<LedgerIcon size={20} />} label="Ledger" href="/ledger" />
+            <QuickAction isMobile={isMobile} icon={<WalletIcon size={20} />} label="Payment" href="/buyer/payment" />
+            <QuickAction isMobile={isMobile} icon={<SocialIcon size={20} />} label="AgriSocial" href="/agrisocial" />
+            <QuickAction isMobile={isMobile} icon={<WheatIcon size={20} />} label="Browse Sellers" href="/farmer/search-buyers" />
           </div>
         </div>
 

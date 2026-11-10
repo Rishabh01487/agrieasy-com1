@@ -240,7 +240,7 @@ export default function FarmerDashboard() {
         {/* Quick actions — 3 columns on mobile, 6 on desktop */}
         <div style={{ marginBottom: isMobile ? 20 : 28 }}>
           <h2 style={{ color: MH.navy, fontSize: isMobile ? '0.95rem' : '1.05rem', fontWeight: 800, margin: '0 0 10px' }}>Quick actions</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, 1fr)' : 'repeat(6, 1fr)', gap: isMobile ? 8 : 10 }}>
+          <div className="qa-grid-3" style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(3, minmax(0, 1fr))' : 'repeat(6, 1fr)', gap: isMobile ? 8 : 10 }}>
             <QuickAction icon={<SearchIcon size={20} />} label="Search Buyers" href="/farmer/search-buyers" />
             <QuickAction icon={<TruckIcon size={20} />} label="My Bookings" href="/farmer/my-bookings" />
             <QuickAction icon={<MapPinIcon size={20} />} label="Location" href="/farmer/setup-location" />

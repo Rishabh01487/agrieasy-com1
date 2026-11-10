@@ -464,13 +464,13 @@ export default function CreateListing() {
                 {commodityPhoto ? (
                   <div style={{ position: 'relative', display: 'inline-block' }}>
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={commodityPhoto} alt="commodity" style={{ width: 200, height: 150, objectFit: 'cover', borderRadius: 10, border: `1.5px solid ${MH.gold}` }} />
+                    <img src={commodityPhoto} alt="commodity" style={{ width: 200, maxWidth: '100%', height: 150, objectFit: 'cover', borderRadius: 10, border: `1.5px solid ${MH.gold}` }} />
                     <button type="button" onClick={() => setCommodityPhoto('')} style={{ position: 'absolute', top: 6, right: 6, background: MH.navy, color: MH.cream, border: `1px solid ${MH.gold}`, borderRadius: '50%', width: 26, height: 26, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <XIcon size={12} />
                     </button>
                   </div>
                 ) : (
-                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 200, height: 150, border: `2px dashed ${MH.gold}`, borderRadius: 10, cursor: 'pointer', gap: 6, background: MH.cream, color: MH.deepPink, transition: 'border-color 0.2s' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: 200, maxWidth: '100%', height: 150, border: `2px dashed ${MH.gold}`, borderRadius: 10, cursor: 'pointer', gap: 6, background: MH.cream, color: MH.deepPink, transition: 'border-color 0.2s' }}>
                     <span style={{ display: 'inline-flex' }}>{uploading ? <HourglassIcon size={24} /> : <CameraIcon size={24} />}</span>
                     <span style={{ color: MH.pinkGray, fontSize: '0.78rem', fontWeight: 600 }}>{uploading ? 'Uploading…' : 'Upload photo'}</span>
                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleCommodityPhotoUpload} disabled={uploading} />
