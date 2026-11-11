@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ensureCsrfCookie } from '@/lib/csrf'
 
+// R2 public host (if configured) — injected into CSP img-src / media-src /
+// connect-src so the browser can fetch media from R2 without CSP violations.
+// Derived from R2_PUBLIC_URL (e.g. https://media.agrieasy.site → media.agrieasy.site).
+const R2_HOST = (() => {
+  const url = process.env.R2_PUBLIC_URL
+  if (!url) return ''
+  try { return new URL(url).hostname } catch { return '' }
+})()
+const R2_SRC = R2_HOST ? ` https://${R2_HOST}` : ''
+
 const SECURITY_HEADERS: Record<string, string> = {
   'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
   'X-Content-Type-Options': 'nosniff',
@@ -12,11 +22,11 @@ const SECURITY_HEADERS: Record<string, string> = {
     "default-src 'self' upi: tez: phonepe: paytmmp: bhim: amzn:",
     "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://unpkg.com",
     "frame-src 'self' https://checkout.razorpay.com https://www.youtube.com https://www.youtube-nocookie.com",
-    "img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.tile.openstreetmap.org https://api.qrserver.com https://*.mzstatic.com https://is1-ssl.mzstatic.com https://*.saavncdn.com",
-    "connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://*.cloudinary.com https://api.razorpay.com https://api.twilio.com https://www.fast2sms.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://corsproxy.io https://api.allorigins.win https://generativelanguage.googleapis.com https://*.workers.dev https://openrouter.ai https://itunes.apple.com https://*.itunes.apple.com",
+    `img-src 'self' data: blob: https://res.cloudinary.com https://lh3.googleusercontent.com https://*.tile.openstreetmap.org https://api.qrserver.com https://*.mzstatic.com https://is1-ssl.mzstatic.com https://*.saavncdn.com${R2_SRC}`,
+    `connect-src 'self' https://api.cloudinary.com https://res.cloudinary.com https://*.cloudinary.com https://api.razorpay.com https://api.twilio.com https://www.fast2sms.com https://nominatim.openstreetmap.org https://*.tile.openstreetmap.org https://unpkg.com https://corsproxy.io https://api.allorigins.win https://generativelanguage.googleapis.com https://*.workers.dev https://openrouter.ai https://itunes.apple.com https://*.itunes.apple.com${R2_SRC}`,
     "style-src 'self' 'unsafe-inline' https://unpkg.com",
     "font-src 'self' data:",
-    "media-src 'self' blob: https://res.cloudinary.com https://*.itunes.apple.com https://audio-ssl.itunes.apple.com https://*.saavncdn.com https://aac.saavncdn.com https://preview.saavncdn.com",
+    `media-src 'self' blob: https://res.cloudinary.com https://*.itunes.apple.com https://audio-ssl.itunes.apple.com https://*.saavncdn.com https://aac.saavncdn.com https://preview.saavncdn.com${R2_SRC}`,
   ].join('; '),
 }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
+import { uploadFile } from '@/lib/upload-client'
 import { LEDGER, SHARED, navStyle } from '@/lib/styles'
 
 interface Batch { bagCount: number; weight: number; individualWeights?: number[] }
@@ -1042,20 +1043,12 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
                     const sigRes = await authFetch('/api/social/upload-signature?kind=image')
                     const sig = await sigRes.json()
                     if (sig.available) {
-                        const fd = new FormData()
-                        fd.append('file', blob)
-                        fd.append('api_key', sig.apiKey)
-                        fd.append('timestamp', sig.timestamp.toString())
-                        fd.append('signature', sig.signature)
-                        fd.append('folder', sig.folder)
-                        // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
-                        fd.append('resource_type', sig.resourceType)
-                        fd.append('public_id', sig.public_id)
-                        const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
-                        const cld = await cldRes.json()
-                        if (cldRes.ok && cld.secure_url) { billPhotoUrl = cld.secure_url; setBillPhotoUrl(billPhotoUrl) }
+                        try {
+                            const url = await uploadFile(sig, blob)
+                            billPhotoUrl = url; setBillPhotoUrl(billPhotoUrl)
+                        } catch { /* ignore photo upload errors — still save the entry */ }
                     }
-                    // If Cloudinary not configured, we still save the ledger
+                    // If storage not configured, we still save the ledger
                     // entry without a photo — better than failing the save.
                 } catch { /* ignore photo upload errors — still save the entry */ }
             }

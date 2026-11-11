@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useRef, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
+import { uploadFile } from '@/lib/upload-client'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import AgriSocialBottomNav from '../components/AgriSocialBottomNav'
 
@@ -677,25 +678,13 @@ function AgriSocialDMInner() {
                                             const sigRes = await authFetch('/api/social/upload-signature?kind=image')
                                             const sig = await sigRes.json()
                                             if (!sig.available) return
-                                            const fd = new FormData()
-                                            fd.append('file', blob)
-                                            fd.append('api_key', sig.apiKey)
-                                            fd.append('timestamp', sig.timestamp.toString())
-                                            fd.append('signature', sig.signature)
-                                            fd.append('folder', sig.folder)
-                                            // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
-                                            fd.append('resource_type', sig.resourceType)
-                                            fd.append('public_id', sig.public_id)
-                                            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
-                                            const cld = await cldRes.json()
-                                            if (cldRes.ok && cld.secure_url) {
-                                                await authFetch('/api/social/dm/messages', {
-                                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ conversationId: activeId, text: '', mediaUrl: cld.secure_url, mediaType: 'image' }),
-                                                })
-                                                fetchActive(activeId)
-                                                fetchConversations()
-                                            }
+                                            const mediaUrl = await uploadFile(sig, blob)
+                                            await authFetch('/api/social/dm/messages', {
+                                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ conversationId: activeId, text: '', mediaUrl: mediaUrl, mediaType: 'image' }),
+                                            })
+                                            fetchActive(activeId)
+                                            fetchConversations()
                                         } catch {}
                                         e.target.value = ''
                                     }} />

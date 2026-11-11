@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",
+    "@aws-sdk/client-s3": "^3.1166.0",
+    "@aws-sdk/s3-request-presigner": "^3.1166.0",
     "@googlemaps/js-api-loader": "^2.0.2",
     "@types/crypto-js": "^4.2.2",
     "@types/nodemailer": "^8.0.1",

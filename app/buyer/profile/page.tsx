@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch, getUserInfo, logout } from '@/lib/auth-fetch'
+import { uploadFile } from '@/lib/upload-client'
 import { SaveIcon } from '@/lib/madhubani'
 import { BUYER, SHARED, inputStyle, labelStyle, cardStyle, navStyle } from '@/lib/styles'
 import { LoadingScreen } from '@/app/components/Spinner'
@@ -46,25 +47,8 @@ async function uploadToCloudinary(file: File): Promise<string> {
 
   const sigRes = await authFetch('/api/social/upload-signature?kind=image')
   const sig = await sigRes.json()
-  if (!sig.available) throw new Error('Cloudinary not configured')
-  const fd = new FormData()
-  fd.append('file', blob)
-  fd.append('api_key', sig.apiKey)
-  fd.append('timestamp', sig.timestamp.toString())
-  fd.append('signature', sig.signature)
-  fd.append('folder', sig.folder)
-  // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
-  fd.append('resource_type', sig.resourceType)
-  fd.append('public_id', sig.public_id)
-  const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, {
-    method: 'POST',
-    body: fd,
-  })
-  const cld = await cldRes.json()
-  if (!cldRes.ok || !cld.secure_url) {
-    throw new Error(cld?.error?.message || 'Upload failed')
-  }
-  return cld.secure_url as string
+  if (!sig.available) throw new Error('Media storage not configured (R2 or Cloudinary)')
+  return uploadFile(sig, blob)
 }
 
 function PhotoUploader({

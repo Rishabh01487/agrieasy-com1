@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, use } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch } from '@/lib/auth-fetch'
+import { uploadFile } from '@/lib/upload-client'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import { useIsMobile } from '@/lib/use-is-mobile'
 import { Icon } from '@/lib/icons'
@@ -648,22 +649,12 @@ export default function AgriSocialProfile({ params }: { params: Promise<{ userId
                                             const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
                                             const sigRes = await authFetch('/api/social/upload-signature?kind=image')
                                             const sig = await sigRes.json()
-                                            if (!sig.available) { setEditError('Cloudinary not configured'); return }
-                                            const fd = new FormData()
-                                            fd.append('file', blob)
-                                            fd.append('api_key', sig.apiKey)
-                                            fd.append('timestamp', sig.timestamp.toString())
-                                            fd.append('signature', sig.signature)
-                                            fd.append('folder', sig.folder)
-                                            // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
-                                            fd.append('resource_type', sig.resourceType)
-                                            fd.append('public_id', sig.public_id)
-                                            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
-                                            const cld = await cldRes.json()
-                                            if (cldRes.ok && cld.secure_url) {
-                                                setEditPic(cld.secure_url)
-                                            } else {
-                                                setEditError('Upload failed: ' + (cld?.error?.message || 'Unknown error'))
+                                            if (!sig.available) { setEditError('Media storage not configured (R2 or Cloudinary)'); return }
+                                            try {
+                                                const url = await uploadFile(sig, blob)
+                                                setEditPic(url)
+                                            } catch (e: any) {
+                                                setEditError('Upload failed: ' + (e?.message || 'Unknown error'))
                                             }
                                         } catch (err) {
                                             setEditError('Upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))

@@ -5,6 +5,14 @@ import dns from "dns";
 dns.setDefaultResultOrder("ipv4first");
 dns.setServers(["8.8.8.8", "8.8.4.4", "1.1.1.1"]);
 
+// R2 public host — computed at build time so Next.js <Image> can optimize
+// images served from R2. Derived from R2_PUBLIC_URL env var.
+const r2Host = (() => {
+  const u = process.env.R2_PUBLIC_URL
+  if (!u) return ''
+  try { return new URL(u).hostname } catch { return '' }
+})()
+
 const nextConfig: NextConfig = {
   devIndicators: false,
   compress: true,
@@ -16,6 +24,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
       { protocol: 'https', hostname: 'res.cloudinary.com' },
+      ...(r2Host ? [{ protocol: 'https' as const, hostname: r2Host }] : []),
     ],
   },
 

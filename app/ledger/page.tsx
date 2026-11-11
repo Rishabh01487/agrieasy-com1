@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authFetch, getUserInfo } from '@/lib/auth-fetch'
+import { uploadFile } from '@/lib/upload-client'
 import { LEDGER, SHARED } from '@/lib/styles'
 import BillCalculator from './BillCalculator'
 import ManualBillEntry from './ManualBillEntry'
@@ -152,19 +153,11 @@ export default function LedgerPage() {
             const blob = await new Promise<Blob>(r => canvas.toBlob(b => r(b || file), 'image/jpeg', 0.85) as unknown as void)
             const sigRes = await authFetch('/api/social/upload-signature?kind=image')
             const sig = await sigRes.json()
-            if (!sig.available) { setError('Cloudinary not configured'); return }
-            const fd = new FormData()
-            fd.append('file', blob)
-            fd.append('api_key', sig.apiKey)
-            fd.append('timestamp', sig.timestamp.toString())
-            fd.append('signature', sig.signature)
-            fd.append('folder', sig.folder)
-            fd.append('resource_type', sig.resourceType)
-            fd.append('public_id', sig.public_id)
-            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
-            const cld = await cldRes.json()
-            if (cldRes.ok && cld.secure_url) setBillPhoto(cld.secure_url)
-            else setError('Upload failed')
+            if (!sig.available) { setError('Media storage not configured (R2 or Cloudinary)'); return }
+            try {
+                const url = await uploadFile(sig, blob)
+                setBillPhoto(url)
+            } catch (e: any) { setError('Upload failed: ' + (e?.message || '')) }
         } catch { setError('Upload failed') }
         finally { setUploading(false) }
     }

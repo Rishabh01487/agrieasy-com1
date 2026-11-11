@@ -31,10 +31,17 @@ const envSchema = z.object({
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
 
-  // Cloudinary
+  // Cloudinary (legacy fallback — used when R2_* vars are not set)
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
+
+  // Cloudflare R2 (preferred media storage — S3-compatible, $0 egress)
+  R2_ACCOUNT_ID: z.string().optional(),
+  R2_ACCESS_KEY_ID: z.string().optional(),
+  R2_SECRET_ACCESS_KEY: z.string().optional(),
+  R2_BUCKET_NAME: z.string().optional(),
+  R2_PUBLIC_URL: z.string().optional(), // e.g. https://media.agrieasy.site
 
   // App
   APP_URL: z.string().optional().default('http://localhost:3000'),

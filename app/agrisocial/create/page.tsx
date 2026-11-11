@@ -4,6 +4,7 @@ import { Suspense, useState, useRef, useCallback, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
+import { uploadFile } from '@/lib/upload-client'
 import { SOCIAL, SHARED } from '@/lib/styles'
 import MusicLibrary from '../components/MusicLibrary'
 
@@ -239,25 +240,16 @@ function CreateContent() {
         if (file.size > 15 * 1024 * 1024) { setError('Audio file too large (max 15MB)'); return }
         setAudioUploading(true); setError('')
         try {
-            const sigRes = await authFetch('/api/social/upload-signature?kind=video')
+            const sigRes = await authFetch('/api/social/upload-signature?kind=audio')
             const sig = await sigRes.json()
             if (!sig.available) { setError('Audio upload not configured'); return }
-            const fd = new FormData()
-            fd.append('file', file)
-            fd.append('api_key', sig.apiKey)
-            fd.append('timestamp', sig.timestamp.toString())
-            fd.append('signature', sig.signature)
-            fd.append('folder', sig.folder)
-            fd.append('public_id', sig.public_id)
-            fd.append('resource_type', 'auto')
-            const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/auto/upload`, { method: 'POST', body: fd })
-            const cld = await cldRes.json()
-            if (cldRes.ok && cld.secure_url) {
-                setAudioUrl(cld.secure_url)
+            try {
+                const url = await uploadFile(sig, file)
+                setAudioUrl(url)
                 const name = file.name.replace(/\.[^/.]+$/, '')
                 setAudioTitle(name)
                 setAudioArtist('')
-            } else { setError('Audio upload failed') }
+            } catch (e: any) { setError('Audio upload failed: ' + (e?.message || 'unknown')) }
         } catch { setError('Audio upload failed') }
         finally { setAudioUploading(false) }
     }
@@ -276,36 +268,25 @@ function CreateContent() {
 
         if (filesToUpload.length > 0 && filesToUpload.some(f => f.blob)) {
             try {
-                const sigRes = await authFetch('/api/social/upload-signature')
+                // Determine kind from the first file (all files in a
+                // carousel share the same type in practice).
+                const firstType = filesToUpload.find(f => f.blob)?.type || 'image'
+                const kindParam = firstType === 'video' ? 'video' : 'image'
+                const sigRes = await authFetch(`/api/social/upload-signature?kind=${kindParam}`)
                 const sig = await sigRes.json()
                 if (!sig.available) {
-                    setError('Media upload requires Cloudinary configuration. Please contact admin.')
-                    setSubmitting(false)
-                    return
-                }
-                if (!sig.apiKey || !sig.cloudName || !sig.signature) {
-                    setError('Upload signature incomplete — missing apiKey, cloudName, or signature. Check server env vars.')
+                    setError('Media upload requires storage configuration (R2 or Cloudinary). Please contact admin.')
                     setSubmitting(false)
                     return
                 }
 
                 for (const file of filesToUpload) {
                     if (!file.blob) continue
-                    const resourceType = file.type === 'video' ? 'video' : 'image'
-                    const fd = new FormData()
-                    fd.append('file', file.blob)
-                    fd.append('api_key', sig.apiKey)
-                    fd.append('timestamp', sig.timestamp.toString())
-                    fd.append('signature', sig.signature)
-                    fd.append('folder', sig.folder)
-                    fd.append('public_id', sig.public_id)
-                    const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
-                    const cld = await cldRes.json()
-                    if (cldRes.ok && cld.secure_url) {
-                        allMediaUrls.push(cld.secure_url)
-                    } else {
-                        const cldMsg = cld?.error?.message || `Cloudinary HTTP ${cldRes.status}`
-                        setError('Upload failed: ' + cldMsg)
+                    try {
+                        const url = await uploadFile(sig, file.blob)
+                        allMediaUrls.push(url)
+                    } catch (e: any) {
+                        setError('Upload failed: ' + (e?.message || 'unknown'))
                         setSubmitting(false)
                         return
                     }
