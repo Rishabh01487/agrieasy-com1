@@ -23,10 +23,6 @@ export async function POST(request: NextRequest) {
     if (!v.success) return validationError('Invalid registration data', v.errors)
     const data = v.data
 
-    if (data.role === 'farmer' && !data.aadhaarNumber) {
-      return badRequest('Aadhar number required for farmers')
-    }
-
     if (data.role === 'buyer' && !data.firmName) {
       return badRequest('Firm name is required for buyers')
     }

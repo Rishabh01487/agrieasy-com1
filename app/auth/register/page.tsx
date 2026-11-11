@@ -300,8 +300,8 @@ export default function Register() {
           )}
           {role === 'farmer' && (
             <div>
-              <label style={lbl}>Aadhar Number</label>
-              <input type="text" {...register('aadhar', { required: 'Aadhar is required' })} placeholder="XXXX XXXX XXXX" style={inp} />
+              <label style={lbl}>Aadhar Number <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.78rem' }}>(optional)</span></label>
+              <input type="text" {...register('aadhar')} placeholder="XXXX XXXX XXXX (optional)" style={inp} />
               {errors.aadhar && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.aadhar.message}</p>}
             </div>
           )}
