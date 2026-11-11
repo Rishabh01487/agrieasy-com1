@@ -74,6 +74,80 @@ Or use: `your-super-secret-jwt-key-change-this-in-production`
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 ```
 
+### 4️⃣ Google Sign-In (OAuth) — Setup From Scratch
+
+> **Do this if you see `Error 401: deleted_client`, `Error 400: redirect_uri_mismatch`,
+> or "Access blocked" on the Google sign-in page.** Follow top to bottom; do not skip.
+
+#### Part A — Delete the old/broken credentials (5 min)
+
+1. Go to https://console.cloud.google.com/apis/credentials
+2. Use the **project selector at the TOP-LEFT** — OAuth clients live inside a
+   specific project. If you have several projects, repeat Part A in each one
+   that shows credentials.
+3. Under **OAuth 2.0 Client IDs**: click every old client → **Delete** → confirm.
+   (Deleting is safe — "Continue with Google" is currently broken anyway.)
+4. **API keys are NOT used for sign-in.** If you see an API key row
+   (`AIzaSy...`) you no longer need, delete it too — especially if it was ever
+   shared in a chat/screenshot (it must be treated as leaked).
+5. Done when the Credentials page is empty.
+
+#### Part B — OAuth consent screen (5 min)
+
+1. Left sidebar → **OAuth consent screen** (Google Auth Platform)
+2. User type: **External** → **Create**
+3. App name: `AgriEasy` · User support email: your Gmail · Developer contact: your Gmail
+4. **Scopes** step → Add: `email`, `profile`, `openid`
+5. **Test users** step → add your Gmail (+ teammates)
+6. Save → back to the dashboard → click **Publish App** (with only
+   email/profile/openid scopes this is instant and lets ANY user sign in;
+   while in "Testing" only your listed test users can sign in).
+
+#### Part C — Create the OAuth client ID (5 min)
+
+1. **Credentials → Create Credentials → OAuth client ID**
+2. Application type: **Web application** ← must be exactly this
+3. Name: `AgriEasy Web`
+4. **Authorized JavaScript origins** — add:
+   ```
+   https://agrieasy.site
+   http://localhost:3100
+   ```
+5. **Authorized redirect URIs** — add EXACTLY (no trailing slashes):
+   ```
+   https://agrieasy.site/api/auth/callback/google
+   https://agrieasy-com1.vercel.app/api/auth/callback/google
+   http://localhost:3100/api/auth/callback/google
+   ```
+6. **Create** → a dialog shows the new **Client ID**
+   (`…apps.googleusercontent.com`) and **Client secret** (`GOCSPX-…`).
+   Copy BOTH now — the secret is shown only once unless you download the JSON.
+
+#### Part D — Put them in Vercel and REDEPLOY (2 min)
+
+1. Vercel → project → Settings → Environment Variables
+2. **Edit** the existing rows (don't create duplicates):
+   - `GOOGLE_CLIENT_ID` → new Client ID
+   - `GOOGLE_CLIENT_SECRET` → new Client secret
+3. Confirm these two exist and are correct:
+   - `NEXTAUTH_URL` = `https://agrieasy.site`
+   - `NEXTAUTH_SECRET` = any long random string (JWT_SECRET works)
+4. Every row must have the **Production** environment ticked.
+5. **Deployments tab → ⋯ on the latest deployment → Redeploy → UNCHECK
+   "Use existing Build Cache" → Redeploy.**
+   ⚠️ Saving env vars does NOTHING to the running deployment until you
+   redeploy — this is the #1 reason changes "don't take effect".
+
+#### Part E — Verify (1 min)
+
+1. Open `https://agrieasy.site/api/auth/oauth-check`
+   - `clientId` must show the NEW client ID (not the old deleted one)
+   - `status` must be `"PASS"`
+   - If FAIL: read `message` + `fix[]` in the response and follow them.
+2. Then test the real flow: `/auth/login` → **Continue with Google**.
+3. First-time Google users are sent to `/auth/register?google=1` once to
+   pick a role + phone, then auto-registered and signed in.
+
 ---
 
 ## 🚀 Deploy to Vercel
