@@ -3,9 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-// signIn import removed — Google sign-up temporarily disabled.
-// To re-enable: import { signIn } from 'next-auth/react'
-//               and restore the Google button (see git history).
+import { signIn } from 'next-auth/react'
 import Link from 'next/link'
 import { AUTH, SHARED, inputStyle, labelStyle } from '@/lib/styles'
 import { authFetch } from '@/lib/auth-fetch'
@@ -106,7 +104,10 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [address, setAddress] = useState('')
-  const { register, handleSubmit, formState: { errors }, setValue } = useForm<FormData>()
+  const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm<FormData>()
+  const phoneValue = watch('phone')
+  const [googleEmail, setGoogleEmail] = useState('')
+  const [googleName, setGoogleName] = useState('')
 
   const onSubmit = async (data: FormData) => {
     setIsLoading(true)
@@ -145,6 +146,43 @@ export default function Register() {
 
   useEffect(() => { setValue('address', address) }, [address, setValue])
 
+  // Pre-fill email + name when a user arrives here via the Google fallback
+  // flow (?google=1&email=...&name=...). This happens when a user clicks
+  // "Continue with Google" on the LOGIN page but isn't registered yet —
+  // AuthSync redirects them here to finish the manual form. We pre-fill
+  // what Google gave us and lock the email field (it's their Google
+  // identity, not editable).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('google') === '1') {
+      const email = params.get('email') || ''
+      const name = params.get('name') || ''
+      if (email) { setGoogleEmail(email); setValue('email', email) }
+      if (name) { setGoogleName(name); setValue('name', name) }
+    }
+  }, [setValue])
+
+  const handleGoogleSignUp = () => {
+    setError('')
+    const phone = (phoneValue || '').trim()
+    // If the user already typed their phone, stash role + phone so
+    // AuthSync can auto-register them after the Google callback — they
+    // won't see this form again (one-click flow). If phone is empty,
+    // we still proceed; AuthSync will fall back to this manual form
+    // with their Google email + name pre-filled.
+    if (phone && phone.replace(/\D/g, '').length >= 10) {
+      try {
+        sessionStorage.setItem('pendingGoogleRegistration', JSON.stringify({
+          role,
+          phone,
+          ts: Date.now(),
+        }))
+      } catch { /* sessionStorage unavailable — fall back to manual form */ }
+    }
+    signIn('google', { callbackUrl: '/auth/register' })
+  }
+
   const lbl = labelStyle({ text: AUTH.text, muted: AUTH.muted })
   const inp = inputStyle({ border: AUTH.border, text: AUTH.text, bg: '#faf5ff' })
 
@@ -180,41 +218,32 @@ export default function Register() {
           ))}
         </div>
 
-        {/* Google Sign Up — TEMPORARILY DISABLED
-            Google OAuth is in branding verification with Google Cloud.
-            Until that's resolved, we hide the Google button and show a
-            notice. Users can still register via the manual form below.
-            To re-enable: restore the onClick={signIn('google', ...)} button
-            and remove this notice block. */}
-        <div style={{
-          width: '100%',
-          padding: '12px 14px',
-          borderRadius: '12px',
-          background: '#F3F4F6',
-          border: '1.5px dashed #D1D5DB',
-          color: '#6B7280',
-          fontSize: '0.82rem',
-          fontWeight: 600,
-          marginBottom: '16px',
-          fontFamily: SHARED.font,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          textAlign: 'left',
-        }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" style={{ opacity: 0.4, flexShrink: 0 }}>
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#9CA3AF" />
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#9CA3AF" />
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#9CA3AF" />
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#9CA3AF" />
+        {/* Google Sign Up — enabled for all roles (farmer / buyer / transporter).
+            Requires phone number first so AuthSync can auto-register the
+            user after the Google callback (one-click flow). */}
+        <button
+          onClick={handleGoogleSignUp}
+          type="button"
+          style={{
+            width: '100%', padding: '11px', borderRadius: '12px',
+            background: AUTH.bg, border: `1.5px solid ${AUTH.border}`,
+            color: AUTH.text, fontSize: '0.93rem', fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', gap: '10px', marginBottom: '8px',
+            fontFamily: SHARED.font, transition: 'background 0.2s, border-color 0.2s',
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
           </svg>
-          <div>
-            <div style={{ marginBottom: '2px' }}>Google sign-up is temporarily disabled</div>
-            <div style={{ fontSize: '0.74rem', fontWeight: 500, color: '#9CA3AF' }}>
-              Please use the form below — we&apos;re resolving Google verification.
-            </div>
-          </div>
-        </div>
+          Continue with Google
+        </button>
+        <p style={{ color: AUTH.muted, fontSize: '0.74rem', textAlign: 'center', marginBottom: '16px', fontFamily: SHARED.font }}>
+          Sign up instantly as {role === 'farmer' ? '🌾 Farmer' : role === 'buyer' ? '🛒 Buyer' : '🚛 Transporter'} — tip: fill your phone below first for one-click registration.
+        </p>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
           <div style={{ flex: 1, height: '1px', background: AUTH.border }} />
@@ -235,8 +264,8 @@ export default function Register() {
             {errors.name && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.name.message}</p>}
           </div>
           <div>
-            <label style={lbl}>Email</label>
-            <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} />
+            <label style={lbl}>Email{googleEmail && <span style={{ color: AUTH.muted, fontWeight: 400, fontSize: '0.75rem' }}> (from Google — not editable)</span>}</label>
+            <input type="email" {...register('email', { required: 'Email is required' })} placeholder="you@example.com" style={inp} readOnly={!!googleEmail} defaultValue={googleEmail} />
             {errors.email && <p style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: '3px', fontFamily: SHARED.font }}>{errors.email.message}</p>}
           </div>
           <div>
