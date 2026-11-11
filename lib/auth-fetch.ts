@@ -185,12 +185,26 @@ export function hasSession(): boolean {
 export async function logout(): Promise<void> {
   if (typeof window === 'undefined') return
   try {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
-  } catch { /* ignore */ }
+    // Send the CSRF header so the server's verifyCsrf() check passes.
+    // The csrf_token cookie is httpOnly:false (set by middleware) so we can
+    // read it from document.cookie and echo it as the X-CSRF-Token header.
+    const csrfCookie = document.cookie
+      .split('; ')
+      .find(c => c.startsWith('csrf_token='))
+    const csrfToken = csrfCookie ? csrfCookie.split('=')[1] : ''
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+      headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : {},
+    })
+  } catch { /* ignore — client-side cleanup runs regardless */ }
   localStorage.removeItem('userId')
   localStorage.removeItem('userEmail')
   localStorage.removeItem('userRole')
   localStorage.removeItem('token')
+  // Also clear the non-httpOnly session-marker cookie (best-effort —
+  // the httpOnly `token` cookie can only be cleared by the server).
+  document.cookie = 'agrieasy_session=; Max-Age=0; path=/; SameSite=Lax'
   window.location.href = '/'
 }
 

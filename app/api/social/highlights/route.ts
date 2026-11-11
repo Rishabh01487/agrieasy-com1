@@ -6,6 +6,7 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError } from '@/lib/api-response'
 import { sanitize } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function GET(req: NextRequest) {
     try {
@@ -23,6 +24,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()

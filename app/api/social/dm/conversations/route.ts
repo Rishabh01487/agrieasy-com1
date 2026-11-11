@@ -3,6 +3,7 @@ import dbConnect from '@/lib/mongodb'
 import Conversation from '@/lib/models/Conversation'
 import User from '@/lib/models/User'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function GET(req: NextRequest) {
     try {
@@ -40,6 +41,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()

@@ -8,6 +8,7 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { z } from 'zod/v4'
 import { sanitize } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 export const runtime = 'nodejs'
 dns.setDefaultResultOrder('ipv4first')
@@ -57,6 +58,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 

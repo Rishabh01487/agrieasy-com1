@@ -4,6 +4,7 @@ import Listing from '@/lib/models/Listing'
 import { z } from 'zod/v4'
 import { positiveAmountSchema } from '@/lib/validation'
 import { validationError } from '@/lib/api-response'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function GET(
   request: NextRequest,
@@ -29,6 +30,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   try {
     const token = request.cookies.get('token')?.value
       || request.headers.get('authorization')?.replace('Bearer ', '')
@@ -106,6 +110,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   try {
     const token = request.cookies.get('token')?.value
       || request.headers.get('authorization')?.replace('Bearer ', '')

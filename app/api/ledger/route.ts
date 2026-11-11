@@ -7,6 +7,7 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError, apiSuccess } from '@/lib/api-response'
 import { sanitize } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 // GET /api/ledger?type=&status=&page=
 export async function GET(req: NextRequest) {
@@ -63,6 +64,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/ledger — create a new ledger entry
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()
@@ -137,6 +141,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()

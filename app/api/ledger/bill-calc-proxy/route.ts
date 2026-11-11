@@ -106,9 +106,40 @@ export async function POST(req: NextRequest) {
     const zai = await ZAI.create()
 
     // Build the image URL
-    const imageUrl = body.imageBase64
-      ? `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}`
-      : body.imageUrl
+    // SECURITY (SSRF): only accept image URLs hosted on our own Cloudinary
+    // account. Without this check, an unauthenticated attacker could submit
+    // http://169.254.169.254/... (cloud metadata) or any internal IP and have
+    // the vision model read the response back as text — full internal-network
+    // SSRF. Mirrors the same allowlist in bill-calc/route.ts and the
+    // Cloudflare Worker (cloudflare-worker/worker.js:95).
+    let imageUrl: string
+    if (body.imageBase64) {
+        imageUrl = `data:${body.mimeType || 'image/jpeg'};base64,${body.imageBase64}`
+    } else if (body.imageUrl) {
+        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ''
+        const allowedHost = cloudName ? `${cloudName}.cloudinary.com` : 'res.cloudinary.com'
+        let parsedUrl: URL
+        try {
+            parsedUrl = new URL(body.imageUrl)
+        } catch {
+            return NextResponse.json({ error: 'Please upload a valid bill image.' }, { status: 400 })
+        }
+        const isCloudinary =
+            (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') &&
+            parsedUrl.hostname === allowedHost
+        if (!isCloudinary) {
+            return NextResponse.json(
+                { error: 'Please upload the bill image directly instead of providing a URL.' },
+                { status: 400 },
+            )
+        }
+        imageUrl = body.imageUrl
+    } else {
+        return NextResponse.json(
+            { error: 'Please upload a bill image to scan.' },
+            { status: 400 },
+        )
+    }
 
     // Call the vision model
     const response = await zai.chat.completions.createVision({

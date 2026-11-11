@@ -248,6 +248,7 @@ function CreateContent() {
             fd.append('timestamp', sig.timestamp.toString())
             fd.append('signature', sig.signature)
             fd.append('folder', sig.folder)
+            fd.append('public_id', sig.public_id)
             fd.append('resource_type', 'auto')
             const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/auto/upload`, { method: 'POST', body: fd })
             const cld = await cldRes.json()
@@ -297,6 +298,7 @@ function CreateContent() {
                     fd.append('timestamp', sig.timestamp.toString())
                     fd.append('signature', sig.signature)
                     fd.append('folder', sig.folder)
+                    fd.append('public_id', sig.public_id)
                     const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/${resourceType}/upload`, { method: 'POST', body: fd })
                     const cld = await cldRes.json()
                     if (cldRes.ok && cld.secure_url) {

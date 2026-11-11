@@ -7,6 +7,7 @@ import Post from '@/lib/models/Post'
 import { authenticateRequest, forbidden, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { invalidate } from '@/lib/cache'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function GET(
   request: NextRequest,
@@ -40,6 +41,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request, ['admin'])
   if (!auth) return unauthorized()
   if (!auth.roleMatch) return forbidden()
@@ -73,6 +77,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request, ['admin'])
   if (!auth) return unauthorized()
   if (!auth.roleMatch) return forbidden()

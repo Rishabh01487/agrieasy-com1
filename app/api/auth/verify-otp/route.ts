@@ -83,7 +83,6 @@ export async function POST(request: NextRequest) {
     return successBody
   } catch (error: unknown) {
     console.error('Verify OTP error:', error)
-    const message = error instanceof Error ? error.message : 'Verification failed'
-    return apiError(ErrorCodes.INTERNAL_ERROR, message)
+    return apiError(ErrorCodes.INTERNAL_ERROR, 'OTP verification failed. Please try again.')
   }
 }

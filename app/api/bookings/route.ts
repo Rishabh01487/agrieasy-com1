@@ -228,9 +228,11 @@ export async function POST(request: NextRequest) {
     return apiSuccess({ booking }, undefined, 201)
   } catch (error: unknown) {
     console.error('Create booking error:', error)
-    const msg = error instanceof Error ? error.message : 'Failed to create booking'
-    const status = msg.includes('required') || msg.includes('Cast to') ? 400 : 500
-    return NextResponse.json({ error: msg }, { status })
+    const e = error as Error & { name?: string }
+    if (e.name === 'ValidationError') {
+      return NextResponse.json({ error: 'Invalid booking data' }, { status: 400 })
+    }
+    return NextResponse.json({ error: 'Failed to create booking' }, { status: 500 })
   }
 }
 

@@ -5,11 +5,15 @@ import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { apiSuccess, apiError, validationError, ErrorCodes, notFound } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
 import { validateBody, updateBuyerVehicleSchema } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
   if (auth.user.role !== 'buyer') return forbidden('Only buyer accounts can update vehicles')
@@ -62,6 +66,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
   if (auth.user.role !== 'buyer') return forbidden('Only buyer accounts can delete vehicles')

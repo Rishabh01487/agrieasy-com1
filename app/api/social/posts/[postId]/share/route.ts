@@ -5,11 +5,15 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { validationError } from '@/lib/api-response'
 import { objectIdSchema } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function POST(
     req: NextRequest,
     { params }: { params: Promise<{ postId: string }> },
 ) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()

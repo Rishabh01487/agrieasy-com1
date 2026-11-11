@@ -685,7 +685,7 @@ function AgriSocialDMInner() {
                                             fd.append('folder', sig.folder)
                                             // SECURITY: forward signed params — Cloudinary rejects uploads that omit signed params.
                                             fd.append('resource_type', sig.resourceType)
-                                            fd.append('allowed_formats', sig.allowedFormats)
+                                            fd.append('public_id', sig.public_id)
                                             const cldRes = await fetch(`https://api.cloudinary.com/v1_1/${sig.cloudName}/image/upload`, { method: 'POST', body: fd })
                                             const cld = await cldRes.json()
                                             if (cldRes.ok && cld.secure_url) {

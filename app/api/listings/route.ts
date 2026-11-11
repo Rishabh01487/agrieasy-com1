@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
   } catch (error: unknown) {
     const e = error as Error & { code?: string; syscall?: string }
     console.error('LISTINGS ERROR CODE:', e.code, '| SYSCALL:', e.syscall, '| MSG:', e.message?.slice(0, 200))
-    return NextResponse.json({ error: 'Failed to fetch listings', detail: e.message }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to fetch listings' }, { status: 500 })
   }
 }
 
@@ -224,17 +224,6 @@ export async function POST(request: NextRequest) {
     console.error('Create listing error:', error)
     // Never leak raw Zod / Mongoose internals to the client — they end up
     // as a JSON blob in the red error banner, which is confusing.
-    let userMessage = 'Failed to create listing. Please try again.'
-    if (error instanceof Error) {
-      // Common, safe-to-show cases:
-      if (error.message.includes('ENCRYPTION_KEY')) {
-        userMessage = 'Server is missing encryption config. Please contact support.'
-      } else if (error.message.includes('duplicate key')) {
-        userMessage = 'One of these commodities already exists for your shop.'
-      } else if (error.message.includes('Validation failed') || error.message.includes('required')) {
-        userMessage = error.message
-      }
-    }
-    return NextResponse.json({ error: userMessage }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create listing' }, { status: 500 })
   }
 }

@@ -5,12 +5,16 @@ import Booking from '@/lib/models/Booking'
 import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError } from '@/lib/api-response'
+import { verifyCsrf } from '@/lib/csrf'
 
 // POST /api/location — update the authenticated user's live location
 // Body: { latitude, longitude, bookingId? }
 //   - If bookingId is provided, also store the location on the booking
 //     (so the farmer/buyer can track the transporter for that specific booking)
 export async function POST(req: NextRequest) {
+    if (!verifyCsrf(req)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     try {
         const auth = authenticateRequest(req)
         if (!auth) return unauthorized()

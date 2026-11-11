@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { apiSuccess } from '@/lib/api-response'
 
@@ -141,7 +141,12 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
         thinking: { type: 'disabled' },
     }
 
-    // Strategy 1: Direct call (works on local dev)
+    // SECURITY: removed the api.allorigins.win fallback path. The previous
+    // code forwarded `Authorization: Bearer ${config.apiKey}` (plus
+    // X-Chat-Id / X-User-Id / X-Token) to a third-party proxy operator who
+    // could sniff the Z-AI API key from inbound requests. Vercel -> Z-AI is
+    // either reachable directly (preferred) or routed through our own
+    // Cloudflare Worker — never through a public CORS proxy.
     let res: Response
     try {
         res = await fetch(url, {
@@ -151,15 +156,10 @@ async function callZaiVision(config: ZaiConfig, prompt: string, imageUrl: string
             signal: AbortSignal.timeout(20000),
         })
     } catch {
-        // Direct call failed (Vercel can't reach the internal API)
-        // Strategy 2: Route through allorigins proxy (passes headers)
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`
-        res = await fetch(proxyUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(body),
-            signal: AbortSignal.timeout(25000),
-        })
+        // Direct call failed (typically Vercel can't reach the internal
+        // Z-AI endpoint). Surface a clean 503 to the user instead of leaking
+        // the API key to a third-party CORS proxy.
+        throw new Error('Could not reach the bill scanner service. Please try again later.')
     }
     if (!res.ok) {
         throw new Error(`Z-AI vision API returned ${res.status}`)
@@ -231,7 +231,35 @@ export async function POST(req: NextRequest) {
         }
 
         // Compose the data URL or pass through
-        const finalUrl = imageUrl || `data:${mimeType};base64,${imageBase64}`
+        // SECURITY (SSRF): only accept image URLs hosted on our own Cloudinary
+        // account. Without this check, an unauthenticated attacker could submit
+        // http://169.254.169.254/... (cloud metadata), http://localhost:27017,
+        // or any internal IP and have the vision model read the response back
+        // as text — full internal-network SSRF. The sibling Cloudflare Worker
+        // already enforces this same allowlist (cloudflare-worker/worker.js:95).
+        let finalUrl: string
+        if (imageUrl) {
+            const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || ''
+            const allowedHost = cloudName ? `${cloudName}.cloudinary.com` : 'res.cloudinary.com'
+            let parsedUrl: URL
+            try {
+                parsedUrl = new URL(imageUrl)
+            } catch {
+                return NextResponse.json({ error: 'Invalid image URL.' }, { status: 400 })
+            }
+            const isCloudinary =
+                (parsedUrl.protocol === 'https:' || parsedUrl.protocol === 'http:') &&
+                parsedUrl.hostname === allowedHost
+            if (!isCloudinary) {
+                return NextResponse.json(
+                    { error: 'For security, image URLs must be hosted on our own Cloudinary account. Please upload the file directly instead.' },
+                    { status: 400 },
+                )
+            }
+            finalUrl = imageUrl
+        } else {
+            finalUrl = `data:${mimeType};base64,${imageBase64}`
+        }
 
         // SECURITY: refuse to run without configured credentials — the
         // previously hardcoded provider JWT was leaked into git history. Return
@@ -386,74 +414,49 @@ Return ONLY valid JSON in this exact shape (no markdown, no commentary):
         })
     } catch (err) {
         console.error('bill-calc error:', err)
-        const msg = err instanceof Error ? err.message : 'Failed to process bill image'
+        // SECURITY: do NOT return raw error.message or env-var debug info to
+        // the client — both leak internal deployment details to anonymous
+        // users (this route allows unauthenticated access).
         return NextResponse.json(
-            {
-                error: msg,
-                // Include debug info to help diagnose Vercel config issues
-                debug: {
-                    envBaseUrl: process.env.ZAI_BASE_URL ? 'set' : 'missing',
-                    envApiKey: process.env.ZAI_API_KEY ? 'set' : 'missing',
-                    envChatId: process.env.ZAI_CHAT_ID ? 'set' : 'missing',
-                    envUserId: process.env.ZAI_USER_ID ? 'set' : 'missing',
-                    envToken: process.env.ZAI_TOKEN ? 'set' : 'missing',
-                    nodeEnv: process.env.NODE_ENV,
-                    vercel: process.env.VERCEL ? 'yes' : 'no',
-                },
-            },
+            { error: 'Could not scan the bill. Please try a clearer photo.' },
             { status: 500 },
         )
     }
 }
 
 /**
- * GET /api/ledger/bill-calc — health check / config debug endpoint.
+ * GET /api/ledger/bill-calc — health check (admin-only).
  * Returns whether the vision config is resolvable + which source it came from.
- * Useful for debugging Vercel env var setup.
+ * SECURITY: previously returned a `debug` object exposing which env vars
+ * were set/missing to ANY logged-in user. Now restricted to admin role and
+ * the debug object is removed; admins can check Vercel dashboard for env-var
+ * presence directly.
  */
 export async function GET(req: NextRequest) {
-    const auth = authenticateRequest(req)
+    const auth = authenticateRequest(req, ['admin'])
     if (!auth) return unauthorized()
+    if (!auth.roleMatch) return forbidden('Admin access required')
     try {
         const resolved = await loadZaiConfig()
         if (!resolved) {
             return NextResponse.json({
                 configured: false,
                 error: 'ZAI_BASE_URL / ZAI_API_KEY env vars are not set.',
-                debug: {
-                    envBaseUrl: process.env.ZAI_BASE_URL ? 'set' : 'missing',
-                    envApiKey: process.env.ZAI_API_KEY ? 'set' : 'missing',
-                    envChatId: process.env.ZAI_CHAT_ID ? 'set' : 'missing',
-                    envUserId: process.env.ZAI_USER_ID ? 'set' : 'missing',
-                    envToken: process.env.ZAI_TOKEN ? 'set' : 'missing',
-                    nodeEnv: process.env.NODE_ENV,
-                    vercel: process.env.VERCEL ? 'yes' : 'no',
-                },
-            }, { status: 200 })  // 200 so the user can see the debug info
+            }, { status: 200 })
         }
         const { config, source } = resolved
         return apiSuccess({
             configured: true,
             source,
-            baseUrl: config.baseUrl,
             apiKeyPresent: !!config.apiKey,
             chatIdPresent: !!config.chatId,
             userIdPresent: !!config.userId,
             tokenPresent: !!config.token,
         })
-    } catch (err) {
+    } catch {
         return NextResponse.json({
             configured: false,
-            error: err instanceof Error ? err.message : 'Unknown error',
-            debug: {
-                envBaseUrl: process.env.ZAI_BASE_URL ? 'set' : 'missing',
-                envApiKey: process.env.ZAI_API_KEY ? 'set' : 'missing',
-                envChatId: process.env.ZAI_CHAT_ID ? 'set' : 'missing',
-                envUserId: process.env.ZAI_USER_ID ? 'set' : 'missing',
-                envToken: process.env.ZAI_TOKEN ? 'set' : 'missing',
-                nodeEnv: process.env.NODE_ENV,
-                vercel: process.env.VERCEL ? 'yes' : 'no',
-            },
-        }, { status: 200 })  // 200 so the user can see the debug info
+            error: 'Unknown error',
+        }, { status: 200 })
     }
 }

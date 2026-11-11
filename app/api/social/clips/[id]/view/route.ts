@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import dbConnect from '@/lib/mongodb'
 import Post from '@/lib/models/Post'
 import { authenticateRequest } from '@/lib/auth'
+import { verifyCsrf } from '@/lib/csrf'
 
 /** Hash an IP for anonymous-view dedup (no PII stored). */
 function hashIp(ip: string): string {
@@ -33,6 +34,9 @@ function getIp(req: NextRequest): string {
  * same clip results in `views` being incremented exactly once.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  if (!verifyCsrf(req)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   try {
     const { id } = await params
     if (!id) return NextResponse.json({ error: 'Missing clip id' }, { status: 400 })

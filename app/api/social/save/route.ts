@@ -40,6 +40,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   try {
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()

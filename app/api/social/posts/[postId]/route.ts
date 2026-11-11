@@ -4,6 +4,7 @@ import Post from '@/lib/models/Post'
 import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
+import { verifyCsrf } from '@/lib/csrf'
 
 export async function GET(
   _request: NextRequest,
@@ -30,6 +31,9 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ postId: string }> }
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const { postId } = await params
 
   try {

@@ -7,6 +7,7 @@ import { apiSuccess, apiError, validationError, ErrorCodes } from '@/lib/api-res
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { validateBody, farmerProfileSchema } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 export const runtime = 'nodejs'
 dns.setDefaultResultOrder('ipv4first')
@@ -46,6 +47,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
   if (auth.user.role !== 'farmer') return forbidden('Only farmer accounts can update this profile')

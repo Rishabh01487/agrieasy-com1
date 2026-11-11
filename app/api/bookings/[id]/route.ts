@@ -8,6 +8,7 @@ import Notification from '@/lib/models/Notification'
 import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { apiSuccess, apiError, validationError, ErrorCodes, notFound } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
+import { verifyCsrf } from '@/lib/csrf'
 
 /**
  * PATCH /api/bookings/[id]
@@ -34,6 +35,9 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request)
   if (!auth) return unauthorized()
 

@@ -62,10 +62,22 @@ export async function POST(request: NextRequest) {
 
         await logAudit({ userId: auth.user.userId, action: 'UPDATE', resource: 'BankVerification', details: { bankName, hasUpi: !!upiId, payoutReady: !!fundAccount }, request })
 
+        // SECURITY: do NOT return the raw wallet document — its toJSON getter
+        // exposes the DECRYPTED accountNumber, ifscCode, bankHolder, upiId,
+        // and razorpayFundAccountId. Echo only the same masked fields the GET
+        // handler returns so the wire shape matches and no PII leaks to the
+        // browser / proxy logs / browser extensions.
         return NextResponse.json({
             success: true,
             message: `Bank account verified and linked successfully!`,
-            wallet,
+            bankVerified: wallet.bankVerified || false,
+            bankName: wallet.bankName,
+            bankHolder: wallet.bankHolder,
+            accountNumberMasked: wallet.accountNumber
+                ? `XXXX XXXX ${wallet.accountNumber.slice(-4)}`
+                : null,
+            ifscCode: wallet.ifscCode,
+            upiId: wallet.upiId || null,
         })
     } catch (error) {
         console.error('Bank verify error:', error)

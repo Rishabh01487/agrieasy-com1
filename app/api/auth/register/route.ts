@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
     return apiSuccess({ userId: user._id.toString() }, undefined, 201)
   } catch (error: unknown) {
     console.error('Registration error:', error)
-    const message = error instanceof Error ? error.message : 'Registration failed'
-    return apiError(ErrorCodes.INTERNAL_ERROR, message)
+    return apiError(ErrorCodes.INTERNAL_ERROR, 'Registration failed. Please try again.')
   }
 }

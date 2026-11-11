@@ -10,6 +10,7 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { PAYLATER } from '@/lib/config'
 import { z } from 'zod'
+import { verifyCsrf } from '@/lib/csrf'
 
 const createPaylaterSchema = z.object({ amount: positiveAmountSchema.max(PAYLATER.MAX_LOAN_AMOUNT) })
 
@@ -71,6 +72,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    if (!verifyCsrf(request)) {
+        return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+    }
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
 

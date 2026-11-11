@@ -6,6 +6,7 @@ import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { parsePagination, paginationMeta, validationError } from '@/lib/api-response'
 import { validateBody, createVehicleSchema } from '@/lib/validation'
+import { verifyCsrf } from '@/lib/csrf'
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   // FIX: Restrict to transporter role only
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request, ['transporter'])
   if (!auth) return unauthorized()
   if (!auth.roleMatch) return forbidden()
@@ -94,13 +98,16 @@ export async function POST(request: NextRequest) {
     }
     // Mongoose validation error (e.g. driverName required at model level)
     if (e.name === 'ValidationError') {
-      return NextResponse.json({ error: e.message || 'Validation failed' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid vehicle data' }, { status: 400 })
     }
-    return NextResponse.json({ error: e.message || 'Failed to create vehicle' }, { status: 500 })
+    return NextResponse.json({ error: 'Failed to create vehicle' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
+  if (!verifyCsrf(request)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
   const auth = authenticateRequest(request, ['transporter'])
   if (!auth) return unauthorized()
   if (!auth.roleMatch) return forbidden()
