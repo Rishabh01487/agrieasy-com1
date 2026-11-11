@@ -74,6 +74,56 @@ Or use: `your-super-secret-jwt-key-change-this-in-production`
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
 ```
 
+### 3b️⃣ Media Storage — Cloudflare R2 (recommended) or Cloudinary (legacy)
+
+The app supports two media storage backends. **R2 is recommended** —
+it's S3-compatible with **$0 egress** (free bandwidth forever), which
+matters hugely for a social app serving photos + videos. At 10K
+video uploads/month, R2 saves ~$70-150/mo vs Cloudinary or Vercel Blob.
+
+If R2 env vars are set → new uploads go to R2.
+If only Cloudinary env vars are set → new uploads go to Cloudinary.
+Existing assets (whichever backend they're on) keep serving — both
+are just URL strings stored in MongoDB.
+
+#### Option A — Cloudflare R2 (recommended)
+
+1. **Create a bucket**: https://dash.cloudflare.com → R2 Object Storage
+   → Create bucket → name it `agrieasy-media` → Create.
+2. **Enable public access**: bucket → Settings → Public access →
+   either connect a custom domain (e.g. `media.agrieasy.site`, requires
+   the domain on Cloudflare DNS) OR enable the `r2.dev` subdomain
+   (free, but rate-limited and not CDN-cached — fine for dev, use a
+   custom domain for production).
+3. **Create API tokens**: bucket → Manage R2 API Tokens → Create API
+   token → Object Read & Write → scope to the bucket. Copy the
+   **Access Key ID**, **Secret Access Key**, and note your
+   **Account ID** (top-right of the Cloudflare dashboard).
+4. **Set these 5 env vars in Vercel** (Settings → Environment Variables,
+   Production):
+
+```
+R2_ACCOUNT_ID=your-cloudflare-account-id
+R2_ACCESS_KEY_ID=the-access-key-id
+R2_SECRET_ACCESS_KEY=the-secret-access-key
+R2_BUCKET_NAME=agrieasy-media
+R2_PUBLIC_URL=https://media.agrieasy.site
+```
+
+5. **Redeploy** (Deployments → ⋯ → Redeploy → uncheck build cache).
+
+#### Option B — Cloudinary (legacy, already configured)
+
+If you already have Cloudinary env vars set, they keep working as the
+fallback when R2_* vars are not set. No action needed.
+
+```
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+```
+
+
 ### 4️⃣ Google Sign-In (OAuth) — Setup From Scratch
 
 > **Do this if you see `Error 401: deleted_client`, `Error 400: redirect_uri_mismatch`,
