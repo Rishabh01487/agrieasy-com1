@@ -6,7 +6,7 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { validationError, apiSuccess } from '@/lib/api-response'
-import { sanitize } from '@/lib/validation'
+import { sanitize, objectIdSchema } from '@/lib/validation'
 import { verifyCsrf } from '@/lib/csrf'
 
 // GET /api/ledger?type=&status=&page=
@@ -88,11 +88,35 @@ export async function POST(req: NextRequest) {
         const user = await User.findById(auth.user.userId).select('role farmerName firmName')
         if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
+        // SECURITY FIX (HIGH — NoSQL injection / IDOR on mirror ledger entry):
+        // body.counterpartyId was previously written directly into the
+        // mirror Ledger document's `userId` field without validation or
+        // existence check — an authenticated user could forge bills/
+        // invoices in ANY user's ledger by passing their userId here.
+        // Now: (1) validate as a 24-hex ObjectId, (2) confirm the user
+        // actually exists in our DB before creating the mirror entry.
+        // (We deliberately do NOT enforce a shared-booking relationship
+        // here — the ledger is a free-form bookkeeping tool, not a
+        // transaction ledger — but we DO require the counterparty to be
+        // a real user, which kills the most damaging forgery vector.)
+        let counterpartyId: string | undefined
+        if (body.counterpartyId) {
+            const cp = objectIdSchema.safeParse(body.counterpartyId)
+            if (!cp.success) {
+                return validationError('Invalid counterpartyId', [{ field: 'counterpartyId', message: 'Must be a valid user id' }])
+            }
+            const exists = await User.exists({ _id: cp.data })
+            if (!exists) {
+                return NextResponse.json({ error: 'Counterparty user not found' }, { status: 404 })
+            }
+            counterpartyId = cp.data
+        }
+
         const entry = await Ledger.create({
             userId: auth.user.userId,
             role: user.role,
             type: body.type,
-            counterpartyId: body.counterpartyId || undefined,
+            counterpartyId,
             counterpartyName: sanitize(body.counterpartyName || '').slice(0, 200),
             listingId: body.listingId || undefined,
             amount: body.amount,
@@ -106,11 +130,11 @@ export async function POST(req: NextRequest) {
             dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
         })
 
-        if (body.counterpartyId && (body.type === 'bill' || body.type === 'invoice')) {
+        if (counterpartyId && (body.type === 'bill' || body.type === 'invoice')) {
             const mirrorType = body.type === 'bill' ? 'expense' : 'expense'
             const counterpartyName = user.farmerName || user.firmName || 'User'
             await Ledger.create({
-                userId: body.counterpartyId,
+                userId: counterpartyId,
                 role: user.role === 'buyer' ? 'farmer' : 'buyer',  // opposite role
                 type: mirrorType,
                 counterpartyId: auth.user.userId,

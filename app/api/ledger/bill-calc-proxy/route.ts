@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import { join } from 'path'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { rateLimitByUser } from '@/lib/rate-limit'
+import { verifyCsrf } from '@/lib/csrf'
 
 /**
  * AgriEasy Bill OCR Proxy — GLM-4.6V Vision Model
  * Uses the SDK to call the vision API.
- * No auth required — works with or without login.
+ *
+ * SECURITY: requires authentication + per-user rate limit (10/min).
+ * Previously this endpoint was unauthenticated ("No auth required —
+ * works with or without login"), allowing anonymous internet users to
+ * POST arbitrary base64 images and burn the server's Z-AI vision API
+ * budget at will. Now: JWT required, CSRF required, max 10/min/user.
  * Error messages are user-friendly — never exposes internal API errors.
  */
 
@@ -71,6 +79,16 @@ Return ONLY valid JSON (no markdown, no explanation) in this exact format:
 }`
 
 export async function POST(req: NextRequest) {
+  // SECURITY FIX (HIGH — anonymous cost abuse):
+  // Require auth + CSRF + rate limit. See file header for rationale.
+  if (!verifyCsrf(req)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
+  const auth = authenticateRequest(req)
+  if (!auth) return unauthorized()
+  const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many bill scans. Please slow down.' })
+  if (rl) return rl
+
   const t0 = Date.now()
   try {
     let body: any = {}; try { body = await req.json() } catch { return NextResponse.json({ error: "Please upload a bill image to scan." }, { status: 400 }) }

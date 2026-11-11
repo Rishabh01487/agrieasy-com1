@@ -7,11 +7,14 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { validateBody, payBillSchema } from '@/lib/validation'
 import { validationError } from '@/lib/api-response'
 import { logAudit } from '@/lib/audit'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
     if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
+    const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many bill payment requests.' })
+    if (rl) return rl
 
     await dbConnect()
     try {

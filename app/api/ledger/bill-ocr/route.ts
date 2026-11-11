@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { rateLimitByUser } from '@/lib/rate-limit'
+import { verifyCsrf } from '@/lib/csrf'
 
 /**
  * POST /api/ledger/bill-ocr
@@ -10,6 +13,11 @@ import { NextRequest, NextResponse } from 'next/server'
  *
  * Body: { image: "base64_string" }
  * Response: { commodities: [...], grandTotalBags, grandTotalWeight }
+ *
+ * SECURITY: requires authentication + per-user rate limit (10/min).
+ * Previously this endpoint was completely unauthenticated — anyone
+ * could POST arbitrary base64 images and burn the server's
+ * OpenRouter budget. Now: JWT required, CSRF required, max 10/min/user.
  */
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
@@ -83,6 +91,18 @@ Rules:
 - Output ONLY JSON`
 
 export async function POST(req: NextRequest) {
+  // SECURITY FIX (HIGH — anonymous cost abuse):
+  // Require auth + CSRF + rate limit. Previously this route had ZERO
+  // protection — anonymous internet users could POST base64 images
+  // and burn the server's OpenRouter budget at will.
+  if (!verifyCsrf(req)) {
+    return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
+  }
+  const auth = authenticateRequest(req)
+  if (!auth) return unauthorized()
+  const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many OCR requests. Please slow down.' })
+  if (rl) return rl
+
   try {
     if (!OPENROUTER_API_KEY) {
       return NextResponse.json(

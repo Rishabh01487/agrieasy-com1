@@ -43,16 +43,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     await dbConnect()
 
-    // Identify viewer from JWT (Authorization header or ?userId= query).
-    let viewerUserId: string | null = null
+    // Identify viewer from JWT only.
+    // SECURITY FIX (LOW — view attribution spoofing):
+    // Previously, when no JWT was present, the route fell back to a
+    // ?userId= query param (only 24-hex-validated) and attributed the
+    // view to that user. An anonymous attacker could inflate any
+    // user's "viewedBy" set by passing their userId here. Now: only a
+    // verified JWT userId is used for user-scoped attribution;
+    // anonymous viewers fall through to IP-hash dedup (which is the
+    // existing code path below).
     const auth = authenticateRequest(req)
-    if (auth?.user?.userId) {
-      viewerUserId = auth.user.userId
-    } else {
-      const url = new URL(req.url)
-      const uidParam = url.searchParams.get('userId')
-      if (uidParam && /^[0-9a-fA-F]{24}$/.test(uidParam)) viewerUserId = uidParam
-    }
+    const viewerUserId: string | null = auth?.user?.userId || null
 
     const ipHash = hashIp(getIp(req))
     const useUserId = !!viewerUserId

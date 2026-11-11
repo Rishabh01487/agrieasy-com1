@@ -2,10 +2,12 @@ import { verifyCsrf } from '@/lib/csrf'
 import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import dbConnect from '@/lib/mongodb'
+import Billing from '@/lib/models/Billing'
 import Transaction from '@/lib/models/Transaction'
-import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
+import { objectIdSchema } from '@/lib/validation'
 
 function getRazorpay() {
   if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
@@ -28,38 +30,57 @@ export async function POST(request: NextRequest) {
   await dbConnect()
 
   try {
-    const { billingId, farmerId, buyerId, amount } = await request.json()
+    const { billingId } = await request.json()
 
-    if (!billingId || !farmerId || !buyerId || !amount) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    // SECURITY FIX (MEDIUM — IDOR / metadata poisoning):
+    // Previously the caller could supply arbitrary farmerId, buyerId,
+    // and billingId values — the route wrote them straight into the
+    // Transaction record with no validation. An attacker could attribute
+    // payments to arbitrary users (audit/analytics poisoning).
+    //
+    // Now: ONLY billingId is accepted from the client. We look up the
+    // Billing record, verify the caller IS its buyer, and derive
+    // farmerId + buyerId + amount from the trusted DB row — never from
+    // the request body.
+    const bid = objectIdSchema.safeParse(billingId)
+    if (!bid.success) {
+      return NextResponse.json({ error: 'Invalid billingId' }, { status: 400 })
     }
 
-    const parsedAmount = Number(amount)
+    const billing = await Billing.findById(bid.data).lean()
+    if (!billing) {
+      return NextResponse.json({ error: 'Billing record not found' }, { status: 404 })
+    }
+    if (billing.buyerId.toString() !== auth.user.userId) {
+      return forbidden('You can only pay for your own bookings')
+    }
+
+    const parsedAmount = Number(billing.totalAmount)
     if (!parsedAmount || parsedAmount < 1) {
-      return NextResponse.json({ error: 'Invalid amount' }, { status: 400 })
+      return NextResponse.json({ error: 'Invalid billing amount — contact support' }, { status: 400 })
     }
 
     const razorpay = getRazorpay()
     const order = await razorpay.orders.create({
       amount: parsedAmount * 100,
       currency: 'INR',
-      receipt: billingId.toString(),
+      receipt: billing._id.toString(),
     })
 
     const transaction = await Transaction.create({
-      fromUserId: auth.user.userId,
-      toUserId: farmerId,
+      fromUserId: auth.user.userId,            // = billing.buyerId (verified above)
+      toUserId: billing.farmerId,              // from trusted DB row, not request body
       amount: parsedAmount,
       type: 'booking_pay',
       status: 'pending',
-      description: `Payment for billing ${billingId}`,
+      description: `Payment for billing ${billing._id}`,
       category: 'booking',
       paymentMethod: 'upi',
       razorpayOrderId: order.id,
-      referenceId: billingId,
+      referenceId: billing._id.toString(),
     })
 
-    await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'PaymentOrder', resourceId: transaction._id.toString(), details: { billingId, amount: parsedAmount, orderId: order.id }, request })
+    await logAudit({ userId: auth.user.userId, action: 'CREATE', resource: 'PaymentOrder', resourceId: transaction._id.toString(), details: { billingId: billing._id.toString(), farmerId: billing.farmerId.toString(), amount: parsedAmount, orderId: order.id }, request })
 
     return NextResponse.json({
       success: true,

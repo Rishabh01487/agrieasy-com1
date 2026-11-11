@@ -6,11 +6,14 @@ import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { validateUpiId } from '@/lib/validators'
 import { logAudit } from '@/lib/audit'
 import { createFundAccount } from '@/lib/razorpay'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
     if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
+    const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 5, message: 'Too many bank verification requests.' })
+    if (rl) return rl
 
     await dbConnect()
     try {

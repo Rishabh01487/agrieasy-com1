@@ -7,7 +7,7 @@ import Vehicle from '@/lib/models/Vehicle'
 import BuyerVehicle from '@/lib/models/BuyerVehicle'
 import User from '@/lib/models/User'
 import Notification from '@/lib/models/Notification'
-import { authenticateRequest, unauthorized } from '@/lib/auth'
+import { authenticateRequest, unauthorized, forbidden } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { rateLimitByUser } from '@/lib/rate-limit'
 import { parsePagination, paginationMeta, validationError, apiSuccess } from '@/lib/api-response'
@@ -27,8 +27,15 @@ async function notify(userId: string, actorId: string, type: 'booking_request' |
 
 export async function POST(request: NextRequest) {
     if (!verifyCsrf(request)) return NextResponse.json({ error: 'CSRF token invalid or missing' }, { status: 403 })
-  const auth = authenticateRequest(request)
+  // SECURITY FIX (LOW — role fallthrough):
+  // Previously any authenticated user (buyer, transporter, admin) could
+  // create a booking — the route always set farmerId=auth.user.userId.
+  // A buyer creating a booking to themselves, or a transporter booking
+  // a trip, made no semantic sense and polluted the booking table.
+  // Now: only farmers can create bookings (they are the sellers).
+  const auth = authenticateRequest(request, ['farmer'])
   if (!auth) return unauthorized()
+  if (!auth.roleMatch) return forbidden('Only farmers can create bookings')
 
   const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many booking requests.' })
   if (rl) return rl

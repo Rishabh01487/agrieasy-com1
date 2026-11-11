@@ -5,6 +5,7 @@ import User from '@/lib/models/User'
 import { authenticateRequest, unauthorized } from '@/lib/auth'
 import { logAudit } from '@/lib/audit'
 import { verifyCsrf } from '@/lib/csrf'
+import { rateLimitByUser } from '@/lib/rate-limit'
 
 export async function GET(request: NextRequest) {
     const auth = authenticateRequest(request)
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest) {
     }
     const auth = authenticateRequest(request)
     if (!auth) return unauthorized()
+    const rl = await rateLimitByUser(auth.user.userId, { windowMs: 60_000, max: 10, message: 'Too many wallet requests.' })
+    if (rl) return rl
 
     await dbConnect()
     try {
