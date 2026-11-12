@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { authFetch } from '@/lib/auth-fetch'
 import { BUYER, SHARED, cardStyle, navStyle, getStatusStyle } from '@/lib/styles'
+import BillCalculator from '../../ledger/BillCalculator'
+import ManualBillEntry from '../../ledger/ManualBillEntry'
 
 interface Billing {
   _id: string
@@ -20,25 +22,26 @@ export default function Billing() {
   const [billings, setBillings] = useState<Billing[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showCalculator, setShowCalculator] = useState(false)
+  const [manualResult, setManualResult] = useState<any>(null)
 
-  useEffect(() => {
-    const fetchBillings = async () => {
-      try {
-        const res = await authFetch('/api/billing?role=buyer')
-        if (!res.ok) {
-          setError('Failed to load billing records')
-          return
-        }
-        const data = await res.json()
-        setBillings(data?.data?.billings || data?.billings || [])
-      } catch (err) {
-        setError('Network error. Please try again.')
-      } finally {
-        setLoading(false)
+  const fetchBillings = async () => {
+    try {
+      const res = await authFetch('/api/billing?role=buyer')
+      if (!res.ok) {
+        setError('Failed to load billing records')
+        return
       }
+      const data = await res.json()
+      setBillings(data?.data?.billings || data?.billings || [])
+    } catch (err) {
+      setError('Network error. Please try again.')
+    } finally {
+      setLoading(false)
     }
-    void fetchBillings()
-  }, [])
+  }
+
+  useEffect(() => { void fetchBillings() }, [])
 
   return (
     <div style={{ minHeight: '100vh', background: BUYER.bg, fontFamily: SHARED.font }}>
@@ -57,6 +60,57 @@ export default function Billing() {
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px' }}>
         <h2 style={{ color: BUYER.textSecondary, fontWeight: 800, fontSize: '1.6rem', margin: '0 0 8px' }}>🧾 Billing Management</h2>
         <p style={{ color: BUYER.muted, marginBottom: '28px' }}>View and manage all your billing transactions with farmers.</p>
+
+        {/* ── Create Bill section (same BillCalculator + ManualBillEntry as the ledger page) ── */}
+        <div style={{ marginBottom: 24 }}>
+          {!showCalculator ? (
+            <button
+              onClick={() => setShowCalculator(true)}
+              style={{
+                width: '100%', padding: '14px 24px',
+                background: 'linear-gradient(135deg, #31372B 0%, #31372B 50%, #4A5240 100%)',
+                color: '#FFFFFF', border: 'none', borderRadius: 12,
+                fontSize: '0.95rem', fontWeight: 800, cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(49, 55, 43, 0.22)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >🧮 Create New Bill</button>
+          ) : (
+            <div style={{ background: BUYER.white || '#fff', borderRadius: 20, padding: 24, border: `1px solid ${BUYER.border}`, boxShadow: SHARED.shadowMd }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <h3 style={{ margin: 0, color: BUYER.text, fontWeight: 700, fontSize: '1.1rem' }}>
+                  {manualResult ? 'Bill from Manual Entry' : '🧮 Bill Calculator'}
+                </h3>
+                <button
+                  onClick={() => { setShowCalculator(false); setManualResult(null) }}
+                  style={{
+                    background: 'transparent', border: `1px solid ${BUYER.border}`,
+                    borderRadius: 100, padding: '6px 14px',
+                    color: BUYER.muted, fontSize: '0.76rem', fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >✕ Close</button>
+              </div>
+
+              {/* Manual Bill Entry — lets the buyer enter commodity + bags + weight + rate
+                  manually (with Per-bag weights or Direct total mode), same as the ledger page. */}
+              {!manualResult && (
+                <div style={{ marginBottom: 16 }}>
+                  <ManualBillEntry onGenerate={(result: any) => setManualResult(result)} />
+                </div>
+              )}
+
+              {/* BillCalculator — shows OCR upload + the editable result with commodity name,
+                  transaction type, consignor/consignee, payment mode, and Save. */}
+              <BillCalculator
+                embedded
+                key={manualResult ? 'manual' : 'photo'}
+                initialResult={manualResult}
+                onSaved={() => { void fetchBillings(); setManualResult(null); setShowCalculator(false) }}
+              />
+            </div>
+          )}
+        </div>
 
         {error && (
           <div style={{ background: SHARED.errorLight, border: '1px solid #fca5a5', borderRadius: '10px', padding: '12px 16px', marginBottom: '20px', color: SHARED.error, fontSize: '0.875rem', fontWeight: 600 }}>
