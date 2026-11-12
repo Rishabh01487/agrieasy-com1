@@ -80,6 +80,14 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
     const [counterpartyName, setCounterpartyName] = useState('')
     const [entryMode, setEntryMode] = useState<'batch' | 'direct'>('batch')
     const [directCommodities, setDirectCommodities] = useState<{ id: string; name: string; totalBags: string; totalWeight: string; rate: string; unit: 'kg' | 'quintal' }[]>([{ id: makeId(), name: '', totalBags: '', totalWeight: '', rate: '', unit: 'kg' }])
+    // Transaction metadata — added so the user can set these BEFORE generating
+    // the bill (previously they only appeared in the BillCalculator result after
+    // generating, which made users think they were missing).
+    const [transRole, setTransRole] = useState<'farmer-buyer' | 'buyer-buyer' | 'farmer-transporter' | 'buyer-transporter'>('farmer-buyer')
+    const [consignorName, setConsignorName] = useState('')
+    const [consignorGstin, setConsignorGstin] = useState('')
+    const [consigneeName, setConsigneeName] = useState('')
+    const [consigneeGstin, setConsigneeGstin] = useState('')
     const palette = LEDGER
 
     // ── Commodity operations ──
@@ -189,6 +197,9 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
         })
         ;(window as any).__manualBillRates = ratesMap
         ;(window as any).__manualBillCounterparty = counterpartyName
+        ;(window as any).__manualBillTransRole = transRole
+        ;(window as any).__manualBillConsignor = { name: consignorName, gstin: consignorGstin }
+        ;(window as any).__manualBillConsignee = { name: consigneeName, gstin: consigneeGstin }
 
         onGenerate({
             commodities: groups,
@@ -224,6 +235,9 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
         valid.forEach((c, i) => { ratesMap[i] = { rate: c.rate, unit: c.unit } })
         ;(window as any).__manualBillRates = ratesMap
         ;(window as any).__manualBillCounterparty = counterpartyName
+        ;(window as any).__manualBillTransRole = transRole
+        ;(window as any).__manualBillConsignor = { name: consignorName, gstin: consignorGstin }
+        ;(window as any).__manualBillConsignee = { name: consigneeName, gstin: consigneeGstin }
         onGenerate({
             commodities: groups,
             grandTotalBags,
@@ -276,23 +290,71 @@ export default function ManualBillEntry({ onGenerate }: ManualBillEntryProps) {
                 </div>
             </div>
 
-            {/* Counterparty name */}
-            <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', color: palette.muted, fontSize: '0.78rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Buyer/Seller Name (optional)
+            {/* Transaction type + consignor/consignee — added so the user can
+                set these BEFORE generating the bill. Previously they only
+                appeared in the BillCalculator result after generating, which
+                made users think they were missing. Values are stashed on
+                window.__manualBill* and picked up by BillCalculator. */}
+            <div style={{
+                marginBottom: 16, padding: 14, background: palette.white,
+                border: `1px solid ${palette.borderLight}`, borderRadius: 12,
+            }}>
+                <label style={{ display: 'block', color: palette.muted, fontSize: '0.72rem', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Transaction type
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                    {([
+                        { key: 'farmer-buyer', label: 'Farmer → Buyer' },
+                        { key: 'buyer-buyer', label: 'Buyer → Buyer' },
+                        { key: 'farmer-transporter', label: 'Farmer → Transporter' },
+                        { key: 'buyer-transporter', label: 'Buyer → Transporter' },
+                    ] as const).map(({ key, label }) => (
+                        <button key={key} onClick={() => setTransRole(key)}
+                            style={{ padding: '5px 12px', borderRadius: 100, fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', border: `1.5px solid ${transRole === key ? palette.primary : palette.border}`, background: transRole === key ? palette.primary : palette.white, color: transRole === key ? '#fff' : palette.muted, transition: 'all 0.15s' }}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <label style={{ display: 'block', color: palette.muted, fontSize: '0.72rem', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {transRole === 'farmer-buyer' ? 'Farmer name' : transRole === 'buyer-buyer' ? 'Selling buyer name' : transRole === 'farmer-transporter' ? 'Farmer name' : 'Buyer name'}
                 </label>
                 <input
                     type="text"
                     value={counterpartyName}
                     onChange={e => setCounterpartyName(e.target.value)}
                     placeholder="e.g. Ramesh Kumar"
-                    style={{
-                        width: '100%', padding: '10px 14px', background: palette.white,
-                        border: `1px solid ${palette.border}`, borderRadius: 10,
-                        fontSize: '0.92rem', color: palette.text, outline: 'none',
-                        fontFamily: SHARED.font,
-                    }}
+                    style={{ width: '100%', padding: '8px 12px', background: palette.white, border: `1px solid ${palette.border}`, borderRadius: 8, fontSize: '0.88rem', color: palette.text, outline: 'none', fontFamily: SHARED.font, marginBottom: 12, boxSizing: 'border-box' as const }}
                 />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div>
+                        <label style={{ display: 'block', color: palette.muted, fontSize: '0.68rem', fontWeight: 700, marginBottom: 4 }}>
+                            Consignor (भेजने वाला)
+                        </label>
+                        <input type="text" placeholder="Name" value={consignorName}
+                            onChange={e => setConsignorName(e.target.value)}
+                            style={{ width: '100%', padding: '7px 10px', border: `1px solid ${palette.border}`, borderRadius: 6, fontSize: '0.84rem', color: palette.text, background: palette.white, outline: 'none', fontFamily: SHARED.font, marginBottom: 6, boxSizing: 'border-box' as const }}
+                        />
+                        <input type="text" placeholder="GSTIN (optional)" value={consignorGstin}
+                            onChange={e => setConsignorGstin(e.target.value.toUpperCase())}
+                            maxLength={15}
+                            style={{ width: '100%', padding: '7px 10px', border: `1px solid ${palette.border}`, borderRadius: 6, fontSize: '0.8rem', color: palette.text, background: palette.white, outline: 'none', fontFamily: SHARED.font, boxSizing: 'border-box' as const }}
+                        />
+                    </div>
+                    <div>
+                        <label style={{ display: 'block', color: palette.muted, fontSize: '0.68rem', fontWeight: 700, marginBottom: 4 }}>
+                            Consignee (प्राप्तकर्ता)
+                        </label>
+                        <input type="text" placeholder="Name" value={consigneeName}
+                            onChange={e => setConsigneeName(e.target.value)}
+                            style={{ width: '100%', padding: '7px 10px', border: `1px solid ${palette.border}`, borderRadius: 6, fontSize: '0.84rem', color: palette.text, background: palette.white, outline: 'none', fontFamily: SHARED.font, marginBottom: 6, boxSizing: 'border-box' as const }}
+                        />
+                        <input type="text" placeholder="GSTIN (optional)" value={consigneeGstin}
+                            onChange={e => setConsigneeGstin(e.target.value.toUpperCase())}
+                            maxLength={15}
+                            style={{ width: '100%', padding: '7px 10px', border: `1px solid ${palette.border}`, borderRadius: 6, fontSize: '0.8rem', color: palette.text, background: palette.white, outline: 'none', fontFamily: SHARED.font, boxSizing: 'border-box' as const }}
+                        />
+                    </div>
+                </div>
             </div>
 
             {entryMode === 'direct' ? (

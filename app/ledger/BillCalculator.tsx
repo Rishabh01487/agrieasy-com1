@@ -717,6 +717,26 @@ export default function BillCalculator({ embedded = false, onSaved, initialResul
                 setCounterpartyName(manualCounterparty)
                 delete (window as any).__manualBillCounterparty
             }
+            // Pick up transaction metadata stashed by ManualBillEntry so the
+            // transaction type + consignor/consignee fields are pre-filled
+            // in the result (user set them before generating).
+            const manualTransRole = (window as any).__manualBillTransRole
+            if (manualTransRole) {
+                setTransRole(manualTransRole)
+                delete (window as any).__manualBillTransRole
+            }
+            const manualConsignor = (window as any).__manualBillConsignor
+            if (manualConsignor) {
+                setConsignorName(manualConsignor.name || '')
+                setConsignorGstin(manualConsignor.gstin || '')
+                delete (window as any).__manualBillConsignor
+            }
+            const manualConsignee = (window as any).__manualBillConsignee
+            if (manualConsignee) {
+                setConsigneeName(manualConsignee.name || '')
+                setConsigneeGstin(manualConsignee.gstin || '')
+                delete (window as any).__manualBillConsignee
+            }
         }
     }, [initialResult])
 
