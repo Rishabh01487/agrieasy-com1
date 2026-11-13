@@ -21,7 +21,10 @@ import { verifyCsrf } from '@/lib/csrf'
  */
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY
-const MODEL = 'qwen/qwen3-vl-32b-instruct'
+// MODEL: qwen/qwen3-vl-32b-instruct was deprecated on OpenRouter.
+// Switched to google/gemini-3.8-flash — reliable vision OCR, very cheap
+// (~$0.075/M input tokens), and handles Hindi/English handwritten bills well.
+const MODEL = 'google/gemini-3.8-flash'
 
 const SYSTEM_PROMPT = `You are a bill OCR system specialized in reading Indian agricultural bills. These bills are handwritten in Hindi (Devanagari) or English.
 
