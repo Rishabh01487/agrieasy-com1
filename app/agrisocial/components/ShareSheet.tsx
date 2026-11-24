@@ -300,7 +300,9 @@ export default function ShareSheet({
   }
 
   /* Watermarked download — burns AgriSocial branding into the video so
-     viewers on Instagram/WhatsApp Status can find the original post. */
+     viewers on Instagram/WhatsApp Status can find the original post.
+     If watermarking fails or produces a suspiciously small file
+     (fragmented), falls back to downloading the original full video. */
   const downloadWatermarked = async (url: string): Promise<boolean> => {
     const isVideo = mediaType === 'video' || url.match(/\.(mp4|webm|mov|mkv)$/i)
     if (isVideo) {
@@ -311,7 +313,11 @@ export default function ShareSheet({
             setToast(`Adding watermark... ${Math.round(progress * 100)}%`)
           }
         })
-        if (watermarked) {
+        // Size check: if the watermarked file is less than 10KB, it's
+        // almost certainly fragmented (a few frames, not the full video).
+        // Fall through to the plain download so the user gets the full
+        // video even without the watermark.
+        if (watermarked && watermarked.size > 10_000) {
           const downloadUrl = URL.createObjectURL(watermarked)
           const a = document.createElement('a')
           a.href = downloadUrl
@@ -319,25 +325,40 @@ export default function ShareSheet({
           document.body.appendChild(a)
           a.click()
           document.body.removeChild(a)
-          URL.revokeObjectURL(downloadUrl)
+          setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000)
           showToast('Video saved with AgriSocial watermark ✓')
           return true
+        } else if (watermarked) {
+          // Fragmented output — fall through to plain download
+          console.warn('[downloadWatermarked] Watermarked file too small:', watermarked.size, 'bytes — falling back to original')
         }
       } catch {
         // Watermarking failed — fall through to plain download
       }
     }
+    // Plain download (no watermark) — fetches the FULL original file
     try {
-      const response = await fetch(url)
+      const response = await fetch(url, { mode: 'cors' })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const blob = await response.blob()
+      const ext =
+        blob.type.includes('mp4') ? 'mp4' :
+        blob.type.includes('webm') ? 'webm' :
+        blob.type.includes('quicktime') ? 'mov' :
+        blob.type.includes('jpeg') || blob.type.includes('jpg') ? 'jpg' :
+        blob.type.includes('png') ? 'png' :
+        blob.type.includes('gif') ? 'gif' :
+        url.split('/').pop()?.split('.').pop() || 'mp4'
+      const baseName = (url.split('/').pop() || 'agrieasy-download').replace(/\.[^.]+$/, '')
       const downloadUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = downloadUrl
-      a.download = url.split('/').pop() || 'agrieasy-download'
+      a.download = `${baseName}.${ext}`
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-      URL.revokeObjectURL(downloadUrl)
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000)
+      showToast(isVideo ? 'Video saved (full original)' : 'Saved')
       return true
     } catch {
       return false

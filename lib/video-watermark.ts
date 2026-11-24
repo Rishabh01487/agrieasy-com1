@@ -18,12 +18,28 @@ export async function watermarkVideo(
     return null
   }
 
+  // Pre-fetch the FULL video as a blob before processing.
+  // This eliminates network buffering stalls during canvas/MediaRecorder
+  // processing — the #1 cause of fragmented output on mobile. The video
+  // plays from a local blob URL, so there's no network dependency.
+  let blobUrl: string | null = null
+  try {
+    const resp = await fetch(videoUrl, { mode: 'cors' })
+    if (!resp.ok) return null
+    const blob = await resp.blob()
+    blobUrl = URL.createObjectURL(blob)
+  } catch {
+    // Fetch failed (CORS or network) — fall back to the network URL.
+    // The video might still play if the server supports range requests,
+    // but buffering stalls are more likely.
+    blobUrl = null
+  }
+
   return new Promise((resolve) => {
     const video = document.createElement('video')
     video.crossOrigin = 'anonymous'
-    video.src = videoUrl
-    video.muted = false
-    video.volume = 0
+    video.src = blobUrl || videoUrl
+    video.muted = true  // CRITICAL: stay muted — see comment below
     video.playsInline = true
     video.preload = 'auto'
 
@@ -74,13 +90,13 @@ export async function watermarkVideo(
       else if (pixels >= 1280 * 720) videoBitsPerSecond = 8_000_000
 
       let rafId: number
+      let intervalId: ReturnType<typeof setInterval>
       let lastDrawTime = 0
+      const frameInterval = 1000 / fps
       const draw = () => {
         if (video.paused || video.ended) return
 
         const now = performance.now()
-        // Throttle to the video's frame rate to avoid double-drawing
-        const frameInterval = 1000 / fps
         if (now - lastDrawTime >= frameInterval) {
           ctx.drawImage(video, 0, 0, w, h)
           drawWatermark(ctx, w, h, username, logoText, siteUrl)
@@ -90,8 +106,17 @@ export async function watermarkVideo(
         if (onProgress && video.duration) {
           onProgress(video.currentTime / video.duration)
         }
+      }
 
-        rafId = requestAnimationFrame(draw)
+      // Use BOTH requestAnimationFrame AND setInterval.
+      // RAF stops when the mobile tab goes to background (screen lock,
+      // app switch), which is the #1 cause of fragmented output — frames
+      // stop being drawn and the recorder captures stale frames.
+      // setInterval keeps drawing even when RAF is throttled.
+      const startDraw = () => {
+        const tick = () => { draw(); rafId = requestAnimationFrame(tick) }
+        tick()
+        intervalId = setInterval(draw, frameInterval)
       }
 
       video.onplay = () => {
@@ -119,7 +144,7 @@ export async function watermarkVideo(
         // timeslice=100ms ensures dataavailable fires regularly (prevents
         // memory issues on long videos)
         recorder.start(100)
-        draw()
+        startDraw()
       }
 
       // Also listen for 'timeupdate' as a backup for 'ended' — on some
@@ -131,6 +156,7 @@ export async function watermarkVideo(
         if (stopped) return
         stopped = true
         cancelAnimationFrame(rafId)
+        clearInterval(intervalId)
         // Draw the final frame with watermark
         ctx.drawImage(video, 0, 0, w, h)
         drawWatermark(ctx, w, h, username, logoText, siteUrl)
@@ -163,11 +189,15 @@ export async function watermarkVideo(
       // output, not the captured media stream).
       video.muted = true
       video.play().catch(() => {
+        if (blobUrl) URL.revokeObjectURL(blobUrl)
         resolve(null)
       })
     }
 
-    video.onerror = () => resolve(null)
+    video.onerror = () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl)
+      resolve(null)
+    }
   })
 }
 
