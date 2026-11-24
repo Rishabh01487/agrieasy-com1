@@ -94,11 +94,15 @@ export async function watermarkVideo(
       let lastDrawTime = 0
       const frameInterval = 1000 / fps
       const draw = () => {
-        if (video.paused || video.ended) return
+        // Don't return early when video.paused — the auto-resume
+        // (onpause handler) will restart playback within 100ms, and
+        // we need to keep drawing the current frame so the recorder
+        // doesn't capture stale/blank frames during the resume gap.
+        if (video.ended) return
 
         const now = performance.now()
         if (now - lastDrawTime >= frameInterval) {
-          ctx.drawImage(video, 0, 0, w, h)
+          try { ctx.drawImage(video, 0, 0, w, h) } catch {}
           drawWatermark(ctx, w, h, username, logoText, siteUrl)
           lastDrawTime = now
         }
@@ -113,13 +117,96 @@ export async function watermarkVideo(
       // app switch), which is the #1 cause of fragmented output — frames
       // stop being drawn and the recorder captures stale frames.
       // setInterval keeps drawing even when RAF is throttled.
+      // IMPORTANT: don't check video.paused — keep drawing the current
+      // frame even when paused so the recorder captures SOMETHING while
+      // we auto-resume playback (see onpause handler below).
       const startDraw = () => {
         const tick = () => { draw(); rafId = requestAnimationFrame(tick) }
         tick()
         intervalId = setInterval(draw, frameInterval)
       }
 
-      video.onplay = () => {
+      // Stall detection: if currentTime doesn't advance for 5 seconds,
+      // the video has stalled permanently (mobile browser throttling,
+      // memory pressure, etc). Force-stop the recorder with whatever
+      // we've captured so far — better to get a partial watermarked
+      // video than to hang forever.
+      let lastCurrentTime = 0
+      let stallCount = 0
+      const stallChecker = setInterval(() => {
+        if (stopped) { clearInterval(stallChecker); return }
+        if (video.currentTime === lastCurrentTime) {
+          stallCount++
+          // 5 ticks × 1s = 5 seconds with no progress
+          if (stallCount >= 5) {
+            console.warn('[watermarkVideo] Video stalled for 5s — force-stopping')
+            clearInterval(stallChecker)
+            stopRecorder()
+          }
+        } else {
+          stallCount = 0
+          lastCurrentTime = video.currentTime
+        }
+      }, 1000)
+
+      // Auto-resume: mobile browsers aggressively pause video playback
+      // (power management, tab switch, screen lock). When paused
+      // mid-playback (not ended, not manually stopped), immediately
+      // resume. This is the #2 cause of fragmented output after the
+      // unmute bug — the video pauses, draw() stops checking (old code
+      // returned early if paused), and the recorder captures stale
+      // frames for the remaining duration.
+      video.onpause = () => {
+        if (!stopped && !video.ended && video.currentTime < video.duration - 0.1) {
+          // Small delay to avoid rapid pause/play loops
+          setTimeout(() => {
+            if (!stopped && video.paused) video.play().catch(() => {})
+          }, 100)
+        }
+      }
+
+      let stopped = false
+      const stopRecorder = () => {
+        if (stopped) return
+        stopped = true
+        cancelAnimationFrame(rafId)
+        clearInterval(intervalId)
+        clearInterval(stallChecker)
+        // Draw the final frame with watermark
+        try { ctx.drawImage(video, 0, 0, w, h) } catch {}
+        drawWatermark(ctx, w, h, username, logoText, siteUrl)
+        // Request any pending data to be flushed before stopping
+        if (recorder && recorder.state === 'recording') {
+          try { recorder.requestData() } catch {}
+        }
+        // Slightly longer delay (500ms) to ensure the last frame +
+        // final dataavailable event are captured.
+        setTimeout(() => {
+          if (recorder && recorder.state !== 'inactive') recorder.stop()
+          // If recorder was never created (play failed), resolve null
+          if (!recorder) resolve(null)
+        }, 500)
+      }
+
+      video.onended = stopRecorder
+      video.ontimeupdate = () => {
+        if (video.duration > 0 && video.currentTime >= video.duration - 0.1) {
+          stopRecorder()
+        }
+      }
+
+      // CRITICAL: keep video.muted = true throughout.
+      // On mobile browsers, only MUTED videos can autoplay. Unmuting
+      // violates the autoplay policy and pauses the video.
+      // Audio is captured via video.captureStream() which works
+      // regardless of mute state.
+      video.muted = true
+
+      // Start playback. When play() resolves, the video is actually
+      // playing — start the recorder HERE, not in onplay (which can
+      // fire before the video data is ready, especially on mobile).
+      video.play().then(() => {
+        // Capture audio track from the video element
         try {
           const videoStream: MediaStream = (video as any).captureStream
             ? (video as any).captureStream()
@@ -139,56 +226,14 @@ export async function watermarkVideo(
           const blob = new Blob(chunks, { type: mimeType })
           const ext = mimeType.includes('mp4') ? 'mp4' : 'webm'
           const file = new File([blob], `krishiclip-watermarked.${ext}`, { type: mimeType })
+          if (blobUrl) URL.revokeObjectURL(blobUrl)
           resolve(file)
         }
-        // timeslice=100ms ensures dataavailable fires regularly (prevents
-        // memory issues on long videos)
+        // timeslice=100ms ensures dataavailable fires regularly
         recorder.start(100)
+        lastCurrentTime = video.currentTime
         startDraw()
-      }
-
-      // Also listen for 'timeupdate' as a backup for 'ended' — on some
-      // mobile browsers the 'ended' event doesn't fire reliably if the
-      // video was paused/resumed by the autoplay policy. If currentTime
-      // reaches the end, we stop the recorder manually.
-      let stopped = false
-      const stopRecorder = () => {
-        if (stopped) return
-        stopped = true
-        cancelAnimationFrame(rafId)
-        clearInterval(intervalId)
-        // Draw the final frame with watermark
-        ctx.drawImage(video, 0, 0, w, h)
-        drawWatermark(ctx, w, h, username, logoText, siteUrl)
-        // Request any pending data to be flushed before stopping
-        if (recorder && recorder.state === 'recording') {
-          try { recorder.requestData() } catch {}
-        }
-        // Slightly longer delay (500ms) to ensure the last frame +
-        // final dataavailable event are captured.
-        setTimeout(() => {
-          if (recorder && recorder.state !== 'inactive') recorder.stop()
-        }, 500)
-      }
-
-      video.onended = stopRecorder
-      video.ontimeupdate = () => {
-        if (video.duration > 0 && video.currentTime >= video.duration - 0.1) {
-          stopRecorder()
-        }
-      }
-
-      // CRITICAL: keep video.muted = true throughout.
-      // On mobile browsers, only MUTED videos can autoplay. The previous
-      // code unmuted after play() resolved (video.muted = false), which
-      // violated the autoplay policy and caused the browser to PAUSE
-      // the video — the recorder then captured only a few frames
-      // (the 'fragmented clip' bug). The audio track is captured
-      // separately via video.captureStream() below, which works
-      // regardless of the mute state (muting only affects audible
-      // output, not the captured media stream).
-      video.muted = true
-      video.play().catch(() => {
+      }).catch(() => {
         if (blobUrl) URL.revokeObjectURL(blobUrl)
         resolve(null)
       })
