@@ -169,20 +169,37 @@ async function tryFileShare(file: File, text: string, title: string): Promise<bo
   }
 }
 
-// Download a media file to the device — fallback when file-share isn't supported,
-// so the user can manually attach it in the target app.
+// Download a media file to the device — fetches the FULL original file
+// (no watermarking, no canvas/MediaRecorder processing that can truncate
+// the output). Used for the "Download" button in the share sheet.
 async function downloadMediaToDevice(mediaUrl: string): Promise<boolean> {
   try {
-    const response = await fetch(mediaUrl)
+    // mode: 'cors' is needed for cross-origin media (Cloudinary / R2).
+    // Both return Access-Control-Allow-Origin: * so this works.
+    const response = await fetch(mediaUrl, { mode: 'cors' })
+    if (!response.ok) return false
     const blob = await response.blob()
+    // Derive a meaningful filename + extension from the URL or blob type
+    const urlPath = mediaUrl.split('/').pop() || 'krishiclip'
+    const ext =
+      blob.type.includes('mp4') ? 'mp4' :
+      blob.type.includes('webm') ? 'webm' :
+      blob.type.includes('quicktime') ? 'mov' :
+      blob.type.includes('jpeg') || blob.type.includes('jpg') ? 'jpg' :
+      blob.type.includes('png') ? 'png' :
+      blob.type.includes('gif') ? 'gif' :
+      urlPath.includes('.') ? urlPath.split('.').pop() || 'mp4' : 'mp4'
+    const baseName = urlPath.replace(/\.[^.]+$/, '') || 'krishiclip'
     const downloadUrl = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = downloadUrl
-    a.download = mediaUrl.split('/').pop() || 'krishiclip'
+    a.download = `${baseName}.${ext}`
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    URL.revokeObjectURL(downloadUrl)
+    // Revoke after a delay — immediate revocation can cancel the download
+    // on some browsers (the blob URL is still being read).
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 10_000)
     return true
   } catch {
     return false
@@ -546,7 +563,17 @@ export default function ShareSheet({
     if (mediaType === 'youtube' || mediaType === 'text') return
     setDownloading(true)
     try {
-      await downloadWatermarked(mediaUrl)
+      // Download the ORIGINAL file directly — no watermarking.
+      // The watermarkVideo() function plays the video in real-time through
+      // a canvas + MediaRecorder, which on mobile often stalls (background
+      // tab pauses requestAnimationFrame, autoplay restrictions, buffering)
+      // and produces only a partial fragment instead of the full video.
+      // For download, the user wants the complete original file.
+      const ok = await downloadMediaToDevice(mediaUrl)
+      if (!ok) {
+        // fetch() failed (CORS or network) — fall back to opening in a new tab
+        window.open(mediaUrl, '_blank')
+      }
     } catch {
       window.open(mediaUrl, '_blank')
     } finally {
