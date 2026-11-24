@@ -563,19 +563,18 @@ export default function ShareSheet({
     if (mediaType === 'youtube' || mediaType === 'text') return
     setDownloading(true)
     try {
-      // Download the ORIGINAL file directly — no watermarking.
-      // The watermarkVideo() function plays the video in real-time through
-      // a canvas + MediaRecorder, which on mobile often stalls (background
-      // tab pauses requestAnimationFrame, autoplay restrictions, buffering)
-      // and produces only a partial fragment instead of the full video.
-      // For download, the user wants the complete original file.
-      const ok = await downloadMediaToDevice(mediaUrl)
-      if (!ok) {
-        // fetch() failed (CORS or network) — fall back to opening in a new tab
-        window.open(mediaUrl, '_blank')
-      }
+      // Download WITH watermark. The watermarkVideo() function was fixed
+      // to keep video.muted=true throughout (previously it unmuted after
+      // play, which on mobile violated autoplay policy and paused the
+      // video — capturing only a fragment). Now the full video plays
+      // to completion and the watermarked output is complete.
+      await downloadWatermarked(mediaUrl)
     } catch {
-      window.open(mediaUrl, '_blank')
+      // Watermarking or download failed — fall back to plain download
+      // of the original file (no watermark, but at least the user gets
+      // the full video).
+      const ok = await downloadMediaToDevice(mediaUrl)
+      if (!ok) window.open(mediaUrl, '_blank')
     } finally {
       setDownloading(false)
     }

@@ -122,18 +122,47 @@ export async function watermarkVideo(
         draw()
       }
 
-      video.onended = () => {
+      // Also listen for 'timeupdate' as a backup for 'ended' — on some
+      // mobile browsers the 'ended' event doesn't fire reliably if the
+      // video was paused/resumed by the autoplay policy. If currentTime
+      // reaches the end, we stop the recorder manually.
+      let stopped = false
+      const stopRecorder = () => {
+        if (stopped) return
+        stopped = true
         cancelAnimationFrame(rafId)
+        // Draw the final frame with watermark
         ctx.drawImage(video, 0, 0, w, h)
         drawWatermark(ctx, w, h, username, logoText, siteUrl)
-        setTimeout(() => { if (recorder && recorder.state !== 'inactive') recorder.stop() }, 300)
+        // Request any pending data to be flushed before stopping
+        if (recorder && recorder.state === 'recording') {
+          try { recorder.requestData() } catch {}
+        }
+        // Slightly longer delay (500ms) to ensure the last frame +
+        // final dataavailable event are captured.
+        setTimeout(() => {
+          if (recorder && recorder.state !== 'inactive') recorder.stop()
+        }, 500)
       }
 
+      video.onended = stopRecorder
+      video.ontimeupdate = () => {
+        if (video.duration > 0 && video.currentTime >= video.duration - 0.1) {
+          stopRecorder()
+        }
+      }
+
+      // CRITICAL: keep video.muted = true throughout.
+      // On mobile browsers, only MUTED videos can autoplay. The previous
+      // code unmuted after play() resolved (video.muted = false), which
+      // violated the autoplay policy and caused the browser to PAUSE
+      // the video — the recorder then captured only a few frames
+      // (the 'fragmented clip' bug). The audio track is captured
+      // separately via video.captureStream() below, which works
+      // regardless of the mute state (muting only affects audible
+      // output, not the captured media stream).
       video.muted = true
-      video.play().then(() => {
-        video.muted = false
-        video.volume = 0
-      }).catch(() => {
+      video.play().catch(() => {
         resolve(null)
       })
     }
